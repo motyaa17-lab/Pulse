@@ -47,6 +47,7 @@ export class UsersService {
         displayName: dto.displayName,
         bio: dto.bio,
         username: dto.username?.toLowerCase(),
+        avatarUrl: dto.avatarUrl === undefined ? undefined : dto.avatarUrl,
       },
       select: {
         id: true,

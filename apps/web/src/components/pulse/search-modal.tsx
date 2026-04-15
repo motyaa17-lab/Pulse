@@ -1,14 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiFetch } from '@/lib/api';
 import { useUiStore } from '@/stores/ui-store';
+import { getOrCreateDirectChat } from '@/lib/direct-chat';
+import { useT } from '@/lib/i18n';
 type SearchUser = { id: string; username: string; displayName: string | null; avatarUrl: string | null };
 type SearchChat = { id: string; type: string; title: string | null };
-type SearchMessage = { id: string; chatId: string; text: string | null; createdAt: string };
+type SearchMessage = {
+  id: string;
+  chatId: string;
+  text: string | null;
+  snippet?: string;
+  createdAt: string;
+};
 
 type SearchResult = {
   users: SearchUser[];
@@ -21,6 +29,8 @@ export function SearchModal() {
   const setOpen = useUiStore((s) => s.setSearchOpen);
   const [q, setQ] = useState('');
   const router = useRouter();
+  const qc = useQueryClient();
+  const t = useT();
 
   const debounced = useDebouncedValue(q, 220);
 
@@ -64,25 +74,35 @@ export function SearchModal() {
                 autoFocus
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search people, chats, messages…"
+                placeholder={t('searchPlaceholder')}
                 className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
-                aria-label="Search"
+                aria-label={t('search')}
               />
               <p className="mt-1 text-[10px] text-ink-muted">⌘K · min 2 characters · results grouped</p>
             </div>
             <div className="max-h-[50vh] overflow-y-auto p-3 text-sm">
-              {isFetching && <p className="text-ink-muted">Searching…</p>}
+              {isFetching && <p className="text-ink-muted">{t('searching')}</p>}
               {!isFetching && data && (
                 <div className="space-y-4">
-                  <Section title="People">
+                  <Section title={t('people')}>
                     {data.users.map((u: SearchUser) => (
                       <button
                         key={u.id}
                         type="button"
                         className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left hover:bg-surface-muted/60"
-                        onClick={() => {
-                          setOpen(false);
-                          router.push(`/chats?start=${u.id}`);
+                        onClick={async () => {
+                          // One-step: create/open DM and navigate directly.
+                          // Keeps the existing dedupe guarantees (client inflight + server serializable tx).
+                          try {
+                            const chat = await getOrCreateDirectChat(u.id);
+                            setOpen(false);
+                            // Ensure the sidebar picks up the chat even if it didn't exist before.
+                            void qc.invalidateQueries({ queryKey: ['chats'] });
+                            router.push(`/chats/${chat.id}`);
+                          } catch {
+                            setOpen(false);
+                            router.push('/chats');
+                          }
                         }}
                       >
                         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-xs font-semibold text-accent">
@@ -95,7 +115,7 @@ export function SearchModal() {
                       </button>
                     ))}
                   </Section>
-                  <Section title="Chats">
+                  <Section title={t('chats')}>
                     {data.chats.map((c: SearchChat) => (
                       <button
                         key={c.id}
@@ -111,7 +131,7 @@ export function SearchModal() {
                       </button>
                     ))}
                   </Section>
-                  <Section title="Messages">
+                  <Section title={t('messages')}>
                     {data.messages.map((m: SearchMessage) => (
                       <button
                         key={m.id}
@@ -122,7 +142,7 @@ export function SearchModal() {
                           router.push(`/chats/${m.chatId}?highlight=${m.id}`);
                         }}
                       >
-                        <Highlight text={m.text ?? ''} needle={debounced} />
+                        <Highlight text={(m.snippet ?? m.text ?? '').trim()} needle={debounced} />
                         <div className="text-[10px] text-ink-muted">
                           {new Date(m.createdAt).toLocaleString()}
                         </div>
@@ -132,7 +152,7 @@ export function SearchModal() {
                   {data.users.length === 0 &&
                     data.chats.length === 0 &&
                     data.messages.length === 0 &&
-                    debounced.length >= 2 && <p className="text-ink-muted">No matches</p>}
+                    debounced.length >= 2 && <p className="text-ink-muted">{t('noMatches')}</p>}
                 </div>
               )}
             </div>

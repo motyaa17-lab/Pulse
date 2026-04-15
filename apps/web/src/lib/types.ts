@@ -9,6 +9,7 @@ export interface ChatListItem {
   lastMessagePreview: string | null;
   unreadCount: number;
   isPinned: boolean;
+  pinOrder?: number | null;
   isArchived: boolean;
   isMuted: boolean;
   peer?: {
@@ -28,6 +29,7 @@ export interface MessageDto {
   clientTempId: string | null;
   replyToMessageId: string | null;
   forwardedFromMessageId: string | null;
+  forwardedFromUser?: { id: string; username: string; displayName: string | null } | null;
   editedAt: string | null;
   deletedAt: string | null;
   createdAt: string;
@@ -48,4 +50,17 @@ export interface MessageDto {
     deletedAt: string | null;
   } | null;
   deliveryStatus?: string;
+}
+
+export interface MeUserDto {
+  id: string;
+  email?: string;
+  username: string;
+  displayName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  isOnline?: boolean;
+  lastSeenAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

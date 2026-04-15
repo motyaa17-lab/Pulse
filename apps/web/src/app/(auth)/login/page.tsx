@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +20,13 @@ type Form = z.infer<typeof schema>;
 export default function LoginPage() {
   const router = useRouter();
   const setTokens = useAuthStore((s) => s.setTokens);
+  const token = useAuthStore((s) => s.accessToken);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    if (token) router.replace('/chats');
+  }, [hasHydrated, token, router]);
   const {
     register,
     handleSubmit,

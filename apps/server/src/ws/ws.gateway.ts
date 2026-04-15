@@ -18,6 +18,7 @@ import { WsService } from './ws.service';
 import { PresenceService } from '../redis/presence.service';
 import { ChatsService } from '../chats/chats.service';
 import { MessagesService } from '../messages/messages.service';
+import { UsersService } from '../users/users.service';
 
 type HandshakeAuth = { token?: string };
 
@@ -41,6 +42,7 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     private readonly presence: PresenceService,
     private readonly chats: ChatsService,
     private readonly messages: MessagesService,
+    private readonly users: UsersService,
   ) {}
 
   afterInit() {
@@ -56,7 +58,7 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
 
     const redisUrl = this.config.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
     try {
-      const pub = new Redis(redisUrl, { lazyConnect: true });
+      const pub = new Redis(redisUrl, { lazyConnect: true, maxRetriesPerRequest: null });
       const sub = pub.duplicate();
       pub.on('error', () => void 0);
       sub.on('error', () => void 0);
@@ -165,6 +167,9 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   async onPing(@ConnectedSocket() client: Socket) {
     const userId = (client.data as { userId: string }).userId;
     await this.presence.refreshOnline(userId);
+    // Treat periodic pings as lightweight activity so "last seen" stays fresh even if
+    // the user isn't sending messages.
+    await this.users.touchLastSeen(userId);
     return { ok: true };
   }
 }

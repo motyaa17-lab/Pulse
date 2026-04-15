@@ -8,6 +8,19 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { AddMemberDto } from './dto/members.dto';
+import { IsOptional, IsString } from 'class-validator';
+import { IsArray } from 'class-validator';
+
+class PinMessageDto {
+  @IsOptional()
+  @IsString()
+  messageId?: string | null;
+}
+
+class ReorderPinnedDto {
+  @IsArray()
+  chatIds!: string[];
+}
 
 @ApiTags('chats')
 @ApiBearerAuth()
@@ -60,9 +73,19 @@ export class ChatsController {
     return this.chats.pin(user.sub, id, Boolean(on));
   }
 
+  @Post('pins/reorder')
+  reorderPins(@CurrentUser() user: JwtUser, @Body() dto: ReorderPinnedDto) {
+    return this.chats.reorderPinned(user.sub, dto.chatIds ?? []);
+  }
+
   @Post(':id/archive')
   archive(@CurrentUser() user: JwtUser, @Param('id') id: string, @Body('on') on: boolean) {
     return this.chats.archive(user.sub, id, Boolean(on));
+  }
+
+  @Post(':id/hide-from-list')
+  hideFromList(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return this.chats.hideFromList(user.sub, id);
   }
 
   @Post(':id/mute')
@@ -73,6 +96,11 @@ export class ChatsController {
   ) {
     const d = until ? new Date(until) : null;
     return this.chats.mute(user.sub, id, d);
+  }
+
+  @Post(':id/pin-message')
+  pinMessage(@CurrentUser() user: JwtUser, @Param('id') id: string, @Body() dto: PinMessageDto) {
+    return this.chats.pinMessage(user.sub, id, dto.messageId ?? null);
   }
 
   @Post(':id/members')

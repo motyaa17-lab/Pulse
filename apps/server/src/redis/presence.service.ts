@@ -10,6 +10,10 @@ const TYPING_KEY = (chatId: string) => `typing:${chatId}`;
 export class PresenceService {
   constructor(@Inject(REDIS) private readonly redis: Redis | null) {}
 
+  // Fallback when Redis is disabled/unavailable (dev convenience).
+  // Keeps typing indicators functional even without a Redis instance.
+  private readonly typingMem = new Map<string, Map<string, number>>();
+
   private isDisabled(): boolean {
     return !this.redis;
   }
@@ -53,18 +57,42 @@ export class PresenceService {
   }
 
   async setTyping(chatId: string, userId: string, ttlSec = 6): Promise<void> {
-    if (this.isDisabled()) return;
+    if (this.isDisabled()) {
+      const key = TYPING_KEY(chatId);
+      const m = this.typingMem.get(key) ?? new Map<string, number>();
+      m.set(userId, Date.now());
+      this.typingMem.set(key, m);
+      // best-effort GC: drop empty maps on next clear/get
+      return;
+    }
     await this.redis!.hset(TYPING_KEY(chatId), userId, String(Date.now()));
     await this.redis!.expire(TYPING_KEY(chatId), ttlSec);
   }
 
   async clearTyping(chatId: string, userId: string): Promise<void> {
-    if (this.isDisabled()) return;
+    if (this.isDisabled()) {
+      const key = TYPING_KEY(chatId);
+      const m = this.typingMem.get(key);
+      if (!m) return;
+      m.delete(userId);
+      if (m.size === 0) this.typingMem.delete(key);
+      return;
+    }
     await this.redis!.hdel(TYPING_KEY(chatId), userId);
   }
 
   async getTypingUserIds(chatId: string, maxAgeMs = 5000): Promise<string[]> {
-    if (this.isDisabled()) return [];
+    if (this.isDisabled()) {
+      const key = TYPING_KEY(chatId);
+      const m = this.typingMem.get(key);
+      if (!m) return [];
+      const now = Date.now();
+      for (const [uid, ts] of m.entries()) {
+        if (now - ts >= maxAgeMs) m.delete(uid);
+      }
+      if (m.size === 0) this.typingMem.delete(key);
+      return [...m.keys()];
+    }
     const map = await this.redis!.hgetall(TYPING_KEY(chatId));
     const now = Date.now();
     return Object.entries(map)

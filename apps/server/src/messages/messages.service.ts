@@ -33,7 +33,7 @@ export class MessagesService {
   }
 
   async create(userId: string, chatId: string, dto: CreateMessageDto) {
-    await this.assertCanPost(chatId, userId);
+    const { chat } = await this.assertCanPost(chatId, userId);
 
     const hasText = Boolean(dto.text?.trim());
     const hasAtt = Boolean(dto.attachments?.length);
@@ -98,8 +98,12 @@ export class MessagesService {
       data: { updatedAt: new Date() },
     });
 
-    const payload = await this.toDto(msg, userId);
-    this.ws.emitToChat(chatId, 'message:new', payload);
+    const dtoOpts = { skipDeliveryDetails: chat.type === ChatType.SAVED } as const;
+    const broadcastPayload = await this.toDto(msg, userId, {
+      ...dtoOpts,
+      skipDeliveryComputation: true,
+    });
+    this.ws.emitToChat(chatId, 'message:new', broadcastPayload);
 
     const members = await this.prisma.chatMember.findMany({
       where: { chatId, leftAt: null },
@@ -108,14 +112,22 @@ export class MessagesService {
     this.ws.emitToUsers(
       members.map((m) => m.userId),
       'chat:updated',
-      { chatId, lastMessageAt: msg.createdAt.toISOString(), preview: payload.text?.slice(0, 160) },
+      {
+        chatId,
+        lastMessageAt: msg.createdAt.toISOString(),
+        preview: broadcastPayload.text?.slice(0, 160),
+      },
     );
 
-    return payload;
+    return this.toDto(msg, userId, dtoOpts);
   }
 
   async list(chatId: string, userId: string, cursor?: string, take = 40) {
     await this.chats.assertMember(chatId, userId);
+    const otherMemberCount = await this.prisma.chatMember.count({
+      where: { chatId, leftAt: null, userId: { not: userId } },
+    });
+    const skipDeliveryDetails = otherMemberCount === 0;
 
     const where: Prisma.MessageWhereInput = { chatId };
     if (cursor) {
@@ -137,12 +149,14 @@ export class MessagesService {
 
     const ordered = rows.reverse();
     const nextCursor = ordered.length ? ordered[0].id : null;
-    const items = await Promise.all(ordered.map((m) => this.toDto(m, userId)));
+    const items = await Promise.all(
+      ordered.map((m) => this.toDto(m, userId, { skipDeliveryDetails })),
+    );
     return { items, nextCursor };
   }
 
   async edit(userId: string, chatId: string, messageId: string, dto: EditMessageDto) {
-    await this.chats.assertMember(chatId, userId);
+    const { chat } = await this.chats.assertMember(chatId, userId);
     const msg = await this.prisma.message.findFirst({
       where: { id: messageId, chatId, deletedAt: null },
     });
@@ -155,13 +169,17 @@ export class MessagesService {
       data: { text: dto.text, editedAt: new Date() },
       include: this.messageInclude(),
     });
-    const payload = await this.toDto(updated, userId);
-    this.ws.emitToChat(chatId, 'message:updated', payload);
-    return payload;
+    const dtoOpts = { skipDeliveryDetails: chat.type === ChatType.SAVED } as const;
+    const broadcastPayload = await this.toDto(updated, userId, {
+      ...dtoOpts,
+      skipDeliveryComputation: true,
+    });
+    this.ws.emitToChat(chatId, 'message:updated', broadcastPayload);
+    return this.toDto(updated, userId, dtoOpts);
   }
 
   async softDelete(userId: string, chatId: string, messageId: string) {
-    await this.chats.assertMember(chatId, userId);
+    const { chat } = await this.chats.assertMember(chatId, userId);
     const msg = await this.prisma.message.findFirst({ where: { id: messageId, chatId } });
     if (!msg) throw new NotFoundException();
     if (msg.senderId !== userId) throw new ForbiddenException();
@@ -171,14 +189,18 @@ export class MessagesService {
       data: { deletedAt: new Date(), text: null },
       include: this.messageInclude(),
     });
-    const payload = await this.toDto(updated, userId);
+    const dtoOpts = { skipDeliveryDetails: chat.type === ChatType.SAVED } as const;
+    const broadcastPayload = await this.toDto(updated, userId, {
+      ...dtoOpts,
+      skipDeliveryComputation: true,
+    });
     this.ws.emitToChat(chatId, 'message:deleted', { id: messageId, chatId });
-    this.ws.emitToChat(chatId, 'message:updated', payload);
-    return payload;
+    this.ws.emitToChat(chatId, 'message:updated', broadcastPayload);
+    return this.toDto(updated, userId, dtoOpts);
   }
 
   async addReaction(userId: string, chatId: string, messageId: string, emoji: string) {
-    await this.chats.assertMember(chatId, userId);
+    const { chat } = await this.chats.assertMember(chatId, userId);
     const msg = await this.prisma.message.findFirst({ where: { id: messageId, chatId } });
     if (!msg) throw new NotFoundException();
 
@@ -194,19 +216,25 @@ export class MessagesService {
       where: { id: messageId },
       include: this.messageInclude(),
     });
-    const payload = await this.toDto(full!, userId);
+    const payload = await this.toDto(full!, userId, {
+      skipDeliveryDetails: chat.type === ChatType.SAVED,
+      skipDeliveryComputation: true,
+    });
     this.ws.emitToChat(chatId, 'reaction:update', { messageId, reactions: payload.reactions });
     return payload.reactions;
   }
 
   async removeReaction(userId: string, chatId: string, messageId: string, emoji: string) {
-    await this.chats.assertMember(chatId, userId);
+    const { chat } = await this.chats.assertMember(chatId, userId);
     await this.prisma.messageReaction.deleteMany({ where: { messageId, userId, emoji } });
     const full = await this.prisma.message.findUnique({
       where: { id: messageId },
       include: this.messageInclude(),
     });
-    const payload = await this.toDto(full!, userId);
+    const payload = await this.toDto(full!, userId, {
+      skipDeliveryDetails: chat.type === ChatType.SAVED,
+      skipDeliveryComputation: true,
+    });
     this.ws.emitToChat(chatId, 'reaction:update', { messageId, reactions: payload.reactions });
     return payload.reactions;
   }
@@ -218,12 +246,24 @@ export class MessagesService {
 
     await this.prisma.readState.upsert({
       where: { chatId_userId: { chatId, userId } },
-      create: { chatId, userId, lastReadMessageId: messageId, lastReadAt: new Date() },
-      update: { lastReadMessageId: messageId, lastReadAt: new Date() },
+      create: {
+        chatId,
+        userId,
+        lastReadMessageId: messageId,
+        lastReadAt: new Date(),
+        lastDeliveredMsgId: messageId,
+      },
+      update: { lastReadMessageId: messageId, lastReadAt: new Date(), lastDeliveredMsgId: messageId },
     });
 
     await this.users.touchLastSeen(userId);
 
+    this.ws.emitToChat(chatId, 'message:deliveredUpdate', {
+      chatId,
+      userId,
+      messageId,
+      deliveredAt: new Date().toISOString(),
+    });
     this.ws.emitToChat(chatId, 'message:readUpdate', {
       chatId,
       userId,
@@ -240,6 +280,12 @@ export class MessagesService {
       create: { chatId, userId, lastDeliveredMsgId: messageId },
       update: { lastDeliveredMsgId: messageId },
     });
+    this.ws.emitToChat(chatId, 'message:deliveredUpdate', {
+      chatId,
+      userId,
+      messageId,
+      deliveredAt: new Date().toISOString(),
+    });
     return { ok: true };
   }
 
@@ -248,11 +294,16 @@ export class MessagesService {
       attachments: true,
       reactions: true,
       replyTo: { include: { attachments: true, reactions: true } },
+      forwardedFromUser: { select: { id: true, username: true, displayName: true } },
     };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async toDto(msg: any, viewerId: string) {
+  private async toDto(
+    msg: any,
+    viewerId: string,
+    opts?: { skipDeliveryDetails?: boolean; skipDeliveryComputation?: boolean },
+  ) {
     const reactionsMap = new Map<string, string[]>();
     for (const r of msg.reactions) {
       const arr = reactionsMap.get(r.emoji) ?? [];
@@ -267,6 +318,12 @@ export class MessagesService {
 
     let deliveryStatus: 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' = 'SENT';
     if (msg.senderId === viewerId) {
+      if (opts?.skipDeliveryDetails) {
+        deliveryStatus = 'READ';
+      } else if (opts?.skipDeliveryComputation) {
+        // Realtime broadcast: do not block Socket.IO on read-state fan-out (was delaying other clients).
+        deliveryStatus = 'SENT';
+      } else {
       const members = await this.prisma.chatMember.findMany({
         where: { chatId: msg.chatId, leftAt: null, NOT: { userId: viewerId } },
         select: { userId: true },
@@ -281,14 +338,24 @@ export class MessagesService {
             const st = states.find((s) => s.userId === m.userId);
             if (!st?.lastReadMessageId) return false;
             const rm = await this.prisma.message.findUnique({ where: { id: st.lastReadMessageId } });
-            return rm && rm.createdAt >= msg.createdAt;
+            return Boolean(rm && rm.createdAt >= msg.createdAt);
           }),
         );
         if (allReadByTime.every(Boolean)) deliveryStatus = 'READ';
         else {
-          const allDel = states.every((s) => s.lastDeliveredMsgId);
-          deliveryStatus = allDel ? 'DELIVERED' : 'SENT';
+          const allDeliveredByTime = await Promise.all(
+            members.map(async (m) => {
+              const st = states.find((s) => s.userId === m.userId);
+              if (!st?.lastDeliveredMsgId) return false;
+              const dm = await this.prisma.message.findUnique({
+                where: { id: st.lastDeliveredMsgId },
+              });
+              return Boolean(dm && dm.createdAt >= msg.createdAt);
+            }),
+          );
+          deliveryStatus = allDeliveredByTime.every(Boolean) ? 'DELIVERED' : 'SENT';
         }
+      }
       }
     }
 
@@ -301,6 +368,13 @@ export class MessagesService {
       clientTempId: msg.clientTempId,
       replyToMessageId: msg.replyToMessageId,
       forwardedFromMessageId: msg.forwardedFromMessageId,
+      forwardedFromUser: msg.forwardedFromUser
+        ? {
+            id: msg.forwardedFromUser.id,
+            username: msg.forwardedFromUser.username,
+            displayName: msg.forwardedFromUser.displayName ?? null,
+          }
+        : null,
       editedAt: msg.editedAt?.toISOString() ?? null,
       deletedAt: msg.deletedAt?.toISOString() ?? null,
       createdAt: msg.createdAt.toISOString(),

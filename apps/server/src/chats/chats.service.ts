@@ -4,7 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { ChatType, MemberRole, MessageType } from '@prisma/client';
+import { ChatType, MemberRole, MessageType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDirectDto } from './dto/direct.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -35,35 +35,75 @@ export class ChatsService {
 
   async getOrCreateDirect(userId: string, dto: CreateDirectDto) {
     if (dto.peerUserId === userId) throw new BadRequestException('Cannot DM yourself');
-    const peer = await this.prisma.user.findUnique({ where: { id: dto.peerUserId } });
+    const peerId = dto.peerUserId;
+    const peer = await this.prisma.user.findUnique({ where: { id: peerId } });
     if (!peer) throw new NotFoundException('User not found');
 
-    const candidates = await this.prisma.chat.findMany({
-      where: {
-        type: ChatType.DIRECT,
-        members: { some: { userId, leftAt: null } },
-      },
-      include: { members: { where: { leftAt: null } } },
-    });
-    const existing = candidates.find(
-      (c) =>
-        c.members.length === 2 && c.members.some((m) => m.userId === dto.peerUserId),
-    );
-    if (existing) return this.getChatDetail(existing.id, userId);
-
-    const chat = await this.prisma.chat.create({
-      data: {
-        type: ChatType.DIRECT,
-        createdById: userId,
-        members: {
-          create: [
-            { userId, role: MemberRole.MEMBER },
-            { userId: dto.peerUserId, role: MemberRole.MEMBER },
+    const openDirectBetweenPair = async (tx: Prisma.TransactionClient): Promise<string | null> => {
+      const existing = await tx.chat.findFirst({
+        where: {
+          type: ChatType.DIRECT,
+          AND: [
+            { members: { some: { userId, leftAt: null } } },
+            { members: { some: { userId: peerId, leftAt: null } } },
           ],
         },
-      },
-    });
-    return this.getChatDetail(chat.id, userId);
+        include: { members: { where: { leftAt: null } } },
+      });
+      if (existing && existing.members.length === 2) return existing.id;
+      return null;
+    };
+
+    const createInSerializableTx = async (): Promise<string> => {
+      return this.prisma.$transaction(
+        async (tx) => {
+          const found = await openDirectBetweenPair(tx);
+          if (found) return found;
+          const chat = await tx.chat.create({
+            data: {
+              type: ChatType.DIRECT,
+              createdById: userId,
+              members: {
+                create: [
+                  { userId, role: MemberRole.MEMBER },
+                  { userId: peerId, role: MemberRole.MEMBER },
+                ],
+              },
+            },
+          });
+          return chat.id;
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
+    };
+
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const chatId = await createInSerializableTx();
+        // If the user previously hid this direct chat, "reopening" it should make it visible again.
+        // Fail open if the HiddenChat table hasn't been migrated yet.
+        try {
+          await this.prisma.hiddenChat.deleteMany({ where: { userId, chatId } });
+        } catch (e) {
+          if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === 'P2021' || e.code === 'P2022')) {
+            // Table/column missing (migration not applied) — ignore so DMs still work.
+          } else {
+            throw e;
+          }
+        }
+        return this.getChatDetail(chatId, userId);
+      } catch (e) {
+        lastErr = e;
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034') continue;
+        throw e;
+      }
+    }
+    throw lastErr;
   }
 
   async createGroup(userId: string, dto: CreateGroupDto) {
@@ -149,19 +189,36 @@ export class ChatsService {
       },
     });
 
-    const pinned = await this.prisma.pinnedChat.findMany({ where: { userId } });
+    const pinned = await this.prisma.pinnedChat.findMany({
+      where: { userId },
+      select: { chatId: true, sortOrder: true },
+    });
     const archived = await this.prisma.archivedChat.findMany({ where: { userId } });
+    let hidden: { chatId: string }[] = [];
+    try {
+      hidden = await this.prisma.hiddenChat.findMany({ where: { userId }, select: { chatId: true } });
+    } catch (e) {
+      // If the migration hasn't been applied yet, do not blank the entire chat list.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === 'P2021' || e.code === 'P2022')) {
+        hidden = [];
+      } else {
+        throw e;
+      }
+    }
     const muted = await this.prisma.muteSetting.findMany({ where: { userId } });
     const readStates = await this.prisma.readState.findMany({ where: { userId } });
 
     const pinSet = new Set(pinned.map((p) => p.chatId));
+    const pinOrder = new Map(pinned.map((p) => [p.chatId, p.sortOrder]));
     const archSet = new Set(archived.map((a) => a.chatId));
+    const hiddenSet = new Set(hidden.map((h) => h.chatId));
     const muteMap = new Map(muted.map((m) => [m.chatId, m.mutedUntil]));
     const readMap = new Map(readStates.map((r) => [r.chatId, r]));
 
     const items = [];
     for (const m of memberships) {
       const c = m.chat;
+      if (hiddenSet.has(c.id)) continue;
       const last = c.messages[0];
       const rs = readMap.get(c.id);
       const unread = await this.unreadCount(c.id, userId, rs?.lastReadMessageId ?? null);
@@ -193,12 +250,18 @@ export class ChatsService {
         isPinned: pinSet.has(c.id),
         isArchived: archSet.has(c.id),
         isMuted: muteMap.has(c.id),
+        pinOrder: pinOrder.get(c.id) ?? null,
         peer,
       });
     }
 
     items.sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+      if (a.isPinned && b.isPinned) {
+        const ao = a.pinOrder ?? 0;
+        const bo = b.pinOrder ?? 0;
+        if (ao !== bo) return ao - bo;
+      }
       return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
     });
 
@@ -228,6 +291,11 @@ export class ChatsService {
       include: {
         groupMeta: true,
         channelMeta: true,
+        pinnedMessage: {
+          include: {
+            sender: { select: { id: true, username: true, displayName: true } },
+          },
+        },
         members: {
           where: { leftAt: null },
           include: {
@@ -272,20 +340,82 @@ export class ChatsService {
         joinedAt: m.joinedAt,
         user: m.user,
       })),
+      pinnedMessage: chat.pinnedMessage
+        ? {
+            id: chat.pinnedMessage.id,
+            text: chat.pinnedMessage.deletedAt ? null : chat.pinnedMessage.text,
+            senderId: chat.pinnedMessage.senderId,
+            createdAt: chat.pinnedMessage.createdAt.toISOString(),
+            deletedAt: chat.pinnedMessage.deletedAt?.toISOString() ?? null,
+            sender: chat.pinnedMessage.sender
+              ? {
+                  id: chat.pinnedMessage.sender.id,
+                  username: chat.pinnedMessage.sender.username,
+                  displayName: chat.pinnedMessage.sender.displayName,
+                }
+              : null,
+          }
+        : null,
     };
+  }
+
+  async pinMessage(userId: string, chatId: string, messageId: string | null) {
+    await this.assertMember(chatId, userId);
+    if (messageId) {
+      const msg = await this.prisma.message.findFirst({
+        where: { id: messageId, chatId },
+        select: { id: true },
+      });
+      if (!msg) throw new BadRequestException('Invalid message');
+    }
+    await this.prisma.chat.update({
+      where: { id: chatId },
+      data: {
+        pinnedMessageId: messageId,
+        pinnedByUserId: messageId ? userId : null,
+        pinnedAt: messageId ? new Date() : null,
+      },
+    });
+    return { ok: true, pinnedMessageId: messageId };
   }
 
   async pin(userId: string, chatId: string, on: boolean) {
     await this.assertMember(chatId, userId);
     if (on) {
+      const max = await this.prisma.pinnedChat.aggregate({
+        where: { userId },
+        _max: { sortOrder: true },
+      });
+      const nextOrder = (max._max.sortOrder ?? -1) + 1;
       await this.prisma.pinnedChat.upsert({
         where: { userId_chatId: { userId, chatId } },
-        create: { userId, chatId },
-        update: {},
+        create: { userId, chatId, sortOrder: nextOrder },
+        update: { sortOrder: nextOrder },
       });
     } else {
       await this.prisma.pinnedChat.deleteMany({ where: { userId, chatId } });
     }
+    return { ok: true };
+  }
+
+  async reorderPinned(userId: string, chatIds: string[]) {
+    const uniq = [...new Set(chatIds)].filter(Boolean);
+    if (uniq.length === 0) return { ok: true };
+    // Ensure user is a member of each chat and it's pinned.
+    const pins = await this.prisma.pinnedChat.findMany({
+      where: { userId, chatId: { in: uniq } },
+      select: { chatId: true },
+    });
+    const pinnedSet = new Set(pins.map((p) => p.chatId));
+    const toUpdate = uniq.filter((id) => pinnedSet.has(id));
+    await this.prisma.$transaction(
+      toUpdate.map((id, idx) =>
+        this.prisma.pinnedChat.update({
+          where: { userId_chatId: { userId, chatId: id } },
+          data: { sortOrder: idx },
+        }),
+      ),
+    );
     return { ok: true };
   }
 
@@ -300,6 +430,21 @@ export class ChatsService {
     } else {
       await this.prisma.archivedChat.deleteMany({ where: { userId, chatId } });
     }
+    return { ok: true };
+  }
+
+  /** Hide chat from this user's list only; chat and messages remain; other members unaffected. */
+  async hideFromList(userId: string, chatId: string) {
+    await this.assertMember(chatId, userId);
+    await this.prisma.$transaction([
+      this.prisma.hiddenChat.upsert({
+        where: { userId_chatId: { userId, chatId } },
+        create: { userId, chatId },
+        update: {},
+      }),
+      this.prisma.pinnedChat.deleteMany({ where: { userId, chatId } }),
+      this.prisma.archivedChat.deleteMany({ where: { userId, chatId } }),
+    ]);
     return { ok: true };
   }
 

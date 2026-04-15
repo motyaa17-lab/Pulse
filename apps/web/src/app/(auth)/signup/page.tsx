@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { apiFetch } from '@/lib/api';
+import { ApiError, API_URL, apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { motion } from 'framer-motion';
 
@@ -52,8 +52,18 @@ export default function SignupPage() {
       });
       setTokens(res);
       router.replace('/onboarding');
-    } catch {
-      setError('root', { message: 'Could not create account. Try a different email or username.' });
+    } catch (e) {
+      // Surface the real failure in dev (status/message), instead of a generic banner.
+      // This also makes it obvious when the API server isn't reachable.
+      // eslint-disable-next-line no-console
+      console.error('Signup failed', e);
+
+      const message =
+        e instanceof ApiError
+          ? `${e.message} (HTTP ${e.status})`
+          : `Could not reach API server at ${API_URL}`;
+
+      setError('root', { message });
     }
   };
 

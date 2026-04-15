@@ -9,10 +9,12 @@ import { apiFetch } from '@/lib/api';
 export default function OnboardingPage() {
   const router = useRouter();
   const token = useAuthStore((s) => s.accessToken);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!token) router.replace('/login');
-  }, [token, router]);
+  }, [hasHydrated, token, router]);
 
   const finish = () => router.replace('/chats');
 

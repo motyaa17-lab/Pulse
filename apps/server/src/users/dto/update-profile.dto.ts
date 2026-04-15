@@ -22,4 +22,10 @@ export class UpdateProfileDto {
   @MaxLength(32)
   @Matches(/^[a-z0-9_]+$/i)
   username?: string;
+
+  @ApiPropertyOptional({ description: 'Public avatar URL (from /media/upload)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  avatarUrl?: string | null;
 }

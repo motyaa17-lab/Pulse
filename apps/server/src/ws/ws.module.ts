@@ -5,6 +5,7 @@ import { AppGateway } from './ws.gateway';
 import { WsService } from './ws.service';
 import { ChatsModule } from '../chats/chats.module';
 import { MessagesModule } from '../messages/messages.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MessagesModule } from '../messages/messages.module';
     }),
     ChatsModule,
     forwardRef(() => MessagesModule),
+    UsersModule,
   ],
   providers: [WsService, AppGateway],
   exports: [WsService],

@@ -1,3 +1,5 @@
+// Use a normal direct Postgres URL (`postgresql://...`). Do not run `prisma generate --no-engine`:
+// that embeds `copyEngine: false` and Prisma then expects `prisma://` / `prisma+postgres://` (Accelerate / Data Proxy style).
 generator client {
   provider = "prisma-client-js"
 }
@@ -42,17 +44,20 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  sessions             Session[]
-  chatMembers          ChatMember[]
-  sentMessages         Message[]         @relation("MessageSender")
-  reactions            MessageReaction[]
-  pinnedChats          PinnedChat[]
-  archivedChats        ArchivedChat[]
-  muteSettings         MuteSetting[]
-  readStates           ReadState[]
-  notificationPrefs    NotificationPreference?
-  forwardedMessages    Message[]         @relation("ForwardedFromUser")
-  createdChats         Chat[]            @relation("ChatCreator")
+  sessions          Session[]
+  chatMembers       ChatMember[]
+  sentMessages      Message[]               @relation("MessageSender")
+  reactions         MessageReaction[]
+  pinnedChats       PinnedChat[]
+  archivedChats     ArchivedChat[]
+  hiddenChats       HiddenChat[]
+  muteSettings      MuteSetting[]
+  readStates        ReadState[]
+  notificationPrefs NotificationPreference?
+  forwardedMessages Message[]               @relation("ForwardedFromUser")
+  createdChats      Chat[]                  @relation("ChatCreator")
+
+  pinnedChatsMessages Chat[] @relation("ChatPinnedByUser")
 }
 
 model Session {
@@ -70,13 +75,13 @@ model Session {
 }
 
 model NotificationPreference {
-  id                    String  @id @default(cuid())
-  userId                String  @unique
-  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  soundEnabled          Boolean @default(true)
-  desktopEnabled        Boolean @default(false)
-  showPreview           Boolean @default(true)
-  mentionOnlyInChannels Boolean @default(false)
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  soundEnabled          Boolean  @default(true)
+  desktopEnabled        Boolean  @default(false)
+  showPreview           Boolean  @default(true)
+  mentionOnlyInChannels Boolean  @default(false)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
@@ -92,70 +97,80 @@ model Chat {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members      ChatMember[]
-  messages     Message[]
-  groupMeta    GroupMetadata?
-  channelMeta  ChannelMetadata?
-  pinnedBy     PinnedChat[]
-  archivedBy   ArchivedChat[]
-  mutedBy      MuteSetting[]
-  readStates   ReadState[]
+  // MVP: one pinned message per chat (shared for all members).
+  pinnedMessageId String?   @unique
+  pinnedMessage   Message?  @relation("ChatPinnedMessage", fields: [pinnedMessageId], references: [id], onDelete: SetNull)
+  pinnedByUserId  String?
+  pinnedByUser    User?     @relation("ChatPinnedByUser", fields: [pinnedByUserId], references: [id], onDelete: SetNull)
+  pinnedAt        DateTime?
+
+  members     ChatMember[]
+  messages    Message[]
+  groupMeta   GroupMetadata?
+  channelMeta ChannelMetadata?
+  pinnedBy    PinnedChat[]
+  archivedBy  ArchivedChat[]
+  hiddenBy    HiddenChat[]
+  mutedBy     MuteSetting[]
+  readStates  ReadState[]
 
   @@index([type, updatedAt])
 }
 
 model GroupMetadata {
-  id          String @id @default(cuid())
-  chatId      String @unique
-  chat        Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  id          String  @id @default(cuid())
+  chatId      String  @unique
+  chat        Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
   description String?
 }
 
 model ChannelMetadata {
-  id          String @id @default(cuid())
-  chatId      String @unique
-  chat        Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  id          String  @id @default(cuid())
+  chatId      String  @unique
+  chat        Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
   description String?
   handle      String? @unique
 }
 
 model ChatMember {
-  id         String     @id @default(cuid())
-  chatId     String
-  chat       Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role       MemberRole @default(MEMBER)
-  joinedAt   DateTime   @default(now())
-  leftAt     DateTime?
+  id       String     @id @default(cuid())
+  chatId   String
+  chat     Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     MemberRole @default(MEMBER)
+  joinedAt DateTime   @default(now())
+  leftAt   DateTime?
 
   @@index([chatId, userId])
   @@index([userId, leftAt])
 }
 
 model Message {
-  id                       String      @id @default(cuid())
-  chatId                   String
-  chat                     Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  senderId                 String?
-  sender                   User?       @relation("MessageSender", fields: [senderId], references: [id])
-  type                     MessageType @default(TEXT)
-  text                     String?
-  clientTempId             String?
-  replyToMessageId         String?
-  replyTo                  Message?    @relation("MessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull)
-  replies                  Message[]   @relation("MessageReply")
-  forwardedFromMessageId   String?
-  forwardedFrom            Message?    @relation("MessageForward", fields: [forwardedFromMessageId], references: [id], onDelete: SetNull)
-  forwards                 Message[]   @relation("MessageForward")
-  forwardedFromUserId      String?
-  forwardedFromUser        User?       @relation("ForwardedFromUser", fields: [forwardedFromUserId], references: [id])
-  editedAt                 DateTime?
-  deletedAt                DateTime?
-  createdAt                DateTime    @default(now())
+  id                     String      @id @default(cuid())
+  chatId                 String
+  chat                   Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId               String?
+  sender                 User?       @relation("MessageSender", fields: [senderId], references: [id])
+  type                   MessageType @default(TEXT)
+  text                   String?
+  clientTempId           String?
+  replyToMessageId       String?
+  replyTo                Message?    @relation("MessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies                Message[]   @relation("MessageReply")
+  forwardedFromMessageId String?
+  forwardedFrom          Message?    @relation("MessageForward", fields: [forwardedFromMessageId], references: [id], onDelete: SetNull)
+  forwards               Message[]   @relation("MessageForward")
+  forwardedFromUserId    String?
+  forwardedFromUser      User?       @relation("ForwardedFromUser", fields: [forwardedFromUserId], references: [id])
+  editedAt               DateTime?
+  deletedAt              DateTime?
+  createdAt              DateTime    @default(now())
 
   attachments MessageAttachment[]
   reactions   MessageReaction[]
+
+  pinnedInChat Chat? @relation("ChatPinnedMessage")
 
   @@index([chatId, createdAt(sort: Desc)])
   @@index([senderId])
@@ -192,14 +207,14 @@ model MessageReaction {
 }
 
 model ReadState {
-  id                  String   @id @default(cuid())
-  chatId              String
-  chat                Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  userId              String
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lastReadMessageId   String?
-  lastReadAt          DateTime?
-  lastDeliveredMsgId  String?
+  id                 String    @id @default(cuid())
+  chatId             String
+  chat               Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadMessageId  String?
+  lastReadAt         DateTime?
+  lastDeliveredMsgId String?
 
   @@unique([chatId, userId])
 }
@@ -210,6 +225,7 @@ model PinnedChat {
   chatId   String
   chat     Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   pinnedAt DateTime @default(now())
+  sortOrder Int      @default(0)
 
   @@id([userId, chatId])
 }
@@ -224,12 +240,25 @@ model ArchivedChat {
   @@id([userId, chatId])
 }
 
+/**
+ * Per-user: chat stays in DB and other members unaffected; only removed from this user's list.
+ */
+model HiddenChat {
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatId   String
+  chat     Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  hiddenAt DateTime @default(now())
+
+  @@id([userId, chatId])
+}
+
 model MuteSetting {
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chatId      String
-  chat        Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  mutedUntil  DateTime?
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatId     String
+  chat       Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  mutedUntil DateTime?
 
   @@id([userId, chatId])
 }

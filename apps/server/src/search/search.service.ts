@@ -5,6 +5,19 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SearchService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private messageSnippet(text: string, needle: string): string {
+    const hay = text;
+    const i = hay.toLowerCase().indexOf(needle.toLowerCase());
+    if (i < 0) return hay.slice(0, 180);
+    const before = 48;
+    const after = 110;
+    const start = Math.max(0, i - before);
+    const end = Math.min(hay.length, i + needle.length + after);
+    const prefix = start > 0 ? '…' : '';
+    const suffix = end < hay.length ? '…' : '';
+    return `${prefix}${hay.slice(start, end)}${suffix}`;
+  }
+
   async search(userId: string, q: string) {
     const query = q.trim();
     if (query.length < 2) {
@@ -71,6 +84,7 @@ export class SearchService {
       messages: messages.map((m) => ({
         ...m,
         createdAt: m.createdAt.toISOString(),
+        snippet: m.text ? this.messageSnippet(m.text, query) : '',
       })),
     };
   }
