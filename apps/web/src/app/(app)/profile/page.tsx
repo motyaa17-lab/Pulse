@@ -25,7 +25,7 @@ export default function MyProfilePage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
-    if (!me) return null;
+    if (!me) return;
     setDisplayName(me.displayName ?? '');
     setUsername(me.username ?? '');
     setBio(me.bio ?? '');
@@ -33,9 +33,10 @@ export default function MyProfilePage() {
   }, [me?.id, me?.avatarUrl, me?.bio, me?.displayName, me?.username]);
 
   const patchMe = useMutation({
-    mutationFn: (body: Partial<Pick<MeUserDto, 'displayName' | 'username' | 'bio' | 'avatarUrl'>>) =>
-      apiFetch<MeUserDto>('/users/me', { method: 'PATCH', body }),
-    onSuccess: (updated) => {
+    mutationFn: (
+      body: Partial<Pick<MeUserDto, 'displayName' | 'username' | 'bio' | 'avatarUrl'>>,
+    ) => apiFetch<MeUserDto>('/users/me', { method: 'PATCH', body }),
+    onSuccess: (updated: MeUserDto) => {
       qc.setQueryData(['me'], updated);
     },
   });
@@ -51,7 +52,7 @@ export default function MyProfilePage() {
           avatarUrl,
         },
       }),
-    onSuccess: (updated) => {
+    onSuccess: (updated: MeUserDto) => {
       qc.setQueryData(['me'], updated);
     },
   });
@@ -104,7 +105,11 @@ export default function MyProfilePage() {
           <div className="relative h-14 w-14 shrink-0">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-1 ring-line/45" />
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-14 w-14 rounded-full object-cover ring-1 ring-line/45"
+              />
             ) : (
               <div
                 className={cn(
@@ -156,7 +161,9 @@ export default function MyProfilePage() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Username</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+              Username
+            </label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -167,7 +174,9 @@ export default function MyProfilePage() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Bio / About</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+              Bio / About
+            </label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
@@ -199,4 +208,3 @@ export default function MyProfilePage() {
     </div>
   );
 }
-

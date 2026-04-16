@@ -54,9 +54,10 @@ export function ChatSidebar() {
   const hideChat = useMutation({
     mutationFn: (chatId: string) =>
       apiFetch<{ ok: boolean }>(`/chats/${chatId}/hide-from-list`, { method: 'POST' }),
-    onSuccess: (_, chatId) => {
-      qc.setQueriesData<ChatListItem[]>({ queryKey: ['chats'] }, (old) =>
-        old ? old.filter((c) => c.id !== chatId) : old,
+    onSuccess: (_res: { ok: boolean }, chatId: string) => {
+      qc.setQueriesData<ChatListItem[]>(
+        { queryKey: ['chats'] },
+        (old: ChatListItem[] | undefined) => (old ? old.filter((c) => c.id !== chatId) : old),
       );
       setOpenMenuId(null);
       if (pathname === `/chats/${chatId}`) router.replace('/chats');
@@ -66,35 +67,39 @@ export function ChatSidebar() {
   const pinChat = useMutation({
     mutationFn: ({ chatId, on }: { chatId: string; on: boolean }) =>
       apiFetch<{ ok: boolean }>(`/chats/${chatId}/pin`, { method: 'POST', body: { on } }),
-    onSuccess: (_res, vars) => {
-      qc.setQueriesData<ChatListItem[]>({ queryKey: ['chats'] }, (old) => {
-        if (!old) return old;
-        const next = old.map((c) => (c.id === vars.chatId ? { ...c, isPinned: vars.on } : c));
-        // Keep ordering consistent with server: pinned first, then by lastMessageAt desc.
-        next.sort((a, b) => {
-          if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-          return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
-        });
-        return next;
-      });
+    onSuccess: (_res: { ok: boolean }, vars: { chatId: string; on: boolean }) => {
+      qc.setQueriesData<ChatListItem[]>(
+        { queryKey: ['chats'] },
+        (old: ChatListItem[] | undefined) => {
+          if (!old) return old;
+          const next = old.map((c) => (c.id === vars.chatId ? { ...c, isPinned: vars.on } : c));
+          // Keep ordering consistent with server: pinned first, then by lastMessageAt desc.
+          next.sort((a, b) => {
+            if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+            return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+          });
+          return next;
+        },
+      );
     },
   });
 
   const archiveChat = useMutation({
     mutationFn: ({ chatId, on }: { chatId: string; on: boolean }) =>
       apiFetch<{ ok: boolean }>(`/chats/${chatId}/archive`, { method: 'POST', body: { on } }),
-    onSuccess: (_res, vars) => {
-      qc.setQueriesData<ChatListItem[]>({ queryKey: ['chats'] }, (old) => {
-        if (!old) return old;
-        const next = old.map((c) =>
-          c.id === vars.chatId ? { ...c, isArchived: vars.on } : c,
-        );
-        next.sort((a, b) => {
-          if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-          return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
-        });
-        return next;
-      });
+    onSuccess: (_res: { ok: boolean }, vars: { chatId: string; on: boolean }) => {
+      qc.setQueriesData<ChatListItem[]>(
+        { queryKey: ['chats'] },
+        (old: ChatListItem[] | undefined) => {
+          if (!old) return old;
+          const next = old.map((c) => (c.id === vars.chatId ? { ...c, isArchived: vars.on } : c));
+          next.sort((a, b) => {
+            if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+            return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+          });
+          return next;
+        },
+      );
       setOpenMenuId(null);
     },
   });
@@ -108,11 +113,14 @@ export function ChatSidebar() {
           until: on ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
         },
       }),
-    onSuccess: (_res, vars) => {
-      qc.setQueriesData<ChatListItem[]>({ queryKey: ['chats'] }, (old) => {
-        if (!old) return old;
-        return old.map((c) => (c.id === vars.chatId ? { ...c, isMuted: vars.on } : c));
-      });
+    onSuccess: (_res: { ok: boolean }, vars: { chatId: string; on: boolean }) => {
+      qc.setQueriesData<ChatListItem[]>(
+        { queryKey: ['chats'] },
+        (old: ChatListItem[] | undefined) => {
+          if (!old) return old;
+          return old.map((c) => (c.id === vars.chatId ? { ...c, isMuted: vars.on } : c));
+        },
+      );
       setOpenMenuId(null);
     },
   });
@@ -140,7 +148,9 @@ export function ChatSidebar() {
     <aside className="flex h-full min-h-0 w-full flex-col border-r border-line/80 bg-sidebar dark:border-line/60">
       <div className="border-b border-line/70 px-2.5 pb-2 pt-2 dark:border-line/45">
         <div className="mb-1.5 flex items-center gap-2 px-0.5">
-          <div className="font-display text-[0.98rem] font-semibold tracking-tight text-ink">Pulse</div>
+          <div className="font-display text-[0.98rem] font-semibold tracking-tight text-ink">
+            Pulse
+          </div>
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
@@ -162,10 +172,7 @@ export function ChatSidebar() {
         {isLoading && (
           <div className="space-y-0.5 px-0.5">
             {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 rounded-md px-1.5 py-1"
-              >
+              <div key={i} className="flex items-center gap-2 rounded-md px-1.5 py-1">
                 <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface-muted dark:bg-surface-elevated/80" />
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="h-3.5 w-2/3 animate-pulse rounded bg-surface-muted dark:bg-surface-elevated/80" />
@@ -183,15 +190,18 @@ export function ChatSidebar() {
             <Reorder.Group
               axis="y"
               values={pinned}
-              onReorder={(next) => {
+              onReorder={(next: ChatListItem[]) => {
                 // Optimistically reorder locally in cache.
-                qc.setQueriesData<ChatListItem[]>({ queryKey: ['chats'] }, (old) => {
-                  if (!old) return old;
-                  const pinnedIds = new Set(next.map((x) => x.id));
-                  const nextPinned = next.map((x, idx) => ({ ...x, pinOrder: idx }));
-                  const rest = old.filter((c) => !pinnedIds.has(c.id));
-                  return [...nextPinned, ...rest];
-                });
+                qc.setQueriesData<ChatListItem[]>(
+                  { queryKey: ['chats'] },
+                  (old: ChatListItem[] | undefined) => {
+                    if (!old) return old;
+                    const pinnedIds = new Set(next.map((x) => x.id));
+                    const nextPinned = next.map((x, idx) => ({ ...x, pinOrder: idx }));
+                    const rest = old.filter((c) => !pinnedIds.has(c.id));
+                    return [...nextPinned, ...rest];
+                  },
+                );
                 void reorderPinned.mutateAsync(next.map((x) => x.id)).catch(() => void 0);
               }}
               className="space-y-px"
@@ -435,41 +445,41 @@ function ChatRow({
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
-                type="button"
-                role="menuitem"
-                disabled={pinPending}
-                className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
-                onClick={() => onPinToggle(!chat.isPinned)}
-              >
-                {chat.isPinned ? t('unpin') : t('pin')}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                disabled={archivePending}
-                className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
-                onClick={() => onArchiveToggle(!chat.isArchived)}
-              >
-                {chat.isArchived ? t('unarchive') : t('archive')}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                disabled={mutePending}
-                className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
-                onClick={() => onMuteToggle(!chat.isMuted)}
-              >
-                {chat.isMuted ? t('unmute') : t('mute')}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                disabled={hidePending}
-                className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
-                onClick={() => confirmHide()}
-              >
-                {t('hideChat')}
-              </button>
+                  type="button"
+                  role="menuitem"
+                  disabled={pinPending}
+                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  onClick={() => onPinToggle(!chat.isPinned)}
+                >
+                  {chat.isPinned ? t('unpin') : t('pin')}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={archivePending}
+                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  onClick={() => onArchiveToggle(!chat.isArchived)}
+                >
+                  {chat.isArchived ? t('unarchive') : t('archive')}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={mutePending}
+                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  onClick={() => onMuteToggle(!chat.isMuted)}
+                >
+                  {chat.isMuted ? t('unmute') : t('mute')}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={hidePending}
+                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  onClick={() => confirmHide()}
+                >
+                  {t('hideChat')}
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

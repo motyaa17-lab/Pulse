@@ -162,12 +162,15 @@ export function Composer({
         deliveryStatus: 'SENDING',
       };
 
-      qc.setQueryData<MessagesQueryData>(['messages', chatId], (old: MessagesQueryData | undefined) => {
-        if (!old) {
-          return { items: [optimistic], nextCursor: null };
-        }
-        return { ...old, items: [...old.items, optimistic] };
-      });
+      qc.setQueryData<MessagesQueryData>(
+        ['messages', chatId],
+        (old: MessagesQueryData | undefined) => {
+          if (!old) {
+            return { items: [optimistic], nextCursor: null };
+          }
+          return { ...old, items: [...old.items, optimistic] };
+        },
+      );
 
       return { prev, tempId };
     },
@@ -176,17 +179,24 @@ export function Composer({
         qc.setQueryData(['messages', chatId], ctx.prev);
       }
     },
-    onSuccess: (serverMsg: MessageDto | null, _vars: SendVars, ctx: SendMutationCtx | undefined) => {
+    onSuccess: (
+      serverMsg: MessageDto | null,
+      _vars: SendVars,
+      ctx: SendMutationCtx | undefined,
+    ) => {
       if (serverMsg) {
-        qc.setQueryData<MessagesQueryData>(['messages', chatId], (old: MessagesQueryData | undefined) => {
-          if (!old) {
-            return { items: [serverMsg], nextCursor: null };
-          }
-          const withoutThisTemp = old.items.filter((m: MessageDto) => m.id !== ctx?.tempId);
-          const hasId = withoutThisTemp.some((m: MessageDto) => m.id === serverMsg.id);
-          const merged = hasId ? withoutThisTemp : [...withoutThisTemp, serverMsg];
-          return { ...old, items: merged };
-        });
+        qc.setQueryData<MessagesQueryData>(
+          ['messages', chatId],
+          (old: MessagesQueryData | undefined) => {
+            if (!old) {
+              return { items: [serverMsg], nextCursor: null };
+            }
+            const withoutThisTemp = old.items.filter((m: MessageDto) => m.id !== ctx?.tempId);
+            const hasId = withoutThisTemp.some((m: MessageDto) => m.id === serverMsg.id);
+            const merged = hasId ? withoutThisTemp : [...withoutThisTemp, serverMsg];
+            return { ...old, items: merged };
+          },
+        );
         const preview = serverMsg.text?.trim() ? serverMsg.text.slice(0, 160) : '[Media]';
         bumpChatListPreview(qc, chatId, preview, serverMsg.createdAt);
       }
@@ -197,33 +207,45 @@ export function Composer({
   });
 
   const edit = useMutation<MessageDto, Error, { text: string; messageId: string }>({
-    mutationFn: async (vars) => {
+    mutationFn: async (vars: { text: string; messageId: string }) => {
       return apiFetch<MessageDto>(`/chats/${chatId}/messages/${vars.messageId}`, {
         method: 'PATCH',
         body: { text: vars.text },
       });
     },
-    onMutate: async (vars) => {
+    onMutate: async (vars: { text: string; messageId: string }) => {
       const prev = qc.getQueryData<MessagesQueryData>(['messages', chatId]);
-      qc.setQueryData<MessagesQueryData>(['messages', chatId], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((m) =>
-            m.id === vars.messageId ? { ...m, text: vars.text, editedAt: new Date().toISOString() } : m,
-          ),
-        };
-      });
+      qc.setQueryData<MessagesQueryData>(
+        ['messages', chatId],
+        (old: MessagesQueryData | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((m) =>
+              m.id === vars.messageId
+                ? { ...m, text: vars.text, editedAt: new Date().toISOString() }
+                : m,
+            ),
+          };
+        },
+      );
       return { prev } as { prev: MessagesQueryData | undefined };
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (
+      _err: Error,
+      _vars: { text: string; messageId: string },
+      ctx: { prev: MessagesQueryData | undefined } | undefined,
+    ) => {
       if (ctx?.prev) qc.setQueryData(['messages', chatId], ctx.prev);
     },
-    onSuccess: (updated) => {
-      qc.setQueryData<MessagesQueryData>(['messages', chatId], (old) => {
-        if (!old) return old;
-        return { ...old, items: old.items.map((m) => (m.id === updated.id ? updated : m)) };
-      });
+    onSuccess: (updated: MessageDto) => {
+      qc.setQueryData<MessagesQueryData>(
+        ['messages', chatId],
+        (old: MessagesQueryData | undefined) => {
+          if (!old) return old;
+          return { ...old, items: old.items.map((m) => (m.id === updated.id ? updated : m)) };
+        },
+      );
       const preview = updated.text?.trim() ? updated.text.slice(0, 160) : '[Media]';
       bumpChatListPreview(qc, chatId, preview, updated.createdAt);
     },
@@ -263,7 +285,19 @@ export function Composer({
     setUiSending(true);
     window.setTimeout(() => setUiSending(false), 250);
     send.mutate({ text: bodyText, replyTo, attachments: attachmentInputs });
-  }, [chatId, clearDraft, clearPending, edit, editing, onCancelEdit, onCancelReply, pending, replyTo, send, text]);
+  }, [
+    chatId,
+    clearDraft,
+    clearPending,
+    edit,
+    editing,
+    onCancelEdit,
+    onCancelReply,
+    pending,
+    replyTo,
+    send,
+    text,
+  ]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -297,7 +331,9 @@ export function Composer({
             <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-400">
               Editing
             </p>
-            <p className="truncate text-[12.5px] leading-snug text-ink">{editing.text || 'Message'}</p>
+            <p className="truncate text-[12.5px] leading-snug text-ink">
+              {editing.text || 'Message'}
+            </p>
           </div>
           <button
             type="button"
@@ -309,7 +345,12 @@ export function Composer({
             aria-label="Cancel edit"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -318,7 +359,9 @@ export function Composer({
         <div className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35">
           <div className="min-w-0 flex-1 border-l-2 border-accent/55 pl-2">
             <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-accent">Reply</p>
-            <p className="truncate text-[12.5px] leading-snug text-ink">{replyTo.text || 'Attachment'}</p>
+            <p className="truncate text-[12.5px] leading-snug text-ink">
+              {replyTo.text || 'Attachment'}
+            </p>
           </div>
           <button
             type="button"
@@ -346,7 +389,11 @@ export function Composer({
             >
               {p.kind === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.url} alt="" className="h-9 w-9 rounded-lg object-cover ring-1 ring-line/45 dark:ring-line/35" />
+                <img
+                  src={p.url}
+                  alt=""
+                  className="h-9 w-9 rounded-lg object-cover ring-1 ring-line/45 dark:ring-line/35"
+                />
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated/70 text-xs font-semibold text-ink-muted ring-1 ring-line/45 dark:bg-surface-elevated/40 dark:ring-line/35">
                   {p.kind === 'video' ? 'VID' : 'FILE'}
@@ -354,7 +401,9 @@ export function Composer({
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12.5px] font-medium text-ink">{p.fileName}</p>
-                <p className="text-[11px] text-ink-muted">{Math.max(1, Math.round(p.sizeBytes / 1024))} KB</p>
+                <p className="text-[11px] text-ink-muted">
+                  {Math.max(1, Math.round(p.sizeBytes / 1024))} KB
+                </p>
               </div>
               <button
                 type="button"
@@ -363,7 +412,12 @@ export function Composer({
                 aria-label="Remove attachment"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -473,7 +527,9 @@ export function Composer({
         </button>
       </div>
       <p className="mt-1 px-1 text-center text-[0.625rem] text-ink-muted/75">
-        <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">Enter</kbd>{' '}
+        <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
+          Enter
+        </kbd>{' '}
         to send ·{' '}
         <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
           Shift+Enter

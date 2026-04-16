@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "files": [
+    "../../../../node_modules/next/dist/pages/_app.js",
+    "../../../../node_modules/react/cjs/react-jsx-runtime.development.js",
+    "../../../../node_modules/react/cjs/react-jsx-runtime.production.js",
+    "../../../../node_modules/react/cjs/react.development.js",
+    "../../../../node_modules/react/cjs/react.production.js",
+    "../../../../node_modules/react/index.js",
+    "../../../../node_modules/react/jsx-runtime.js",
+    "../../../../node_modules/react/package.json",
+    "../../../../package.json",
+    "../../package.json",
+    "../chunks/135.js",
+    "../chunks/263.js",
+    "../chunks/296.js",
+    "../chunks/33.js",
+    "../chunks/383.js",
+    "../chunks/476.js",
+    "../chunks/627.js",
+    "../chunks/840.js",
+    "../chunks/914.js",
+    "../webpack-runtime.js"
+  ]
+}
