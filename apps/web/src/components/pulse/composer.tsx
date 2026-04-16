@@ -236,7 +236,7 @@ export function Composer({
       );
       return { prev } as { prev: MessagesQueryData | undefined };
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (_err, _vars, ctx: any) => {
       if (ctx?.prev) qc.setQueryData(['messages', chatId], ctx.prev);
     },
     onSuccess: (updated: MessageDto) => {
