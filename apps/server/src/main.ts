@@ -14,6 +14,14 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   app.use(cookieParser());
+
+  // Fast liveness endpoints that bypass Nest routing/guards and do not touch external deps.
+  const http = app.getHttpAdapter().getInstance() as {
+    get: (path: string, handler: (req: unknown, res: { json: (body: unknown) => void }) => void) => void;
+  };
+  http.get('/', (_req, res) => res.json({ ok: true, service: 'pulse-api' }));
+  http.get('/health', (_req, res) => res.json({ ok: true }));
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -43,8 +51,8 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   const port = Number(process.env.PORT ?? 4000);
-  await app.listen(port);
-  logger.log(`HTTP + WS listening on ${port}`);
+  await app.listen(port, '0.0.0.0');
+  logger.log(`HTTP + WS listening on 0.0.0.0:${port}`);
 }
 
 bootstrap();

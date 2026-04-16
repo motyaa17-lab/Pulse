@@ -1,7 +1,0 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/(app)/settings/page": "app/(app)/settings/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(app)/chats/page": "app/(app)/chats/page.js",
-  "/(app)/chats/[chatId]/page": "app/(app)/chats/[chatId]/page.js"
-}

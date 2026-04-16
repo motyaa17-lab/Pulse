@@ -2,10 +2,15 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('health')
-@Controller('health')
+@Controller()
 export class HealthController {
-  @Get()
-  ok() {
-    return { status: 'ok', service: 'pulse-server' };
+  @Get('/')
+  root() {
+    return { ok: true, service: 'pulse-api' };
+  }
+
+  @Get('/health')
+  health() {
+    return { ok: true };
   }
 }
