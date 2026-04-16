@@ -10,7 +10,7 @@
     "build": "npm run build -w @pulse/types && npm run build -w @pulse/server && npm run build -w @pulse/web",
     "lint": "npm run lint -w @pulse/server && npm run lint -w @pulse/web",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "db:generate": "npm run prisma:generate -w @pulse/server",
     "db:migrate": "npm run prisma:migrate -w @pulse/server",
     "db:seed": "npm run prisma:seed -w @pulse/server",
