@@ -174,7 +174,7 @@ export function Composer({
 
       return { prev, tempId };
     },
-    onError: (_err: Error, _vars: void, ctx: SendMutationCtx | undefined) => {
+    onError: (_err: Error, _vars: SendVars, ctx: SendMutationCtx | undefined) => {
       if (ctx?.prev !== undefined) {
         qc.setQueryData(['messages', chatId], ctx.prev);
       }

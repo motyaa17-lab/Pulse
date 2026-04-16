@@ -177,6 +177,12 @@ globalThis.__RSC_MANIFEST['/(app)/profile/page'] = {
       ],
       async: false,
     },
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\sessions\\page.tsx': {
+      id: 156,
+      name: '*',
+      chunks: [],
+      async: false,
+    },
     'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\profile\\page.tsx': {
       id: 462,
       name: '*',
@@ -200,26 +206,8 @@ globalThis.__RSC_MANIFEST['/(app)/profile/page'] = {
       chunks: [],
       async: false,
     },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\sessions\\page.tsx': {
-      id: 156,
-      name: '*',
-      chunks: [],
-      async: false,
-    },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(auth)\\onboarding\\page.tsx': {
-      id: 5129,
-      name: '*',
-      chunks: [],
-      async: false,
-    },
     'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\users\\[userId]\\page.tsx': {
       id: 2398,
-      name: '*',
-      chunks: [],
-      async: false,
-    },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(auth)\\signup\\page.tsx': {
-      id: 3208,
       name: '*',
       chunks: [],
       async: false,
@@ -230,20 +218,32 @@ globalThis.__RSC_MANIFEST['/(app)/profile/page'] = {
       chunks: [],
       async: false,
     },
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(auth)\\onboarding\\page.tsx': {
+      id: 5129,
+      name: '*',
+      chunks: [],
+      async: false,
+    },
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(auth)\\signup\\page.tsx': {
+      id: 3208,
+      name: '*',
+      chunks: [],
+      async: false,
+    },
     'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\chats\\layout.tsx': {
       id: 9291,
       name: '*',
       chunks: [],
       async: false,
     },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\chats\\page.tsx': {
-      id: 5379,
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\chats\\[chatId]\\page.tsx': {
+      id: 9384,
       name: '*',
       chunks: [],
       async: false,
     },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\chats\\[chatId]\\page.tsx': {
-      id: 9384,
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\chats\\page.tsx': {
+      id: 5379,
       name: '*',
       chunks: [],
       async: false,
