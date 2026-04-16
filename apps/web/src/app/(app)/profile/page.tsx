@@ -23,6 +23,7 @@ export default function MyProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  //force redeploy
 
   useEffect(() => {
     if (!me) return;
