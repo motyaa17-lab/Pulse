@@ -177,32 +177,26 @@ globalThis.__RSC_MANIFEST['/(auth)/signup/page'] = {
       ],
       async: false,
     },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\sessions\\page.tsx': {
-      id: 156,
-      name: '*',
-      chunks: [],
-      async: false,
-    },
     'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\profile\\page.tsx': {
       id: 462,
       name: '*',
       chunks: [],
       async: false,
     },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(auth)\\login\\page.tsx': {
-      id: 533,
-      name: '*',
-      chunks: [],
-      async: false,
-    },
-    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\users\\[userId]\\page.tsx': {
-      id: 2398,
-      name: '*',
-      chunks: [],
-      async: false,
-    },
     'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\settings\\page.tsx': {
       id: 336,
+      name: '*',
+      chunks: [],
+      async: false,
+    },
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\sessions\\page.tsx': {
+      id: 156,
+      name: '*',
+      chunks: [],
+      async: false,
+    },
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(auth)\\login\\page.tsx': {
+      id: 533,
       name: '*',
       chunks: [],
       async: false,
@@ -226,6 +220,12 @@ globalThis.__RSC_MANIFEST['/(auth)/signup/page'] = {
         '271',
         'static/chunks/app/(auth)/signup/page-f3fe1e3d9b702cfe.js',
       ],
+      async: false,
+    },
+    'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\users\\[userId]\\page.tsx': {
+      id: 2398,
+      name: '*',
+      chunks: [],
       async: false,
     },
     'C:\\telegram-clone\\apps\\web\\src\\app\\(app)\\chats\\layout.tsx': {

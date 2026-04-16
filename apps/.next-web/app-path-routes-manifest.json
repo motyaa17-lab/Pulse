@@ -1,13 +1,13 @@
 {
   "/_not-found/page": "/_not-found",
   "/page": "/",
-  "/(app)/sessions/page": "/sessions",
   "/(app)/profile/page": "/profile",
-  "/(auth)/login/page": "/login",
-  "/(app)/users/[userId]/page": "/users/[userId]",
   "/(app)/settings/page": "/settings",
+  "/(app)/sessions/page": "/sessions",
+  "/(auth)/login/page": "/login",
   "/(auth)/onboarding/page": "/onboarding",
   "/(auth)/signup/page": "/signup",
+  "/(app)/users/[userId]/page": "/users/[userId]",
   "/(app)/chats/[chatId]/page": "/chats/[chatId]",
   "/(app)/chats/page": "/chats"
 }

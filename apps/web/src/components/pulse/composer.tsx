@@ -206,7 +206,12 @@ export function Composer({
     },
   });
 
-  const edit = useMutation<MessageDto, Error, { text: string; messageId: string }>({
+  const edit = useMutation<
+    MessageDto,
+    Error,
+    { text: string; messageId: string },
+    { prev: MessagesQueryData | undefined }
+  >({
     mutationFn: async (vars: { text: string; messageId: string }) => {
       return apiFetch<MessageDto>(`/chats/${chatId}/messages/${vars.messageId}`, {
         method: 'PATCH',
@@ -231,11 +236,7 @@ export function Composer({
       );
       return { prev } as { prev: MessagesQueryData | undefined };
     },
-    onError: (
-      _err: Error,
-      _vars: { text: string; messageId: string },
-      ctx: { prev: MessagesQueryData | undefined } | undefined,
-    ) => {
+    onError: (_err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(['messages', chatId], ctx.prev);
     },
     onSuccess: (updated: MessageDto) => {
