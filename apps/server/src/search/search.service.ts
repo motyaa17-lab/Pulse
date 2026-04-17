@@ -40,6 +40,7 @@ export class SearchService {
         avatarUrl: true,
         bio: true,
         lastSeenAt: true,
+        shareLastSeen: true,
       },
     });
 
@@ -77,10 +78,15 @@ export class SearchService {
     });
 
     return {
-      users: users.map((u) => ({
-        ...u,
-        lastSeenAt: u.lastSeenAt?.toISOString() ?? null,
-      })),
+      users: users.map((u) => {
+        const show = u.shareLastSeen;
+        const { shareLastSeen: _s, ...rest } = u;
+        return {
+          ...rest,
+          lastSeenAt: show ? (u.lastSeenAt?.toISOString() ?? null) : null,
+          lastSeenVisible: show,
+        };
+      }),
       chats,
       messages: messages.map((m) => ({
         ...m,

@@ -15,6 +15,8 @@ import { cn } from '@/lib/cn';
 import { connectSocket } from '@/lib/socket';
 import type { MeUserDto } from '@/lib/types';
 import { useT } from '@/lib/i18n';
+import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
+import { useLanguageStore } from '@/stores/language-store';
 
 function typeLabel(t: (k: any) => string, type: string | undefined): string {
   switch (type) {
@@ -41,6 +43,7 @@ export default function ChatPage() {
   const typing = useUiStore((s) => s.typingByChat?.[chatId] ?? false);
   const setTyping = useUiStore((s) => s.setTypingForChat);
   const t = useT();
+  const language = useLanguageStore((s) => s.language);
 
   useEffect(() => {
     setDetailsOpen(false);
@@ -58,11 +61,22 @@ export default function ChatPage() {
       const ids = (p.userIds ?? []).filter((id) => id && id !== myId);
       setTyping(chatId, ids.length > 0);
     };
+    const onPresence = (payload: unknown) => {
+      const p = payload as { userId?: string; online?: boolean };
+      const peer = qc.getQueryData<ChatDetailForDrawer>(['chat', chatId])?.peer;
+      if (!p?.userId || !peer?.id || p.userId !== peer.id) return;
+      qc.setQueryData<ChatDetailForDrawer | undefined>(['chat', chatId], (old) => {
+        if (!old?.peer || old.peer.id !== p.userId) return old;
+        return { ...old, peer: { ...old.peer, isOnline: Boolean(p.online) } };
+      });
+    };
     s.on('typing:update', onTyping);
+    s.on('presence:update', onPresence);
     return () => {
       s.off('connect', joinRoom);
       s.emit('chat:leave', { chatId });
       s.off('typing:update', onTyping);
+      s.off('presence:update', onPresence);
       setTyping(chatId, false);
     };
   }, [chatId, qc, setTyping]);
@@ -79,11 +93,7 @@ export default function ChatPage() {
   const peerId = chat?.type === 'DIRECT' ? chat?.peer?.id : null;
   const status =
     chat?.type === 'DIRECT' && chat?.peer
-      ? chat.peer.isOnline
-        ? t('online')
-        : chat.peer.lastSeenAt
-          ? t('lastSeenRecently')
-          : t('offline')
+      ? directChatPresenceSubtitle(chat.peer, t, language)
       : typeLabel(t as any, chat?.type);
   const statusText = typing && chat?.type === 'DIRECT' ? t('typing') : status;
   const initial = title.slice(0, 1).toUpperCase() || '?';

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ChatType, MemberRole, MessageType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PresenceService } from '../redis/presence.service';
 import { CreateDirectDto } from './dto/direct.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -14,7 +15,10 @@ import { AddMemberDto } from './dto/members.dto';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly presence: PresenceService,
+  ) {}
 
   async assertMember(chatId: string, userId: string) {
     const m = await this.prisma.chatMember.findFirst({
@@ -322,6 +326,7 @@ export class ChatsService {
                 displayName: true,
                 avatarUrl: true,
                 lastSeenAt: true,
+                shareLastSeen: true,
               },
             },
           },
@@ -330,12 +335,29 @@ export class ChatsService {
     });
     if (!chat) throw new NotFoundException();
 
+    const memberUsers = chat.members.map((m) => m.user);
+    const presenceIds = [...new Set(memberUsers.map((u) => u.id))];
+    const onlineMap = await this.presence.areUsersOnline(presenceIds);
+
+    const mapMemberUser = (u: (typeof memberUsers)[number]) => {
+      const showLast = u.id === userId || u.shareLastSeen;
+      return {
+        id: u.id,
+        username: u.username,
+        displayName: u.displayName,
+        avatarUrl: u.avatarUrl,
+        lastSeenAt: showLast && u.lastSeenAt ? u.lastSeenAt.toISOString() : null,
+        lastSeenVisible: showLast,
+        isOnline: Boolean(onlineMap[u.id]),
+      };
+    };
+
     let title = chat.title;
     let peer = null;
     if (chat.type === ChatType.DIRECT) {
       const other = chat.members.find((m) => m.userId !== userId)?.user;
       title = other?.displayName ?? other?.username ?? 'Direct';
-      peer = other ?? null;
+      peer = other ? mapMemberUser(other) : null;
     }
 
     const me = chat.members.find((m) => m.userId === userId);
@@ -354,7 +376,7 @@ export class ChatsService {
         userId: m.userId,
         role: m.role,
         joinedAt: m.joinedAt,
-        user: m.user,
+        user: mapMemberUser(m.user),
       })),
       pinnedMessage: chat.pinnedMessage
         ? {

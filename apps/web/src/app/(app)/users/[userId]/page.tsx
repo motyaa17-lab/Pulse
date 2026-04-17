@@ -5,26 +5,29 @@ import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, toPublicUrl } from '@/lib/api';
 import { useT, type I18nKey } from '@/lib/i18n';
+import { directChatPresenceSubtitle, type PresencePeer } from '@/lib/format-last-seen';
+import { useLanguageStore } from '@/stores/language-store';
 
-type PublicUserDto = {
+type PublicUserDto = PresencePeer & {
   id: string;
   username: string;
   displayName: string | null;
   bio: string | null;
   avatarUrl: string | null;
-  isOnline?: boolean;
-  lastSeenAt?: string | null;
 };
 
-function statusLabel(u: PublicUserDto | undefined, t: (k: I18nKey) => string): string {
+function statusLabel(
+  u: PublicUserDto | undefined,
+  t: (k: I18nKey) => string,
+  lang: 'ru' | 'en',
+): string {
   if (!u) return '';
-  if (u.isOnline) return t('online');
-  if (u.lastSeenAt) return t('lastSeenRecently');
-  return t('offline');
+  return directChatPresenceSubtitle(u, t, lang);
 }
 
 export default function UserProfilePage() {
   const t = useT();
+  const language = useLanguageStore((s) => s.language);
   const params = useParams<{ userId: string }>();
   const userId = params.userId;
 
@@ -70,7 +73,7 @@ export default function UserProfilePage() {
               @{user?.username ?? t('profileDash')}
             </p>
             <p className="mt-2 inline-flex rounded-full border border-line/70 bg-surface-muted/40 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-ink-muted dark:border-line/45 dark:bg-surface-muted/25">
-              {statusLabel(user, t)}
+              {statusLabel(user, t, language)}
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength, MinLength, Matches } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength, MinLength, Matches } from 'class-validator';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional()
@@ -28,4 +28,9 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(2000)
   avatarUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Whether other users can see your last seen time' })
+  @IsOptional()
+  @IsBoolean()
+  shareLastSeen?: boolean;
 }

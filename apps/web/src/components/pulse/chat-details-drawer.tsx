@@ -6,6 +6,8 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { toPublicUrl } from '@/lib/api';
 import { useT, type I18nKey } from '@/lib/i18n';
+import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
+import { useLanguageStore } from '@/stores/language-store';
 
 export type ChatDetailForDrawer = {
   id: string;
@@ -21,6 +23,7 @@ export type ChatDetailForDrawer = {
     avatarUrl: string | null;
     lastSeenAt?: string | null;
     isOnline?: boolean;
+    lastSeenVisible?: boolean;
   } | null;
   pinnedMessage?: {
     id: string;
@@ -77,6 +80,7 @@ export function ChatDetailsDrawer({
   chat: ChatDetailForDrawer | undefined;
 }) {
   const t = useT();
+  const language = useLanguageStore((s) => s.language);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -107,14 +111,7 @@ export function ChatDetailsDrawer({
   const avatarSrc = isDirect ? (chat?.peer?.avatarUrl ?? chat?.avatarUrl) : chat?.avatarUrl;
   const avatarPublicSrc = toPublicUrl(avatarSrc);
   const peerId = chat?.peer?.id;
-  const status =
-    isDirect && chat?.peer
-      ? chat.peer.isOnline
-        ? t('online')
-        : chat.peer.lastSeenAt
-          ? t('lastSeenRecently')
-          : t('offline')
-      : null;
+  const status = isDirect && chat?.peer ? directChatPresenceSubtitle(chat.peer, t, language) : null;
   const initial = displayName.slice(0, 1).toUpperCase() || '?';
 
   return createPortal(

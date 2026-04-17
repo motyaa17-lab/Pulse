@@ -61,6 +61,8 @@ export interface MeUserDto {
   avatarUrl: string | null;
   isOnline?: boolean;
   lastSeenAt?: string | null;
+  /** When false, other users do not see your last seen time. */
+  shareLastSeen?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -21,6 +21,7 @@ export class UsersService {
         bio: true,
         avatarUrl: true,
         lastSeenAt: true,
+        shareLastSeen: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -28,8 +29,14 @@ export class UsersService {
     if (!user) throw new NotFoundException();
     const online = await this.presence.isUserOnline(id);
     if (viewerId !== id) {
-      const { email: _e, ...publicUser } = user;
-      return { ...publicUser, isOnline: online };
+      const { email: _e, shareLastSeen, ...publicUser } = user;
+      const showSeen = shareLastSeen;
+      return {
+        ...publicUser,
+        lastSeenAt: showSeen ? user.lastSeenAt : null,
+        lastSeenVisible: showSeen,
+        isOnline: online,
+      };
     }
     return { ...user, isOnline: online };
   }
@@ -48,6 +55,7 @@ export class UsersService {
         bio: dto.bio,
         username: dto.username?.toLowerCase(),
         avatarUrl: dto.avatarUrl === undefined ? undefined : dto.avatarUrl,
+        shareLastSeen: dto.shareLastSeen === undefined ? undefined : dto.shareLastSeen,
       },
       select: {
         id: true,
@@ -57,6 +65,7 @@ export class UsersService {
         bio: true,
         avatarUrl: true,
         lastSeenAt: true,
+        shareLastSeen: true,
         createdAt: true,
         updatedAt: true,
       },

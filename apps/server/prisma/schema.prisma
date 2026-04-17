@@ -41,6 +41,8 @@ model User {
   bio          String?
   avatarUrl    String?
   lastSeenAt   DateTime?
+  /// When false, other users do not see this user's last seen time in API responses.
+  shareLastSeen Boolean  @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
