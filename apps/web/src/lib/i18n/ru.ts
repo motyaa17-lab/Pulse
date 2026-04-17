@@ -56,6 +56,8 @@ export const ru = {
   newChatAria: 'Новый чат',
   profileAria: 'Профиль',
   settingsAria: 'Настройки',
+  mainMenuAria: 'Открыть меню',
+  mainMenuSessions: 'Мои сессии',
   chatActionsAria: 'Действия с чатом',
   mobileOpenChatsAria: 'Открыть чаты',
   mutedTooltip: 'Без звука',

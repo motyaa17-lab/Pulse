@@ -62,6 +62,106 @@ function NavIcon({ active, children }: { active?: boolean; children: React.React
   );
 }
 
+function HamburgerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M5 7h14M5 12h14M5 17h14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function AppMenu({ pathname, variant }: { pathname: string | null; variant: 'header' | 'dock' }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const menuAbove = variant === 'dock';
+  const dockActive =
+    pathname === '/settings' || pathname === '/profile' || pathname === '/sessions';
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    const timer = window.setTimeout(() => window.addEventListener('click', close), 0);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('click', close);
+    };
+  }, [open]);
+
+  const btnClass =
+    variant === 'header'
+      ? cn(
+          'shrink-0 rounded-2xl border border-white/12 bg-white/8 p-2.5 text-white/85 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]',
+        )
+      : cn(
+          'grid h-11 w-11 place-items-center rounded-2xl bg-transparent transition',
+          dockActive
+            ? 'bg-white/14 text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]'
+            : 'text-white/70 hover:bg-white/8 hover:text-white',
+        );
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className={btnClass}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t('mainMenuAria')}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+      >
+        <HamburgerIcon />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className={cn(
+            'absolute z-50 min-w-[12.5rem] rounded-2xl border border-white/12 bg-[#0B1020]/92 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]',
+            menuAbove ? 'bottom-full left-0 mb-2' : 'left-0 top-full mt-2',
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Link
+            href="/settings"
+            role="menuitem"
+            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
+            onClick={() => setOpen(false)}
+          >
+            {t('settings')}
+          </Link>
+          <Link
+            href="/profile"
+            role="menuitem"
+            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
+            onClick={() => setOpen(false)}
+          >
+            {t('myProfile')}
+          </Link>
+          <Link
+            href="/sessions"
+            role="menuitem"
+            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
+            onClick={() => setOpen(false)}
+          >
+            {t('mainMenuSessions')}
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ChatSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -176,10 +276,13 @@ export function ChatSidebar() {
       {/* Full width on mobile, centered preview on desktop */}
       <div className="flex h-full w-full flex-col md:mx-auto md:max-w-[420px]">
         <header className="shrink-0 px-4 pb-3 pt-10">
-          <div className="flex items-end justify-between">
-            <h1 className="font-display text-4xl font-semibold tracking-tight text-white">
-              {t('chats')}
-            </h1>
+          <div className="flex items-end justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-end gap-3">
+              <AppMenu pathname={pathname} variant="header" />
+              <h1 className="min-w-0 flex-1 truncate font-display text-4xl font-semibold tracking-tight text-white">
+                {t('chats')}
+              </h1>
+            </div>
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
@@ -352,7 +455,10 @@ export function ChatSidebar() {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-4 md:hidden">
         <div className="mx-auto w-full max-w-[420px] px-4">
           <nav className="pointer-events-auto rounded-[22px] border border-white/12 bg-white/10 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-[28px]">
-            <div className="grid grid-cols-5 items-center gap-1">
+            <div className="grid grid-cols-4 items-center gap-1">
+              <div className="flex justify-center">
+                <AppMenu pathname={pathname} variant="dock" />
+              </div>
               <Link href="/chats" className="contents" aria-label={t('chats')}>
                 <NavIcon active={pathname?.startsWith('/chats')}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -392,40 +498,6 @@ export function ChatSidebar() {
                   </svg>
                 </NavIcon>
               </button>
-              <Link href="/profile" className="contents" aria-label={t('profileAria')}>
-                <NavIcon active={pathname === '/profile'}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M20 21a8 8 0 0 0-16 0"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                </NavIcon>
-              </Link>
-              <Link href="/settings" className="contents" aria-label={t('settingsAria')}>
-                <NavIcon active={pathname === '/settings'}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M19.4 15a7.9 7.9 0 0 0 .1-2l2-1.5-2-3.5-2.4.6a8 8 0 0 0-1.7-1L13 3h-2L8.6 7.6a8 8 0 0 0-1.7 1L4.5 8 2.5 11.5l2 1.5a7.9 7.9 0 0 0 .1 2l-2 1.5 2 3.5 2.4-.6a8 8 0 0 0 1.7 1L11 21h2l2.4-4.6a8 8 0 0 0 1.7-1l2.4.6 2-3.5-2-1.5z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </NavIcon>
-              </Link>
             </div>
           </nav>
         </div>

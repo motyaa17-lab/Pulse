@@ -58,6 +58,8 @@ export const en = {
   newChatAria: 'New chat',
   profileAria: 'Profile',
   settingsAria: 'Settings',
+  mainMenuAria: 'Open menu',
+  mainMenuSessions: 'My sessions',
   chatActionsAria: 'Chat actions',
   mobileOpenChatsAria: 'Open chats',
   mutedTooltip: 'Muted',
