@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
+import { toPublicUrl } from '@/lib/api';
 
 export type ChatDetailForDrawer = {
   id: string;
@@ -57,7 +58,9 @@ function typeLabel(type: string | undefined): string {
 function PlaceholderSection({ title, hint }: { title: string; hint: string }) {
   return (
     <section className="rounded-xl border border-line/55 bg-surface-muted/25 px-3 py-3 dark:border-line/40 dark:bg-surface-muted/15">
-      <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">{title}</h3>
+      <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
+        {title}
+      </h3>
       <p className="mt-1.5 text-[13px] leading-snug text-ink-muted/90">{hint}</p>
     </section>
   );
@@ -99,7 +102,8 @@ export function ChatDetailsDrawer({
   const displayName =
     chat?.peer?.displayName ?? chat?.title ?? chat?.peer?.username ?? 'Conversation';
   const username = chat?.peer?.username;
-  const avatarSrc = isDirect ? chat?.peer?.avatarUrl ?? chat?.avatarUrl : chat?.avatarUrl;
+  const avatarSrc = isDirect ? (chat?.peer?.avatarUrl ?? chat?.avatarUrl) : chat?.avatarUrl;
+  const avatarPublicSrc = toPublicUrl(avatarSrc);
   const peerId = chat?.peer?.id;
   const status =
     isDirect && chat?.peer
@@ -159,14 +163,17 @@ export function ChatDetailsDrawer({
                   if (!peerId) return;
                   onClose();
                 }}
-                className={cn('group flex flex-col items-center text-center', !peerId && 'pointer-events-none')}
+                className={cn(
+                  'group flex flex-col items-center text-center',
+                  !peerId && 'pointer-events-none',
+                )}
                 aria-label="Open profile"
               >
                 <div className="relative h-[4.5rem] w-[4.5rem] shrink-0">
-                  {avatarSrc ? (
+                  {avatarPublicSrc ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={avatarSrc}
+                      src={avatarPublicSrc}
                       alt=""
                       className="h-full w-full rounded-full object-cover ring-2 ring-line/40 transition group-hover:ring-accent/35 dark:ring-line/35"
                     />
@@ -181,7 +188,9 @@ export function ChatDetailsDrawer({
                     </div>
                   )}
                 </div>
-                <p className="mt-4 font-display text-lg font-semibold leading-tight text-ink">{displayName}</p>
+                <p className="mt-4 font-display text-lg font-semibold leading-tight text-ink">
+                  {displayName}
+                </p>
                 {username ? <p className="mt-1 text-sm text-ink-muted">@{username}</p> : null}
                 {status ? <p className="mt-1 text-sm text-ink-muted">{status}</p> : null}
                 <p className="mt-2 text-xs font-semibold text-accent opacity-0 transition group-hover:opacity-100">
@@ -196,10 +205,10 @@ export function ChatDetailsDrawer({
             <div>
               <div className="flex justify-center">
                 <div className="relative h-16 w-16 shrink-0">
-                  {avatarSrc ? (
+                  {avatarPublicSrc ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={avatarSrc}
+                      src={avatarPublicSrc}
                       alt=""
                       className="h-full w-full rounded-2xl object-cover ring-2 ring-line/40 dark:ring-line/35"
                     />
@@ -257,8 +266,13 @@ export function ChatDetailsDrawer({
           )}
 
           <div className="mt-8 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Shared</p>
-            <PlaceholderSection title="Media" hint="Photos and videos shared in this chat will appear here." />
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+              Shared
+            </p>
+            <PlaceholderSection
+              title="Media"
+              hint="Photos and videos shared in this chat will appear here."
+            />
             <PlaceholderSection title="Files" hint="Documents and other files will appear here." />
             <PlaceholderSection title="Links" hint="Links from messages will be listed here." />
           </div>

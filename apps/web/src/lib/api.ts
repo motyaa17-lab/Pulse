@@ -2,6 +2,15 @@ import { useAuthStore } from '@/stores/auth-store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+export function toPublicUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  // Already absolute (http/https) or protocol-relative.
+  if (/^(https?:)?\/\//i.test(url)) return url;
+  // Relative to API host.
+  if (url.startsWith('/')) return `${API_URL}${url}`;
+  return `${API_URL}/${url}`;
+}
+
 export class ApiError extends Error {
   status: number;
   body?: unknown;

@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, API_URL } from '@/lib/api';
+import { apiFetch, API_URL, toPublicUrl } from '@/lib/api';
 import type { MeUserDto } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/auth-store';
@@ -105,10 +105,10 @@ export default function MyProfilePage() {
       <section className="mt-8 rounded-2xl border border-line bg-surface-elevated p-4">
         <div className="flex items-center gap-3">
           <div className="relative h-14 w-14 shrink-0">
-            {avatarUrl ? (
+            {toPublicUrl(avatarUrl) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={avatarUrl}
+                src={toPublicUrl(avatarUrl)!}
                 alt=""
                 className="h-14 w-14 rounded-full object-cover ring-1 ring-line/45"
               />

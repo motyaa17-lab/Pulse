@@ -78,8 +78,10 @@ export class MediaService {
     await mkdir(join(root, userId), { recursive: true });
     const diskPath = join(root, storageKey);
     await writeFile(diskPath, file.buffer);
-    const port = this.config.get<string>('PORT') ?? '4000';
-    const url = `http://localhost:${port}/uploads/${storageKey.replace(/\\/g, '/')}`;
+    // Return a public path relative to the API host.
+    // The frontend can prefix it with NEXT_PUBLIC_API_URL in production (Railway/Vercel),
+    // avoiding broken "http://localhost" URLs.
+    const url = `/uploads/${storageKey.replace(/\\/g, '/')}`;
     return {
       storageKey,
       url,

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, toPublicUrl } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
 type PublicUserDto = {
@@ -44,10 +44,10 @@ export default function UserProfilePage() {
       <section className="mt-6 rounded-2xl border border-line bg-surface-elevated p-5">
         <div className="flex items-center gap-3">
           <div className="relative h-14 w-14 shrink-0">
-            {user?.avatarUrl ? (
+            {toPublicUrl(user?.avatarUrl) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={user.avatarUrl}
+                src={toPublicUrl(user.avatarUrl)!}
                 alt=""
                 className="h-14 w-14 rounded-full object-cover ring-1 ring-line/45"
               />
@@ -81,4 +81,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
