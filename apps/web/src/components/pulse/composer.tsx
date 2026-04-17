@@ -197,7 +197,7 @@ export function Composer({
             return { ...old, items: merged };
           },
         );
-        const preview = serverMsg.text?.trim() ? serverMsg.text.slice(0, 160) : '[Media]';
+        const preview = serverMsg.text?.trim() ? serverMsg.text.slice(0, 160) : t('previewMedia');
         bumpChatListPreview(qc, chatId, preview, serverMsg.createdAt);
       }
     },
@@ -247,7 +247,7 @@ export function Composer({
           return { ...old, items: old.items.map((m) => (m.id === updated.id ? updated : m)) };
         },
       );
-      const preview = updated.text?.trim() ? updated.text.slice(0, 160) : '[Media]';
+      const preview = updated.text?.trim() ? updated.text.slice(0, 160) : t('previewMedia');
       bumpChatListPreview(qc, chatId, preview, updated.createdAt);
     },
     onSettled: () => setUiSending(false),
@@ -335,10 +335,10 @@ export function Composer({
         <div className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35">
           <div className="min-w-0 flex-1 border-l-2 border-amber-500/60 pl-2">
             <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-400">
-              Editing
+              {t('composerEditing')}
             </p>
             <p className="truncate text-[12.5px] leading-snug text-ink">
-              {editing.text || 'Message'}
+              {editing.text || t('message')}
             </p>
           </div>
           <button
@@ -348,7 +348,7 @@ export function Composer({
               setText('');
               onCancelEdit();
             }}
-            aria-label="Cancel edit"
+            aria-label={t('cancelEditAria')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -364,16 +364,18 @@ export function Composer({
       {replyTo && (
         <div className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35">
           <div className="min-w-0 flex-1 border-l-2 border-accent/55 pl-2">
-            <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-accent">Reply</p>
+            <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-accent">
+              {t('msgReply')}
+            </p>
             <p className="truncate text-[12.5px] leading-snug text-ink">
-              {replyTo.text || 'Attachment'}
+              {replyTo.text || t('composerAttachment')}
             </p>
           </div>
           <button
             type="button"
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-elevated hover:text-ink"
             onClick={onCancelReply}
-            aria-label="Cancel reply"
+            aria-label={t('cancelReplyAria')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -402,7 +404,7 @@ export function Composer({
                 />
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated/70 text-xs font-semibold text-ink-muted ring-1 ring-line/45 dark:bg-surface-elevated/40 dark:ring-line/35">
-                  {p.kind === 'video' ? 'VID' : 'FILE'}
+                  {p.kind === 'video' ? t('videoKind') : t('fileKind')}
                 </div>
               )}
               <div className="min-w-0 flex-1">
@@ -415,7 +417,7 @@ export function Composer({
                 type="button"
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-elevated hover:text-ink"
                 onClick={() => removePending(chatId, p.localId)}
-                aria-label="Remove attachment"
+                aria-label={t('removeAttachmentAria')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path
@@ -436,7 +438,7 @@ export function Composer({
             'mb-px flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[1rem] text-ink-muted transition',
             'hover:bg-surface-elevated/90 hover:text-accent active:scale-[0.97] dark:hover:bg-surface-elevated/55',
           )}
-          title="Attach file"
+          title={t('attachFile')}
         >
           <PaperclipIcon className="h-[1.15rem] w-[1.15rem] opacity-90" />
           <input
@@ -510,7 +512,7 @@ export function Composer({
           className={cn(
             'mb-px max-h-[8.25rem] min-h-[2.5rem] flex-1 resize-none bg-transparent py-2.5 pr-1 text-[15px] leading-[1.45] text-ink placeholder:text-ink-muted/65 outline-none dark:text-white dark:placeholder:text-white/45 md:dark:text-ink md:dark:placeholder:text-ink-muted/65',
           )}
-          aria-label="Message text"
+          aria-label={t('messageTextAria')}
         />
         <button
           type="button"
@@ -551,11 +553,11 @@ export function Composer({
         <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
           Enter
         </kbd>{' '}
-        to send ·{' '}
+        {t('composerHintSend')} ·{' '}
         <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
           Shift+Enter
         </kbd>{' '}
-        new line
+        {t('composerHintNewLine')}
       </p>
     </div>
   );

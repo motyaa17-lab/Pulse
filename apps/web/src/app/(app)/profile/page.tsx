@@ -6,8 +6,10 @@ import { apiFetch, API_URL, toPublicUrl } from '@/lib/api';
 import type { MeUserDto } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/auth-store';
+import { useT } from '@/lib/i18n';
 
 export default function MyProfilePage() {
+  const t = useT();
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
   const sessionId = useAuthStore((s) => s.sessionId);
@@ -60,16 +62,16 @@ export default function MyProfilePage() {
   });
 
   const uploadAvatar = async (file: File) => {
-    if (!token) throw new Error('Not authenticated');
+    if (!token) throw new Error(t('errNotAuthenticated'));
     setAvatarError(null);
 
     const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
     if (!file.type.startsWith('image/')) {
-      setAvatarError('Please choose an image file.');
+      setAvatarError(t('errAvatarNotImage'));
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      setAvatarError('Image is too large. Max 5MB.');
+      setAvatarError(t('errAvatarTooLarge'));
       return;
     }
 
@@ -86,21 +88,21 @@ export default function MyProfilePage() {
       setAvatarUrl(meta.url);
       await patchMe.mutateAsync({ avatarUrl: meta.url });
     } catch {
-      setAvatarError('Upload failed. Please try again.');
+      setAvatarError(t('errAvatarUploadFailed'));
     } finally {
       setAvatarUploading(false);
     }
   };
 
-  const initial = (me?.displayName ?? me?.username ?? 'Me').slice(0, 1).toUpperCase();
+  const initial = (me?.displayName ?? me?.username ?? '?').slice(0, 1).toUpperCase();
 
   return (
     <div className="mx-auto max-w-lg px-6 py-10">
       <Link href="/settings" className="text-sm text-accent">
-        ← Settings
+        {t('backToSettings')}
       </Link>
-      <h1 className="mt-4 font-display text-3xl font-semibold text-ink">My Profile</h1>
-      <p className="mt-2 text-sm text-ink-muted">How others see you in chats.</p>
+      <h1 className="mt-4 font-display text-3xl font-semibold text-ink">{t('profilePageTitle')}</h1>
+      <p className="mt-2 text-sm text-ink-muted">{t('profilePageSubtitle')}</p>
 
       <section className="mt-8 rounded-2xl border border-line bg-surface-elevated p-4">
         <div className="flex items-center gap-3">
@@ -125,12 +127,16 @@ export default function MyProfilePage() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-ink">
-              {me?.displayName ?? me?.username ?? (isLoading ? 'Loading…' : '—')}
+              {me?.displayName ??
+                me?.username ??
+                (isLoading ? t('profileLoading') : t('profileDash'))}
             </div>
-            <div className="truncate text-xs text-ink-muted">@{me?.username ?? '—'}</div>
+            <div className="truncate text-xs text-ink-muted">
+              @{me?.username ?? t('profileDash')}
+            </div>
           </div>
           <label className="inline-flex cursor-pointer items-center rounded-xl border border-line px-3 py-2 text-sm text-ink-muted hover:text-ink">
-            {avatarUploading ? 'Uploading…' : 'Change avatar'}
+            {avatarUploading ? t('uploadingAvatar') : t('changeAvatar')}
             <input
               type="file"
               accept="image/*"
@@ -152,39 +158,39 @@ export default function MyProfilePage() {
         <div className="mt-5 space-y-3">
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-              Display name
+              {t('labelDisplayName')}
             </label>
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="mt-1 h-10 w-full rounded-xl border border-line bg-surface-muted/40 px-3 text-sm text-ink outline-none focus:border-accent/40"
-              placeholder="Your name"
+              placeholder={t('placeholderDisplayName')}
             />
           </div>
 
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-              Username
+              {t('labelUsername')}
             </label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="mt-1 h-10 w-full rounded-xl border border-line bg-surface-muted/40 px-3 text-sm text-ink outline-none focus:border-accent/40"
-              placeholder="handle"
+              placeholder={t('placeholderUsername')}
             />
-            <p className="mt-1 text-xs text-ink-muted">Letters, numbers, underscore. 3–32 chars.</p>
+            <p className="mt-1 text-xs text-ink-muted">{t('usernameRules')}</p>
           </div>
 
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-              Bio / About
+              {t('labelBio')}
             </label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
               className="mt-1 w-full resize-none rounded-xl border border-line bg-surface-muted/40 px-3 py-2 text-sm text-ink outline-none focus:border-accent/40"
-              placeholder="A short about section…"
+              placeholder={t('placeholderBio')}
             />
           </div>
         </div>
@@ -201,10 +207,10 @@ export default function MyProfilePage() {
                 : 'border-accent/35 bg-accent/10 text-ink hover:border-accent/55',
             )}
           >
-            Save changes
+            {t('saveChanges')}
           </button>
-          {save.isError && <span className="text-xs text-red-500">Failed to save.</span>}
-          {save.isSuccess && <span className="text-xs text-ink-muted">Saved.</span>}
+          {save.isError && <span className="text-xs text-red-500">{t('saveFailed')}</span>}
+          {save.isSuccess && <span className="text-xs text-ink-muted">{t('profileSaved')}</span>}
         </div>
       </section>
     </div>

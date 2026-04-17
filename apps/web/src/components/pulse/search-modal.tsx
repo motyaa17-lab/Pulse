@@ -8,7 +8,12 @@ import { apiFetch } from '@/lib/api';
 import { useUiStore } from '@/stores/ui-store';
 import { getOrCreateDirectChat } from '@/lib/direct-chat';
 import { useT } from '@/lib/i18n';
-type SearchUser = { id: string; username: string; displayName: string | null; avatarUrl: string | null };
+type SearchUser = {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+};
 type SearchChat = { id: string; type: string; title: string | null };
 type SearchMessage = {
   id: string;
@@ -78,7 +83,7 @@ export function SearchModal() {
                 className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
                 aria-label={t('search')}
               />
-              <p className="mt-1 text-[10px] text-ink-muted">⌘K · min 2 characters · results grouped</p>
+              <p className="mt-1 text-[10px] text-ink-muted">{t('searchHint')}</p>
             </div>
             <div className="max-h-[50vh] overflow-y-auto p-3 text-sm">
               {isFetching && <p className="text-ink-muted">{t('searching')}</p>}
@@ -109,7 +114,9 @@ export function SearchModal() {
                           {(u.displayName ?? u.username).slice(0, 1).toUpperCase()}
                         </span>
                         <span>
-                          <span className="font-medium text-ink">{u.displayName ?? u.username}</span>
+                          <span className="font-medium text-ink">
+                            {u.displayName ?? u.username}
+                          </span>
                           <span className="ml-2 text-xs text-ink-muted">@{u.username}</span>
                         </span>
                       </button>
@@ -126,7 +133,9 @@ export function SearchModal() {
                           router.push(`/chats/${c.id}`);
                         }}
                       >
-                        <span className="font-medium text-ink">{c.title ?? 'Untitled'}</span>
+                        <span className="font-medium text-ink">
+                          {c.title ?? t('searchUntitled')}
+                        </span>
                         <span className="ml-2 text-xs uppercase text-ink-muted">{c.type}</span>
                       </button>
                     ))}
@@ -166,7 +175,9 @@ export function SearchModal() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{title}</p>
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+        {title}
+      </p>
       <div className="space-y-1">{children}</div>
     </div>
   );

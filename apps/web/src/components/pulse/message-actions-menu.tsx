@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
+import { useT } from '@/lib/i18n';
 
 type Action = {
   id: string;
@@ -35,6 +36,7 @@ export function MessageActionsMenu({
   onReact: (emoji: string) => void;
   closeOnScrollEl?: React.RefObject<HTMLElement | null>;
 }) {
+  const t = useT();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number; origin: 'top' | 'bottom' }>({
     top: 0,
@@ -122,7 +124,7 @@ export function MessageActionsMenu({
             </button>
           ))}
           <div className="ml-auto pl-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">
-            React
+            {t('react')}
           </div>
         </div>
       )}
@@ -151,4 +153,3 @@ export function MessageActionsMenu({
     document.body,
   );
 }
-

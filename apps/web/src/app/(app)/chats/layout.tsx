@@ -4,8 +4,10 @@ import { ChatSidebar } from '@/components/pulse/chat-sidebar';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import { usePathname } from 'next/navigation';
+import { useT } from '@/lib/i18n';
 
 export default function ChatsLayout({ children }: { children: React.ReactNode }) {
+  const t = useT();
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
   const pathname = usePathname();
@@ -30,8 +32,9 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
           type="button"
           className="fixed left-3 top-3 z-30 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs text-white shadow-sm backdrop-blur md:hidden"
           onClick={() => setSidebarOpen(true)}
+          aria-label={t('mobileOpenChatsAria')}
         >
-          Chats
+          {t('chats')}
         </button>
       )}
       <main className={cn('relative min-h-0 min-w-0 flex-1', !isChatRoute && 'hidden md:block')}>

@@ -17,7 +17,8 @@ import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { Composer } from './composer';
 import { MessageActionsMenu } from './message-actions-menu';
 import { motion } from 'framer-motion';
-import { useT } from '@/lib/i18n';
+import { useT, type I18nKey } from '@/lib/i18n';
+import { useLanguageStore } from '@/stores/language-store';
 
 /** Messages from the same sender within this window visually stack as one group. */
 const GROUP_GAP_MS = 5 * 60 * 1000;
@@ -68,15 +69,15 @@ function sameCalendarDay(a: string, b: string): boolean {
   );
 }
 
-function formatDateDivider(iso: string): string {
+function formatDateDivider(iso: string, t: (k: I18nKey) => string, locale: string): string {
   const d = new Date(iso);
   const now = new Date();
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diff = Math.round((startToday.getTime() - startThat.getTime()) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  return d.toLocaleDateString(undefined, {
+  if (diff === 0) return t('today');
+  if (diff === 1) return t('yesterday');
+  return d.toLocaleDateString(locale, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
@@ -96,6 +97,8 @@ type MessagesQueryData = { items: MessageDto[]; nextCursor: string | null };
 
 export function MessageThread({ chatId }: { chatId: string }) {
   const qc = useQueryClient();
+  const t = useT();
+  const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const accessToken = useAuthStore((s) => s.accessToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const myIdFromToken = decodeJwtSub(accessToken);
@@ -199,7 +202,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
         });
         return { ...old, items: [...withoutMatchingOptimistic, msg] };
       });
-      const preview = msg.text?.trim() ? msg.text.slice(0, 160) : '[Media]';
+      const preview = msg.text?.trim() ? msg.text.slice(0, 160) : t('previewMedia');
       bumpChatListPreview(qc, chatId, preview, msg.createdAt);
     };
 
@@ -304,7 +307,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
       s.off('message:readUpdate', onReadUpdate);
       s.off('message:hidden', onMessageHidden);
     };
-  }, [accessToken, chatId, myId, qc]);
+  }, [accessToken, chatId, myId, qc, t]);
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -346,7 +349,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
     if (src.deletedAt) return;
     // MVP: forward only text messages (attachments forwarding can come later).
     if (!src.text?.trim()) {
-      window.alert('This message type cannot be forwarded yet (MVP: text only).');
+      window.alert(t('forwardTextOnlyAlert'));
       return;
     }
     try {
@@ -360,12 +363,12 @@ export function MessageThread({ chatId }: { chatId: string }) {
       bumpChatListPreview(
         qc,
         targetChatId,
-        created.text?.trim() ? created.text.slice(0, 160) : '[Forwarded]',
+        created.text?.trim() ? created.text.slice(0, 160) : t('previewForwarded'),
         created.createdAt,
       );
       setForwarding(null);
     } catch {
-      window.alert('Failed to forward message.');
+      window.alert(t('forwardFailedAlert'));
     }
   };
 
@@ -410,7 +413,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-sm text-ink-muted">
-          Loading…
+          {t('commonLoading')}
         </div>
       </div>
     );
@@ -473,7 +476,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
         {dragActive && (
           <div className="pointer-events-none absolute inset-0 z-[50] flex items-center justify-center">
             <div className="rounded-2xl border border-line/70 bg-surface-elevated/85 px-4 py-3 text-sm font-semibold text-ink shadow-lg backdrop-blur dark:border-line/45 dark:bg-surface-elevated/65">
-              Drop files to upload
+              {t('dropFilesToUpload')}
             </div>
           </div>
         )}
@@ -505,9 +508,9 @@ export function MessageThread({ chatId }: { chatId: string }) {
                 />
               </svg>
             </div>
-            <p className="mt-4 font-display text-xl font-semibold text-ink">Quiet here</p>
+            <p className="mt-4 font-display text-xl font-semibold text-ink">{t('quietHere')}</p>
             <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-ink-muted">
-              Send the first message to start the conversation.
+              {t('quietHereSubtitle')}
             </p>
           </div>
         )}
@@ -571,7 +574,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
         <div
           className="fixed inset-0 z-[130] flex items-end justify-center bg-black/35 p-4 backdrop-blur-[1px] md:items-center"
           role="dialog"
-          aria-label="Forward message"
+          aria-label={t('forwardMessageTitle')}
           onMouseDown={() => setForwarding(null)}
         >
           <div
@@ -579,12 +582,14 @@ export function MessageThread({ chatId }: { chatId: string }) {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 border-b border-line/70 px-3 py-2.5 dark:border-line/45">
-              <div className="font-display text-[0.95rem] font-semibold text-ink">Forward to…</div>
+              <div className="font-display text-[0.95rem] font-semibold text-ink">
+                {t('forwardTo')}
+              </div>
               <button
                 type="button"
                 className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-muted/80 hover:text-ink dark:hover:bg-surface-muted/35"
                 onClick={() => setForwarding(null)}
-                aria-label="Close"
+                aria-label={t('close')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path
@@ -598,7 +603,8 @@ export function MessageThread({ chatId }: { chatId: string }) {
             </div>
             <div className="max-h-[55vh] overflow-y-auto p-1.5">
               {(chatsForForward ?? []).map((c) => {
-                const label = c.title ?? c.peer?.displayName ?? c.peer?.username ?? 'Chat';
+                const label =
+                  c.title ?? c.peer?.displayName ?? c.peer?.username ?? t('chatFallback');
                 const preview = c.lastMessagePreview?.trim() ?? '';
                 return (
                   <button
@@ -618,7 +624,9 @@ export function MessageThread({ chatId }: { chatId: string }) {
                 );
               })}
               {(chatsForForward ?? []).length === 0 && (
-                <div className="px-3 py-6 text-center text-sm text-ink-muted">No chats found.</div>
+                <div className="px-3 py-6 text-center text-sm text-ink-muted">
+                  {t('noChatsFound')}
+                </div>
               )}
             </div>
           </div>
@@ -663,6 +671,7 @@ function MessageBubble({
 }) {
   const qc = useQueryClient();
   const t = useT();
+  const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const isDeleted = Boolean(m.deletedAt);
   const isSystem = m.type === 'SYSTEM';
   const showTrigger = menuOpen;
@@ -765,7 +774,7 @@ function MessageBubble({
         if (!old) return old;
         return { ...old, items: old.items.map((x) => (x.id === updated.id ? updated : x)) };
       });
-      bumpChatListPreview(qc, chatId, 'Message deleted', updated.createdAt);
+      bumpChatListPreview(qc, chatId, t('previewMessageDeleted'), updated.createdAt);
       void qc.invalidateQueries({ queryKey: ['chats'] });
     } catch {
       qc.setQueryData(['messages', chatId], snapshot);
@@ -826,7 +835,7 @@ function MessageBubble({
       // Surface errors: pin needs the migration + endpoint working.
       // eslint-disable-next-line no-console
       console.error('[pin-message] failed', e);
-      window.alert('Failed to pin message. Check server logs / migration.');
+      window.alert(t('pinFailedAlert'));
     }
   };
 
@@ -852,12 +861,12 @@ function MessageBubble({
     () => [
       {
         id: 'reply',
-        label: 'Reply',
+        label: t('msgReply'),
         onSelect: onReply,
       },
       {
         id: 'forward',
-        label: 'Forward',
+        label: t('msgForward'),
         disabled: isDeleted || !m.text?.trim(),
         onSelect: () => {
           setMenuOpen(false);
@@ -868,23 +877,23 @@ function MessageBubble({
         id: 'pin',
         label:
           ((qc.getQueryData(['chat', chatId]) as any)?.pinnedMessage?.id ?? null) === m.id
-            ? 'Unpin message'
-            : 'Pin message',
+            ? t('msgUnpin')
+            : t('msgPin'),
         disabled: isDeleted,
         onSelect: () => pinOrUnpin(m.id),
       },
       {
         id: 'copy',
-        label: 'Copy text',
+        label: t('msgCopyText'),
         disabled: !canCopy,
         onSelect: async () => {
-          const t = m.text ?? '';
+          const textToCopy = m.text ?? '';
           try {
-            await navigator.clipboard.writeText(t);
+            await navigator.clipboard.writeText(textToCopy);
           } catch {
             // fallback
             const ta = document.createElement('textarea');
-            ta.value = t;
+            ta.value = textToCopy;
             ta.style.position = 'fixed';
             ta.style.left = '-9999px';
             document.body.appendChild(ta);
@@ -896,7 +905,7 @@ function MessageBubble({
       },
       {
         id: 'edit',
-        label: 'Edit',
+        label: t('msgEdit'),
         disabled: !canEdit,
         onSelect: () => {
           setMenuOpen(false);
@@ -920,13 +929,16 @@ function MessageBubble({
       canCopy,
       canDeleteEveryone,
       canEdit,
+      chatId,
       deleteForMe,
       isDeleted,
+      locale,
       m.id,
       m.text,
       onEdit,
       onForward,
       onReply,
+      qc,
       setMenuOpen,
       softDelete,
       t,
@@ -963,7 +975,7 @@ function MessageBubble({
       {showDate && (
         <div className="mb-2 flex justify-center">
           <span className="rounded-full bg-surface-elevated/80 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-ink-muted/90 shadow-sm ring-1 ring-line/35 backdrop-blur dark:bg-surface-elevated/85 dark:ring-line/40">
-            {formatDateDivider(m.createdAt)}
+            {formatDateDivider(m.createdAt, t, locale)}
           </span>
         </div>
       )}
@@ -986,7 +998,7 @@ function MessageBubble({
               menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
             )}
             onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Message actions"
+            aria-label={t('messageActionsButtonAria')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -1030,7 +1042,7 @@ function MessageBubble({
                     : 'border-accent/55 dark:border-accent/45',
                 )}
               >
-                {m.replyTo.deletedAt ? 'Original message removed' : m.replyTo.text}
+                {m.replyTo.deletedAt ? t('originalMessageRemoved') : m.replyTo.text}
               </div>
             )}
             {m.forwardedFromMessageId && (
@@ -1042,16 +1054,17 @@ function MessageBubble({
                     : 'border-accent/55 dark:border-accent/45',
                 )}
               >
-                <span className="font-bold uppercase tracking-[0.1em]">Forwarded</span>{' '}
+                <span className="font-bold uppercase tracking-[0.1em]">{t('forwarded')}</span>{' '}
                 {m.forwardedFromUser ? (
                   <span className="opacity-90">
-                    from {m.forwardedFromUser.displayName ?? m.forwardedFromUser.username}
+                    {t('forwardedFrom')}{' '}
+                    {m.forwardedFromUser.displayName ?? m.forwardedFromUser.username}
                   </span>
                 ) : null}
               </div>
             )}
             <p className={cn('whitespace-pre-wrap break-words', isDeleted && 'italic opacity-75')}>
-              {isDeleted ? 'Message deleted' : m.text ? linkify(m.text) : null}
+              {isDeleted ? t('messageDeleted') : m.text ? linkify(m.text) : null}
             </p>
             {m.attachments?.length > 0 && (
               <div className="mt-2 space-y-2">
@@ -1095,7 +1108,7 @@ function MessageBubble({
                   minute: '2-digit',
                 })}
               </span>
-              {m.editedAt && <span className="opacity-75">edited</span>}
+              {m.editedAt && <span className="opacity-75">{t('edited')}</span>}
               {isOutgoing && lastInGroup && m.deliveryStatus && (
                 <span
                   className="ml-0.5 inline-flex items-center gap-0.5 opacity-80"

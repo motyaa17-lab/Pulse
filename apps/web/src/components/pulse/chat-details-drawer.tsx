@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { toPublicUrl } from '@/lib/api';
+import { useT, type I18nKey } from '@/lib/i18n';
 
 export type ChatDetailForDrawer = {
   id: string;
@@ -40,18 +41,18 @@ export type ChatDetailForDrawer = {
   }[];
 };
 
-function typeLabel(type: string | undefined): string {
+function typeLabel(type: string | undefined, t: (k: I18nKey) => string): string {
   switch (type) {
     case 'DIRECT':
-      return 'Direct message';
+      return t('directMessage');
     case 'GROUP':
-      return 'Group';
+      return t('group');
     case 'CHANNEL':
-      return 'Channel';
+      return t('channel');
     case 'SAVED':
-      return 'Saved messages';
+      return t('savedMessagesLong');
     default:
-      return type ?? 'Chat';
+      return type ?? t('chatFallback');
   }
 }
 
@@ -75,6 +76,7 @@ export function ChatDetailsDrawer({
   onClose: () => void;
   chat: ChatDetailForDrawer | undefined;
 }) {
+  const t = useT();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -100,7 +102,7 @@ export function ChatDetailsDrawer({
 
   const isDirect = chat?.type === 'DIRECT';
   const displayName =
-    chat?.peer?.displayName ?? chat?.title ?? chat?.peer?.username ?? 'Conversation';
+    chat?.peer?.displayName ?? chat?.title ?? chat?.peer?.username ?? t('conversationFallback');
   const username = chat?.peer?.username;
   const avatarSrc = isDirect ? (chat?.peer?.avatarUrl ?? chat?.avatarUrl) : chat?.avatarUrl;
   const avatarPublicSrc = toPublicUrl(avatarSrc);
@@ -108,10 +110,10 @@ export function ChatDetailsDrawer({
   const status =
     isDirect && chat?.peer
       ? chat.peer.isOnline
-        ? 'Online'
+        ? t('online')
         : chat.peer.lastSeenAt
-          ? 'Last seen recently'
-          : 'Offline'
+          ? t('lastSeenRecently')
+          : t('offline')
       : null;
   const initial = displayName.slice(0, 1).toUpperCase() || '?';
 
@@ -120,7 +122,7 @@ export function ChatDetailsDrawer({
       <button
         type="button"
         className="fixed inset-0 z-[100] bg-ink/25 backdrop-blur-[2px] dark:bg-black/45"
-        aria-label="Close chat info"
+        aria-label={t('drawerCloseInfo')}
         onClick={onClose}
       />
       <aside
@@ -135,13 +137,13 @@ export function ChatDetailsDrawer({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line/70 px-4 py-3 dark:border-line/45">
           <h2 id="chat-details-title" className="font-display text-lg font-semibold text-ink">
-            Chat info
+            {t('drawerChatInfo')}
           </h2>
           <button
             type="button"
             className="rounded-full p-2 text-ink-muted transition hover:bg-surface-muted hover:text-ink"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('close')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -167,7 +169,7 @@ export function ChatDetailsDrawer({
                   'group flex flex-col items-center text-center',
                   !peerId && 'pointer-events-none',
                 )}
-                aria-label="Open profile"
+                aria-label={t('openProfileAria')}
               >
                 <div className="relative h-[4.5rem] w-[4.5rem] shrink-0">
                   {avatarPublicSrc ? (
@@ -194,11 +196,11 @@ export function ChatDetailsDrawer({
                 {username ? <p className="mt-1 text-sm text-ink-muted">@{username}</p> : null}
                 {status ? <p className="mt-1 text-sm text-ink-muted">{status}</p> : null}
                 <p className="mt-2 text-xs font-semibold text-accent opacity-0 transition group-hover:opacity-100">
-                  View profile
+                  {t('drawerViewProfile')}
                 </p>
               </Link>
               <p className="mt-3 inline-flex rounded-full border border-line/70 bg-surface-muted/40 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-ink-muted dark:border-line/45 dark:bg-surface-muted/25">
-                {typeLabel(chat?.type)}
+                {typeLabel(chat?.type, t)}
               </p>
             </div>
           ) : (
@@ -225,14 +227,14 @@ export function ChatDetailsDrawer({
                 </div>
               </div>
               <p className="mt-4 text-center font-display text-lg font-semibold text-ink">
-                {chat?.title ?? typeLabel(chat?.type)}
+                {chat?.title ?? typeLabel(chat?.type, t)}
               </p>
               <p className="mt-2 text-center text-[0.65rem] font-bold uppercase tracking-[0.1em] text-ink-muted">
-                {typeLabel(chat?.type)}
+                {typeLabel(chat?.type, t)}
               </p>
               {chat?.role && (
                 <p className="mt-4 text-center text-sm text-ink-muted">
-                  Your role: <span className="font-medium text-ink">{chat.role}</span>
+                  {t('drawerYourRole')} <span className="font-medium text-ink">{chat.role}</span>
                 </p>
               )}
             </div>
@@ -241,7 +243,7 @@ export function ChatDetailsDrawer({
           {!isDirect && chat?.members && chat.members.length > 0 && (
             <div className="mt-8">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                Members ({chat.members.length})
+                {t('drawerMembers')} ({chat.members.length})
               </p>
               <ul className="mt-2 space-y-2">
                 {chat.members.map((m) => (
@@ -261,20 +263,17 @@ export function ChatDetailsDrawer({
 
           {isDirect && chat?.role && (
             <p className="mt-8 text-center text-sm text-ink-muted">
-              Your role: <span className="font-medium text-ink">{chat.role}</span>
+              {t('drawerYourRole')} <span className="font-medium text-ink">{chat.role}</span>
             </p>
           )}
 
           <div className="mt-8 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-              Shared
+              {t('drawerShared')}
             </p>
-            <PlaceholderSection
-              title="Media"
-              hint="Photos and videos shared in this chat will appear here."
-            />
-            <PlaceholderSection title="Files" hint="Documents and other files will appear here." />
-            <PlaceholderSection title="Links" hint="Links from messages will be listed here." />
+            <PlaceholderSection title={t('drawerMedia')} hint={t('drawerMediaHint')} />
+            <PlaceholderSection title={t('drawerFiles')} hint={t('drawerFilesHint')} />
+            <PlaceholderSection title={t('drawerLinks')} hint={t('drawerLinksHint')} />
           </div>
         </div>
       </aside>

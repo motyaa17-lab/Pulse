@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch, toPublicUrl } from '@/lib/api';
-import { cn } from '@/lib/cn';
+import { useT, type I18nKey } from '@/lib/i18n';
 
 type PublicUserDto = {
   id: string;
@@ -16,14 +16,15 @@ type PublicUserDto = {
   lastSeenAt?: string | null;
 };
 
-function statusLabel(u: PublicUserDto | undefined): string {
+function statusLabel(u: PublicUserDto | undefined, t: (k: I18nKey) => string): string {
   if (!u) return '';
-  if (u.isOnline) return 'Online';
-  if (u.lastSeenAt) return 'Last seen recently';
-  return 'Offline';
+  if (u.isOnline) return t('online');
+  if (u.lastSeenAt) return t('lastSeenRecently');
+  return t('offline');
 }
 
 export default function UserProfilePage() {
+  const t = useT();
   const params = useParams<{ userId: string }>();
   const userId = params.userId;
 
@@ -32,13 +33,16 @@ export default function UserProfilePage() {
     queryFn: () => apiFetch<PublicUserDto>(`/users/${userId}`),
   });
 
-  const title = user?.displayName ?? user?.username ?? (isLoading ? 'Loading…' : 'User');
+  const title =
+    user?.displayName ??
+    user?.username ??
+    (isLoading ? t('commonLoading') : t('publicUserFallback'));
   const initial = title.slice(0, 1).toUpperCase() || '?';
 
   return (
     <div className="mx-auto max-w-lg px-6 py-10">
       <Link href="/chats" className="text-sm text-accent">
-        ← Back to chats
+        {t('backToChatsLink')}
       </Link>
 
       <section className="mt-6 rounded-2xl border border-line bg-surface-elevated p-5">
@@ -62,17 +66,25 @@ export default function UserProfilePage() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-2xl font-semibold text-ink">{title}</h1>
-            <p className="mt-0.5 truncate text-sm text-ink-muted">@{user?.username ?? '—'}</p>
+            <p className="mt-0.5 truncate text-sm text-ink-muted">
+              @{user?.username ?? t('profileDash')}
+            </p>
             <p className="mt-2 inline-flex rounded-full border border-line/70 bg-surface-muted/40 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-ink-muted dark:border-line/45 dark:bg-surface-muted/25">
-              {statusLabel(user)}
+              {statusLabel(user, t)}
             </p>
           </div>
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">About</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+            {t('publicUserAbout')}
+          </p>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">
-            {user?.bio?.trim() ? user.bio : <span className="text-ink-muted">No bio yet.</span>}
+            {user?.bio?.trim() ? (
+              user.bio
+            ) : (
+              <span className="text-ink-muted">{t('publicUserNoBio')}</span>
+            )}
           </p>
         </div>
       </section>

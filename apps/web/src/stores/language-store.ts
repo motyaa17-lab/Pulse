@@ -13,10 +13,9 @@ type LanguageState = {
 export const useLanguageStore = create<LanguageState>()(
   persist(
     (set) => ({
-      language: 'en',
+      language: 'ru',
       setLanguage: (language) => set({ language }),
     }),
     { name: 'pulse-language' },
   ),
 );
-

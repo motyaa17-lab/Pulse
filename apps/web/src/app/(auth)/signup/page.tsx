@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ApiError, API_URL, apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { motion } from 'framer-motion';
+import { useT } from '@/lib/i18n';
 
 const schema = z
   .object({
@@ -25,6 +26,7 @@ const schema = z
 type Form = z.infer<typeof schema>;
 
 export default function SignupPage() {
+  const t = useT();
   const router = useRouter();
   const setTokens = useAuthStore((s) => s.setTokens);
   const {
@@ -74,19 +76,23 @@ export default function SignupPage() {
       className="w-full rounded-[26px] border border-white/12 bg-white/10 p-8 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-[28px] transition"
     >
       <div className="mb-8 space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">Pulse</p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-white">SIGN UP</h1>
-        <p className="text-sm text-white/70">Original identity, familiar rhythm.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
+          {t('brandPulse')}
+        </p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-white">
+          {t('signupHeading')}
+        </h1>
+        <p className="text-sm text-white/70">{t('signupSubtitle')}</p>
       </div>
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
         <div>
           <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="email">
-            Email
+            {t('fieldEmail')}
           </label>
           <input
             id="email"
             type="email"
-            placeholder="you@domain.com"
+            placeholder={t('placeholderEmail')}
             className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-sky-400/20"
             {...register('email')}
           />
@@ -94,11 +100,11 @@ export default function SignupPage() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="username">
-            Username
+            {t('labelUsername')}
           </label>
           <input
             id="username"
-            placeholder="handle"
+            placeholder={t('placeholderUsername')}
             className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-emerald-400/20"
             {...register('username')}
           />
@@ -108,18 +114,18 @@ export default function SignupPage() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="dn">
-            Display name (optional)
+            {t('signupDisplayNameOptional')}
           </label>
           <input
             id="dn"
-            placeholder="Your name"
+            placeholder={t('placeholderDisplayName')}
             className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-white/15"
             {...register('displayName')}
           />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="password">
-            Password
+            {t('fieldPassword')}
           </label>
           <input
             id="password"
@@ -134,7 +140,7 @@ export default function SignupPage() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="confirm">
-            Confirm password
+            {t('fieldConfirmPassword')}
           </label>
           <input
             id="confirm"
@@ -152,13 +158,13 @@ export default function SignupPage() {
           className="group relative flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-400 via-sky-500 to-blue-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,211,238,0.22)] transition duration-200 hover:brightness-110 active:scale-[0.99] disabled:opacity-60 disabled:shadow-none"
         >
           <span className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-r from-emerald-400 via-sky-500 to-blue-500 blur-xl opacity-40 transition group-hover:opacity-55" />
-          {isSubmitting ? 'Creating…' : 'Create account'}
+          {isSubmitting ? t('authCreatingAccount') : t('signupSubmit')}
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-white/70">
-        Already have an account?{' '}
+        {t('authHaveAccount')}{' '}
         <Link className="font-medium text-white underline-offset-4 hover:underline" href="/login">
-          Sign in
+          {t('authSignInLink')}
         </Link>
       </p>
     </motion.div>

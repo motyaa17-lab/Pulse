@@ -38,30 +38,34 @@ export default function SettingsPage() {
         ← {t('backToChats')}
       </Link>
       <h1 className="mt-4 font-display text-3xl font-semibold text-ink">{t('settings')}</h1>
-      <p className="mt-2 text-sm text-ink-muted">Appearance, sessions, and account basics.</p>
+      <p className="mt-2 text-sm text-ink-muted">{t('settingsIntro')}</p>
 
       <section className="mt-8 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
         <h2 className="text-sm font-semibold text-ink">{t('appearance')}</h2>
         <div className="flex flex-wrap gap-2">
-          {(['light', 'dark', 'system'] as const).map((t) => (
+          {(['light', 'dark', 'system'] as const).map((mode) => (
             <button
-              key={t}
+              key={mode}
               type="button"
-              onClick={() => setTheme(t)}
+              onClick={() => setTheme(mode)}
               className={`rounded-full border px-3 py-1 text-xs capitalize ${
-                theme === t
+                theme === mode
                   ? 'border-accent bg-accent/10 text-ink'
                   : 'border-line text-ink-muted hover:text-ink'
               }`}
             >
-              {t}
+              {mode === 'light'
+                ? t('themeLight')
+                : mode === 'dark'
+                  ? t('themeDark')
+                  : t('themeSystem')}
             </button>
           ))}
         </div>
       </section>
 
       <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
-        <h2 className="text-sm font-semibold text-ink">Language</h2>
+        <h2 className="text-sm font-semibold text-ink">{t('languageSection')}</h2>
         <div className="flex flex-wrap gap-2">
           {(['en', 'ru'] as const).map((lang) => (
             <button
@@ -74,7 +78,7 @@ export default function SettingsPage() {
                   : 'border-line text-ink-muted hover:text-ink'
               }`}
             >
-              {lang}
+              {lang === 'en' ? t('wordEnglish') : t('wordRussian')}
             </button>
           ))}
         </div>
@@ -82,7 +86,7 @@ export default function SettingsPage() {
 
       <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
         <h2 className="text-sm font-semibold text-ink">{t('sessions')}</h2>
-        <p className="text-xs text-ink-muted">Review signed-in devices and revoke access.</p>
+        <p className="text-xs text-ink-muted">{t('sessionsIntro')}</p>
         <Link
           href="/sessions"
           className="inline-flex rounded-xl border border-line px-3 py-2 text-sm text-accent"

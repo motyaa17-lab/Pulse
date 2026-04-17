@@ -72,7 +72,8 @@ export default function ChatPage() {
     queryFn: () => apiFetch<ChatDetailForDrawer>(`/chats/${chatId}`),
   });
 
-  const title = chat?.title ?? chat?.peer?.displayName ?? chat?.peer?.username ?? 'Conversation';
+  const title =
+    chat?.title ?? chat?.peer?.displayName ?? chat?.peer?.username ?? t('conversationFallback');
 
   const avatarSrc = toPublicUrl(chat?.avatarUrl ?? chat?.peer?.avatarUrl ?? null);
   const peerId = chat?.type === 'DIRECT' ? chat?.peer?.id : null;
@@ -105,7 +106,7 @@ export default function ChatPage() {
               'border border-white/12 bg-white/8 text-white/85 hover:bg-white/12 hover:text-white active:scale-[0.99]',
             )}
             onClick={() => router.push('/chats')}
-            aria-label="Back to chat list"
+            aria-label={t('backToChatListAria')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -121,7 +122,7 @@ export default function ChatPage() {
             <Link
               href={`/users/${peerId}`}
               className="relative h-9 w-9 shrink-0 md:h-10 md:w-10"
-              aria-label="Open profile"
+              aria-label={t('openProfileAria')}
             >
               {avatarSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -197,7 +198,7 @@ export default function ChatPage() {
             )}
             onClick={() => setDetailsOpen(true)}
           >
-            Info
+            {t('info')}
           </button>
         </header>
         {pinned && (
@@ -209,22 +210,22 @@ export default function ChatPage() {
               'border-b border-white/10 bg-white/6 text-white/70 hover:bg-white/10',
               'md:border-b md:border-line/60 md:bg-surface-elevated/90 md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45 dark:md:bg-surface-elevated/95',
             )}
-            aria-label="Pinned message"
+            aria-label={t('pinnedMessageAria')}
           >
             <span className="inline-flex rounded-full border border-line/70 bg-surface-muted/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-muted">
-              Pinned
+              {t('pinnedBadge')}
             </span>
             <span className={cn('min-w-0 flex-1 truncate text-[13px]', 'text-white md:text-ink')}>
               {pinned.deletedAt
-                ? 'Message deleted'
+                ? t('messageDeleted')
                 : pinned.text?.trim()
                   ? pinned.text
-                  : 'Attachment'}
+                  : t('attachment')}
             </span>
             <span
               className={cn('shrink-0 text-[11px] font-semibold', 'text-sky-300 md:text-accent')}
             >
-              View
+              {t('view')}
             </span>
           </button>
         )}

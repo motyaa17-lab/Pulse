@@ -9,28 +9,29 @@ import type { ChatListItem } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useUiStore } from '@/stores/ui-store';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
-import { useT } from '@/lib/i18n';
+import { useT, type I18nKey } from '@/lib/i18n';
+import { useLanguageStore } from '@/stores/language-store';
 
-function formatListTime(iso: string): string {
+function formatListTime(iso: string, t: (k: I18nKey) => string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfMsg = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.round((startOfToday.getTime() - startOfMsg.getTime()) / 86400000);
-  const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (diffDays === 0) return t;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const timeStr = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  if (diffDays === 0) return timeStr;
+  if (diffDays === 1) return t('yesterday');
+  if (diffDays < 7) return d.toLocaleDateString(locale, { weekday: 'short' });
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
-function chatLabel(chat: ChatListItem): string {
-  return chat.title ?? chat.peer?.displayName ?? chat.peer?.username ?? 'Chat';
+function chatLabel(chat: ChatListItem, t: (k: I18nKey) => string): string {
+  return chat.title ?? chat.peer?.displayName ?? chat.peer?.username ?? t('chatFallback');
 }
 
-function chatInitial(chat: ChatListItem): string {
-  return chatLabel(chat).slice(0, 1).toUpperCase() || '?';
+function chatInitial(chat: ChatListItem, t: (k: I18nKey) => string): string {
+  return chatLabel(chat, t).slice(0, 1).toUpperCase() || '?';
 }
 
 function avatarSrc(chat: ChatListItem): string | null {
@@ -66,6 +67,7 @@ export function ChatSidebar() {
   const router = useRouter();
   const qc = useQueryClient();
   const t = useT();
+  const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const setSearchOpen = useUiStore((s) => s.setSearchOpen);
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -175,13 +177,15 @@ export function ChatSidebar() {
       <div className="flex h-full w-full flex-col md:mx-auto md:max-w-[420px]">
         <header className="shrink-0 px-4 pb-3 pt-10">
           <div className="flex items-end justify-between">
-            <h1 className="font-display text-4xl font-semibold tracking-tight text-white">Chats</h1>
+            <h1 className="font-display text-4xl font-semibold tracking-tight text-white">
+              {t('chats')}
+            </h1>
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
               className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]"
             >
-              Search
+              {t('search')}
             </button>
           </div>
 
@@ -191,7 +195,7 @@ export function ChatSidebar() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search for messages or users..."
+                placeholder={t('chatListSearchPlaceholder')}
                 className="w-full bg-transparent text-[14px] text-white placeholder:text-white/40 outline-none"
                 aria-label={t('filterConversations')}
               />
@@ -205,7 +209,7 @@ export function ChatSidebar() {
               type="button"
               onClick={() => setShowArchived((v) => !v)}
               className="mx-2 mt-1 flex w-[calc(100%-1rem)] items-center gap-2 rounded-2xl border border-white/10 bg-white/7 px-3 py-3 text-left text-sm text-white/85 shadow-[0_10px_26px_rgba(0,0,0,0.25)] backdrop-blur transition hover:bg-white/10 active:scale-[0.99]"
-              aria-label="Archived chats"
+              aria-label={t('archivedChats')}
             >
               <span className="grid h-9 w-9 place-items-center rounded-2xl bg-white/10 text-white/80">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -225,9 +229,9 @@ export function ChatSidebar() {
                 </svg>
               </span>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold leading-tight">Archived Chats</div>
+                <div className="font-semibold leading-tight">{t('archivedChats')}</div>
                 <div className="mt-0.5 text-[12.5px] text-white/50">
-                  {showArchived ? 'Tap to hide' : 'Tap to view'}
+                  {showArchived ? t('archivedTapToHide') : t('archivedTapToShow')}
                 </div>
               </div>
               <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/12 px-2 text-[12px] font-bold text-white/80">
@@ -276,6 +280,7 @@ export function ChatSidebar() {
                   <Reorder.Item key={c.id} value={c} className="cursor-grab active:cursor-grabbing">
                     <ChatRow
                       chat={c}
+                      locale={locale}
                       active={pathname === `/chats/${c.id}`}
                       menuOpen={openMenuId === c.id}
                       onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
@@ -298,6 +303,7 @@ export function ChatSidebar() {
               <ChatRow
                 key={c.id}
                 chat={c}
+                locale={locale}
                 active={pathname === `/chats/${c.id}`}
                 menuOpen={openMenuId === c.id}
                 onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
@@ -322,6 +328,7 @@ export function ChatSidebar() {
                   <ChatRow
                     key={c.id}
                     chat={c}
+                    locale={locale}
                     active={pathname === `/chats/${c.id}`}
                     menuOpen={openMenuId === c.id}
                     onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
@@ -346,7 +353,7 @@ export function ChatSidebar() {
         <div className="mx-auto w-full max-w-[420px] px-4">
           <nav className="pointer-events-auto rounded-[22px] border border-white/12 bg-white/10 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-[28px]">
             <div className="grid grid-cols-5 items-center gap-1">
-              <Link href="/chats" className="contents" aria-label="Chats">
+              <Link href="/chats" className="contents" aria-label={t('chats')}>
                 <NavIcon active={pathname?.startsWith('/chats')}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <path
@@ -362,7 +369,7 @@ export function ChatSidebar() {
                 type="button"
                 onClick={() => setSearchOpen(true)}
                 className="contents"
-                aria-label="Search"
+                aria-label={t('search')}
               >
                 <NavIcon>
                   <MagnifierIcon />
@@ -372,7 +379,7 @@ export function ChatSidebar() {
                 type="button"
                 onClick={() => setSearchOpen(true)}
                 className="contents"
-                aria-label="New chat"
+                aria-label={t('newChatAria')}
               >
                 <NavIcon>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -385,7 +392,7 @@ export function ChatSidebar() {
                   </svg>
                 </NavIcon>
               </button>
-              <Link href="/profile" className="contents" aria-label="Profile">
+              <Link href="/profile" className="contents" aria-label={t('profileAria')}>
                 <NavIcon active={pathname === '/profile'}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <path
@@ -402,7 +409,7 @@ export function ChatSidebar() {
                   </svg>
                 </NavIcon>
               </Link>
-              <Link href="/settings" className="contents" aria-label="Settings">
+              <Link href="/settings" className="contents" aria-label={t('settingsAria')}>
                 <NavIcon active={pathname === '/settings'}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <path
@@ -429,6 +436,7 @@ export function ChatSidebar() {
 
 function ChatRow({
   chat,
+  locale,
   active,
   menuOpen,
   onToggleMenu,
@@ -442,6 +450,7 @@ function ChatRow({
   mutePending,
 }: {
   chat: ChatListItem;
+  locale: string;
   active: boolean;
   menuOpen: boolean;
   onToggleMenu: () => void;
@@ -455,19 +464,14 @@ function ChatRow({
   mutePending: boolean;
 }) {
   const t = useT();
-  const timeLabel = formatListTime(chat.lastMessageAt);
+  const timeLabel = formatListTime(chat.lastMessageAt, t, locale);
   const src = toPublicUrl(avatarSrc(chat));
-  const label = chatLabel(chat);
+  const label = chatLabel(chat, t);
   const isTyping = useUiStore((s) => s.typingByChat?.[chat.id] ?? false);
-  const preview = isTyping ? 'Typing…' : chat.lastMessagePreview?.trim() || ' ';
+  const preview = isTyping ? t('typing') : chat.lastMessagePreview?.trim() || ' ';
 
   const confirmHide = () => {
-    if (
-      !window.confirm(
-        // Keep this dialog simple for MVP i18n.
-        t('hideChat'),
-      )
-    ) {
+    if (!window.confirm(t('hideChatConfirm'))) {
       return;
     }
     onHide();
@@ -505,13 +509,13 @@ function ChatRow({
                   'bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white',
                 )}
               >
-                {chatInitial(chat)}
+                {chatInitial(chat, t)}
               </div>
             )}
             {chat.isMuted && (
               <span
                 className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-white/65 ring-2 ring-[#070B14]"
-                title="Muted"
+                title={t('mutedTooltip')}
               />
             )}
           </div>
@@ -560,7 +564,7 @@ function ChatRow({
             )}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
-            aria-label="Chat actions"
+            aria-label={t('chatActionsAria')}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
