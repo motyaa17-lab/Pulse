@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDraftStore } from '@/stores/draft-store';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
@@ -532,6 +532,21 @@ export function Composer({
           )}
         </button>
       </div>
+      {send.isError && (
+        <p
+          className="mt-1.5 px-2 text-center text-[11px] leading-snug text-red-600 dark:text-red-400"
+          role="alert"
+        >
+          <span className="font-semibold">{t('sendFailed')}</span>{' '}
+          <span className="opacity-90">
+            {send.error instanceof ApiError
+              ? `${send.error.message} (HTTP ${send.error.status})`
+              : send.error instanceof Error
+                ? send.error.message
+                : String(send.error)}
+          </span>
+        </p>
+      )}
       <p className="mt-1 hidden px-1 text-center text-[0.625rem] text-ink-muted/75 md:block">
         <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
           Enter

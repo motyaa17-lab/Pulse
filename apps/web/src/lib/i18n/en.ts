@@ -44,6 +44,7 @@ export const en = {
   confirmDeleteForMe: 'Remove this message from your chat history on this device?',
   confirmDeleteForEveryone:
     'Delete this message for everyone in the chat? People may still see it on older devices or backups.',
+  sendFailed: 'Could not send:',
 } as const;
 
 export type I18nKey = keyof typeof en;
