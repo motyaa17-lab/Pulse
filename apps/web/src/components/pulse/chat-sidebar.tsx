@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, toPublicUrl } from '@/lib/api';
 import type { ChatListItem } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useUiStore } from '@/stores/ui-store';
@@ -35,6 +35,30 @@ function chatInitial(chat: ChatListItem): string {
 
 function avatarSrc(chat: ChatListItem): string | null {
   return chat.avatarUrl ?? chat.peer?.avatarUrl ?? null;
+}
+
+function MagnifierIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" stroke="currentColor" strokeWidth="2" />
+      <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function NavIcon({ active, children }: { active?: boolean; children: React.ReactNode }) {
+  return (
+    <span
+      className={cn(
+        'grid h-11 w-11 place-items-center rounded-2xl transition',
+        active
+          ? 'bg-white/14 text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]'
+          : 'text-white/70 hover:bg-white/8 hover:text-white',
+      )}
+    >
+      {children}
+    </span>
+  );
 }
 
 export function ChatSidebar() {
@@ -145,70 +169,122 @@ export function ChatSidebar() {
   });
 
   return (
-    <aside className="flex h-full min-h-0 w-full flex-col border-r border-line/80 bg-sidebar dark:border-line/60">
-      <div className="border-b border-line/70 px-2.5 pb-2 pt-2 dark:border-line/45">
-        <div className="mb-1.5 flex items-center gap-2 px-0.5">
-          <div className="font-display text-[0.98rem] font-semibold tracking-tight text-ink">
-            Pulse
+    <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#070B14] text-white">
+      {/* Mobile-first centered column (desktop preview) */}
+      <div className="mx-auto flex h-full w-full max-w-[420px] flex-col">
+        <header className="shrink-0 px-4 pb-3 pt-10">
+          <div className="flex items-end justify-between">
+            <h1 className="font-display text-4xl font-semibold tracking-tight text-white">Chats</h1>
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]"
+            >
+              Search
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            className="ml-auto flex h-7 items-center rounded-md border border-line/90 bg-surface-muted/50 px-2 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-ink-muted transition hover:border-accent/35 hover:bg-surface-muted/80 hover:text-ink dark:border-line/55 dark:bg-surface-elevated/35 dark:hover:border-accent/30"
-            aria-label={t('search')}
-          >
-            {t('search')}
-          </button>
-        </div>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('filterConversations')}
-          className="h-8 w-full rounded-md border border-line/90 bg-surface-muted/60 px-2.5 text-[12.5px] text-ink placeholder:text-ink-muted/75 outline-none ring-accent/20 focus:border-accent/40 focus:ring-[3px] dark:border-line/50 dark:bg-surface-elevated/45 dark:focus:border-accent/35"
-          aria-label={t('filterConversations')}
-        />
-      </div>
-      <div className="scrollbar-thin flex-1 overflow-y-auto px-1 py-0.5">
-        {isLoading && (
-          <div className="space-y-0.5 px-0.5">
-            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="flex items-center gap-2 rounded-md px-1.5 py-1">
-                <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface-muted dark:bg-surface-elevated/80" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="h-3.5 w-2/3 animate-pulse rounded bg-surface-muted dark:bg-surface-elevated/80" />
-                  <div className="h-3 w-full animate-pulse rounded bg-surface-muted/80 dark:bg-surface-elevated/60" />
+
+          <div className="mt-4">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur">
+              <MagnifierIcon className="text-white/55" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search for messages or users..."
+                className="w-full bg-transparent text-[14px] text-white placeholder:text-white/40 outline-none"
+                aria-label={t('filterConversations')}
+              />
+            </div>
+          </div>
+        </header>
+
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-24">
+          {isLoading && (
+            <div className="space-y-2 px-2">
+              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <div key={i} className="flex items-center gap-3 rounded-2xl px-2 py-2">
+                  <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-white/10" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="h-4 w-2/3 animate-pulse rounded bg-white/10" />
+                    <div className="h-3 w-full animate-pulse rounded bg-white/10" />
+                  </div>
                 </div>
-              </div>
+              ))}
+            </div>
+          )}
+          {!isLoading && pinned.length > 0 && (
+            <div className="mb-1">
+              <p className="px-3 pb-1 pt-2 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/45">
+                {t('pinned')}
+              </p>
+              <Reorder.Group
+                axis="y"
+                values={pinned}
+                onReorder={(next: ChatListItem[]) => {
+                  // Optimistically reorder locally in cache.
+                  qc.setQueriesData<ChatListItem[]>(
+                    { queryKey: ['chats'] },
+                    (old: ChatListItem[] | undefined) => {
+                      if (!old) return old;
+                      const pinnedIds = new Set(next.map((x) => x.id));
+                      const nextPinned = next.map((x, idx) => ({ ...x, pinOrder: idx }));
+                      const rest = old.filter((c) => !pinnedIds.has(c.id));
+                      return [...nextPinned, ...rest];
+                    },
+                  );
+                  void reorderPinned.mutateAsync(next.map((x) => x.id)).catch(() => void 0);
+                }}
+                className="space-y-px"
+              >
+                {pinned.map((c: ChatListItem) => (
+                  <Reorder.Item key={c.id} value={c} className="cursor-grab active:cursor-grabbing">
+                    <ChatRow
+                      chat={c}
+                      active={pathname === `/chats/${c.id}`}
+                      menuOpen={openMenuId === c.id}
+                      onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
+                      onHide={() => hideChat.mutate(c.id)}
+                      onPinToggle={(on) => pinChat.mutate({ chatId: c.id, on })}
+                      onArchiveToggle={(on) => archiveChat.mutate({ chatId: c.id, on })}
+                      onMuteToggle={(on) => muteChat.mutate({ chatId: c.id, on })}
+                      hidePending={hideChat.isPending}
+                      pinPending={pinChat.isPending}
+                      archivePending={archiveChat.isPending}
+                      mutePending={muteChat.isPending}
+                    />
+                  </Reorder.Item>
+                ))}
+              </Reorder.Group>
+            </div>
+          )}
+          <div className="space-y-1">
+            {rest.map((c: ChatListItem) => (
+              <ChatRow
+                key={c.id}
+                chat={c}
+                active={pathname === `/chats/${c.id}`}
+                menuOpen={openMenuId === c.id}
+                onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
+                onHide={() => hideChat.mutate(c.id)}
+                onPinToggle={(on) => pinChat.mutate({ chatId: c.id, on })}
+                onArchiveToggle={(on) => archiveChat.mutate({ chatId: c.id, on })}
+                onMuteToggle={(on) => muteChat.mutate({ chatId: c.id, on })}
+                hidePending={hideChat.isPending}
+                pinPending={pinChat.isPending}
+                archivePending={archiveChat.isPending}
+                mutePending={muteChat.isPending}
+              />
             ))}
           </div>
-        )}
-        {!isLoading && pinned.length > 0 && (
-          <div className="mb-1">
-            <p className="px-2 pb-0.5 pt-1.5 text-[0.625rem] font-bold uppercase tracking-[0.14em] text-ink-muted/80">
-              {t('pinned')}
-            </p>
-            <Reorder.Group
-              axis="y"
-              values={pinned}
-              onReorder={(next: ChatListItem[]) => {
-                // Optimistically reorder locally in cache.
-                qc.setQueriesData<ChatListItem[]>(
-                  { queryKey: ['chats'] },
-                  (old: ChatListItem[] | undefined) => {
-                    if (!old) return old;
-                    const pinnedIds = new Set(next.map((x) => x.id));
-                    const nextPinned = next.map((x, idx) => ({ ...x, pinOrder: idx }));
-                    const rest = old.filter((c) => !pinnedIds.has(c.id));
-                    return [...nextPinned, ...rest];
-                  },
-                );
-                void reorderPinned.mutateAsync(next.map((x) => x.id)).catch(() => void 0);
-              }}
-              className="space-y-px"
-            >
-              {pinned.map((c: ChatListItem) => (
-                <Reorder.Item key={c.id} value={c} className="cursor-grab active:cursor-grabbing">
+          {!isLoading && archived.length > 0 && (
+            <div className="mt-2">
+              <p className="px-3 pb-1 pt-3 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/45">
+                {t('archived')}
+              </p>
+              <div className="space-y-1 opacity-[0.9]">
+                {archived.map((c: ChatListItem) => (
                   <ChatRow
+                    key={c.id}
                     chat={c}
                     active={pathname === `/chats/${c.id}`}
                     menuOpen={openMenuId === c.id}
@@ -222,71 +298,93 @@ export function ChatSidebar() {
                     archivePending={archiveChat.isPending}
                     mutePending={muteChat.isPending}
                   />
-                </Reorder.Item>
-              ))}
-            </Reorder.Group>
-          </div>
-        )}
-        <div className="space-y-px">
-          {rest.map((c: ChatListItem) => (
-            <ChatRow
-              key={c.id}
-              chat={c}
-              active={pathname === `/chats/${c.id}`}
-              menuOpen={openMenuId === c.id}
-              onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
-              onHide={() => hideChat.mutate(c.id)}
-              onPinToggle={(on) => pinChat.mutate({ chatId: c.id, on })}
-              onArchiveToggle={(on) => archiveChat.mutate({ chatId: c.id, on })}
-              onMuteToggle={(on) => muteChat.mutate({ chatId: c.id, on })}
-              hidePending={hideChat.isPending}
-              pinPending={pinChat.isPending}
-              archivePending={archiveChat.isPending}
-              mutePending={muteChat.isPending}
-            />
-          ))}
-        </div>
-        {!isLoading && archived.length > 0 && (
-          <div className="mt-2">
-            <p className="px-2 pb-0.5 pt-2 text-[0.625rem] font-bold uppercase tracking-[0.14em] text-ink-muted/80">
-              {t('archived')}
-            </p>
-            <div className="space-y-px opacity-[0.88]">
-              {archived.map((c: ChatListItem) => (
-                <ChatRow
-                  key={c.id}
-                  chat={c}
-                  active={pathname === `/chats/${c.id}`}
-                  menuOpen={openMenuId === c.id}
-                  onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
-                  onHide={() => hideChat.mutate(c.id)}
-                  onPinToggle={(on) => pinChat.mutate({ chatId: c.id, on })}
-                  onArchiveToggle={(on) => archiveChat.mutate({ chatId: c.id, on })}
-                  onMuteToggle={(on) => muteChat.mutate({ chatId: c.id, on })}
-                  hidePending={hideChat.isPending}
-                  pinPending={pinChat.isPending}
-                  archivePending={archiveChat.isPending}
-                  mutePending={muteChat.isPending}
-                />
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-      <div className="border-t border-line/70 p-1.5 dark:border-line/45">
-        <div className="flex gap-1">
-          <Link
-            href="/settings"
-            className="flex-1 rounded-md border border-line/90 py-1.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide text-ink-muted transition hover:border-accent/30 hover:bg-surface-muted/60 hover:text-ink dark:border-line/55 dark:hover:bg-surface-elevated/45"
-          >
-            {t('settings')}
-          </Link>
-          <Link
-            href="/sessions"
-            className="flex-1 rounded-md border border-line/90 py-1.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide text-ink-muted transition hover:border-accent/30 hover:bg-surface-muted/60 hover:text-ink dark:border-line/55 dark:hover:bg-surface-elevated/45"
-          >
-            {t('sessions')}
-          </Link>
+
+      {/* Floating bottom navigation */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-4">
+        <div className="mx-auto w-full max-w-[420px] px-4">
+          <nav className="pointer-events-auto rounded-[22px] border border-white/12 bg-white/10 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-[28px]">
+            <div className="grid grid-cols-5 items-center gap-1">
+              <Link href="/chats" className="contents" aria-label="Chats">
+                <NavIcon active={pathname?.startsWith('/chats')}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </NavIcon>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="contents"
+                aria-label="Search"
+              >
+                <NavIcon>
+                  <MagnifierIcon />
+                </NavIcon>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="contents"
+                aria-label="New chat"
+              >
+                <NavIcon>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M12 5v14M5 12h14"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </NavIcon>
+              </button>
+              <Link href="/profile" className="contents" aria-label="Profile">
+                <NavIcon active={pathname === '/profile'}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M20 21a8 8 0 0 0-16 0"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </NavIcon>
+              </Link>
+              <Link href="/settings" className="contents" aria-label="Settings">
+                <NavIcon active={pathname === '/settings'}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M19.4 15a7.9 7.9 0 0 0 .1-2l2-1.5-2-3.5-2.4.6a8 8 0 0 0-1.7-1L13 3h-2L8.6 7.6a8 8 0 0 0-1.7 1L4.5 8 2.5 11.5l2 1.5a7.9 7.9 0 0 0 .1 2l-2 1.5 2 3.5 2.4-.6a8 8 0 0 0 1.7 1L11 21h2l2.4-4.6a8 8 0 0 0 1.7-1l2.4.6 2-3.5-2-1.5z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </NavIcon>
+              </Link>
+            </div>
+          </nav>
         </div>
       </div>
     </aside>
@@ -322,9 +420,10 @@ function ChatRow({
 }) {
   const t = useT();
   const timeLabel = formatListTime(chat.lastMessageAt);
-  const src = avatarSrc(chat);
+  const src = toPublicUrl(avatarSrc(chat));
   const label = chatLabel(chat);
-  const preview = chat.lastMessagePreview?.trim() || ' ';
+  const isTyping = useUiStore((s) => s.typingByChat?.[chat.id] ?? false);
+  const preview = isTyping ? 'Typing…' : chat.lastMessagePreview?.trim() || ' ';
 
   const confirmHide = () => {
     if (
@@ -346,30 +445,28 @@ function ChatRow({
     >
       <div
         className={cn(
-          'flex min-h-[2.75rem] items-stretch gap-0 rounded-md transition-colors',
-          'hover:bg-surface-muted/85 dark:hover:bg-surface-elevated/50',
-          active &&
-            'bg-accent/[0.11] dark:bg-accent/[0.09] before:pointer-events-none before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-accent',
+          'flex items-stretch gap-0 rounded-2xl transition',
+          'active:scale-[0.99]',
+          active ? 'bg-white/12 shadow-[0_14px_40px_rgba(0,0,0,0.4)]' : 'hover:bg-white/6',
         )}
       >
         <Link
           href={`/chats/${chat.id}`}
-          className="flex min-w-0 flex-1 items-center gap-2 px-1.5 py-1"
+          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3"
         >
-          <div className="relative h-10 w-10 shrink-0">
+          <div className="relative h-12 w-12 shrink-0">
             {src ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={src}
                 alt=""
-                className="h-10 w-10 rounded-full object-cover ring-1 ring-line/55 dark:ring-line/35"
+                className="h-12 w-12 rounded-full object-cover ring-1 ring-white/15"
               />
             ) : (
               <div
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full text-[0.8125rem] font-semibold ring-1 ring-line/45 dark:ring-line/35',
-                  'bg-gradient-to-br from-accent/35 to-accent/10 text-accent',
-                  'dark:from-accent/25 dark:to-accent/5',
+                  'flex h-12 w-12 items-center justify-center rounded-full text-[0.95rem] font-semibold ring-1 ring-white/15',
+                  'bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white',
                 )}
               >
                 {chatInitial(chat)}
@@ -377,7 +474,7 @@ function ChatRow({
             )}
             {chat.isMuted && (
               <span
-                className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-ink-muted ring-2 ring-sidebar dark:bg-ink-muted/80 dark:ring-sidebar"
+                className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-white/65 ring-2 ring-[#070B14]"
                 title="Muted"
               />
             )}
@@ -386,27 +483,31 @@ function ChatRow({
             <div className="flex items-baseline gap-2">
               <span
                 className={cn(
-                  'min-w-0 flex-1 truncate text-[12.5px] font-semibold leading-tight text-ink',
-                  active && 'text-ink',
+                  'min-w-0 flex-1 truncate text-[15px] font-semibold leading-tight text-white',
                 )}
               >
                 {label}
               </span>
               <span
                 className={cn(
-                  'shrink-0 text-[0.65rem] tabular-nums text-ink-muted/90',
-                  chat.unreadCount > 0 && 'font-bold text-accent dark:text-accent',
+                  'shrink-0 text-[0.72rem] tabular-nums text-white/55',
+                  chat.unreadCount > 0 && 'font-bold text-sky-300',
                 )}
               >
                 {timeLabel}
               </span>
             </div>
             <div className="mt-px flex items-center gap-1.5">
-              <p className="min-w-0 flex-1 truncate text-[11.5px] leading-snug text-ink-muted/95 group-hover/row:text-ink-muted">
+              <p
+                className={cn(
+                  'min-w-0 flex-1 truncate text-[13px] leading-snug',
+                  isTyping ? 'text-emerald-300/90' : 'text-white/55',
+                )}
+              >
                 {preview}
               </p>
               {chat.unreadCount > 0 && (
-                <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold leading-none text-accent-foreground shadow-sm dark:shadow-bubble-dark">
+                <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-400 px-1.5 text-[10px] font-bold leading-none text-[#06101f] shadow-[0_8px_18px_rgba(56,189,248,0.25)]">
                   {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                 </span>
               )}
@@ -417,7 +518,7 @@ function ChatRow({
           <motion.button
             type="button"
             className={cn(
-              'flex h-8 w-7 items-center justify-center rounded-md text-ink-muted/55 transition hover:bg-surface-elevated/80 hover:text-ink',
+              'flex h-10 w-9 items-center justify-center rounded-2xl text-white/55 transition hover:bg-white/10 hover:text-white',
               'opacity-100 sm:opacity-0 sm:group-hover/row:opacity-100 sm:focus:opacity-100',
               menuOpen && 'opacity-100',
             )}
@@ -440,7 +541,7 @@ function ChatRow({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.985 }}
                 transition={{ duration: 0.14, ease: [0.2, 0.8, 0.2, 1] }}
-                className="absolute right-0 top-full z-50 mt-0.5 min-w-[9.5rem] rounded-lg border border-line/90 bg-surface-elevated py-0.5 shadow-lift dark:border-line/55 dark:bg-surface-elevated/98"
+                className="absolute right-0 top-full z-50 mt-1 min-w-[9.5rem] rounded-2xl border border-white/12 bg-[#0B1020]/85 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]"
                 role="menu"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -448,7 +549,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={pinPending}
-                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
                   onClick={() => onPinToggle(!chat.isPinned)}
                 >
                   {chat.isPinned ? t('unpin') : t('pin')}
@@ -457,7 +558,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={archivePending}
-                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
                   onClick={() => onArchiveToggle(!chat.isArchived)}
                 >
                   {chat.isArchived ? t('unarchive') : t('archive')}
@@ -466,7 +567,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={mutePending}
-                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
                   onClick={() => onMuteToggle(!chat.isMuted)}
                 >
                   {chat.isMuted ? t('unmute') : t('mute')}
@@ -475,7 +576,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={hidePending}
-                  className="w-full px-2.5 py-1.5 text-left text-[12px] font-medium text-ink transition hover:bg-surface-muted/90 disabled:opacity-50 dark:hover:bg-surface-muted/40"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
                   onClick={() => confirmHide()}
                 >
                   {t('hideChat')}
