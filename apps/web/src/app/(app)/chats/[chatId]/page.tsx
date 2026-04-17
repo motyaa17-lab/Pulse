@@ -94,7 +94,10 @@ export default function ChatPage() {
   return (
     <div className={cn('flex h-full min-h-0 flex-col', isMobile && 'bg-[#070B14] text-white')}>
       <div
-        className={cn('flex h-full min-h-0 flex-col', isMobile && 'mx-auto w-full max-w-[420px]')}
+        className={cn(
+          'flex h-full min-h-0 flex-col',
+          isMobile && 'w-full md:mx-auto md:max-w-[420px]',
+        )}
       >
         <header
           className={cn(
@@ -112,7 +115,7 @@ export default function ChatPage() {
                 ? 'border border-white/12 bg-white/8 text-white/85 hover:bg-white/12 hover:text-white active:scale-[0.99]'
                 : 'border border-line/75 text-ink-muted hover:bg-surface-muted/90 hover:text-ink dark:border-line/50 dark:hover:bg-surface-muted/45',
             )}
-            onClick={() => (isMobile ? router.push('/chats') : setSidebar(true))}
+            onClick={() => router.push('/chats')}
             aria-label="Back to chat list"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

@@ -171,8 +171,8 @@ export function ChatSidebar() {
 
   return (
     <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#070B14] text-white">
-      {/* Mobile-first centered column (desktop preview) */}
-      <div className="mx-auto flex h-full w-full max-w-[420px] flex-col">
+      {/* Full width on mobile, centered preview on desktop */}
+      <div className="flex h-full w-full flex-col md:mx-auto md:max-w-[420px]">
         <header className="shrink-0 px-4 pb-3 pt-10">
           <div className="flex items-end justify-between">
             <h1 className="font-display text-4xl font-semibold tracking-tight text-white">Chats</h1>

@@ -4,36 +4,21 @@ import { ChatSidebar } from '@/components/pulse/chat-sidebar';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import { usePathname } from 'next/navigation';
-import { useMediaQuery } from '@/lib/use-media-query';
 
 export default function ChatsLayout({ children }: { children: React.ReactNode }) {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
   const pathname = usePathname();
-  const isMobile = useMediaQuery('(max-width: 768px)');
-
-  // True mobile layout: one screen at a time.
-  if (isMobile) {
-    const isChatRoute = pathname?.startsWith('/chats/') ?? false;
-    return (
-      <div className="h-dvh w-full overflow-hidden bg-[#070B14]">
-        {isChatRoute ? (
-          <main className="h-full w-full">{children}</main>
-        ) : (
-          <div className="h-full w-full">
-            <ChatSidebar />
-          </div>
-        )}
-      </div>
-    );
-  }
+  const isChatRoute = pathname?.startsWith('/chats/') ?? false;
 
   return (
     <div className="flex h-dvh min-h-0 w-full overflow-hidden bg-[#070B14]">
       <div
         className={cn(
-          'absolute inset-y-0 left-0 z-20 w-[min(100%,420px)] transition-transform md:static md:translate-x-0',
+          'absolute inset-y-0 left-0 z-20 w-full transition-transform md:static md:w-[min(100%,420px)] md:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          // Mobile: one-screen navigation (no split view)
+          isChatRoute && 'hidden md:block',
         )}
       >
         <div className="flex h-full flex-col border-r border-white/10 bg-[#070B14]">
@@ -49,7 +34,9 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
           Chats
         </button>
       )}
-      <main className="relative min-h-0 min-w-0 flex-1">{children}</main>
+      <main className={cn('relative min-h-0 min-w-0 flex-1', !isChatRoute && 'hidden md:block')}>
+        {children}
+      </main>
     </div>
   );
 }
