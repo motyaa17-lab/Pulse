@@ -63,6 +63,7 @@ export class SearchService {
         chatId: { in: chatIds },
         deletedAt: null,
         text: { contains: query, mode: 'insensitive' },
+        hiddenForUsers: { none: { userId } },
       },
       take: 30,
       orderBy: { createdAt: 'desc' },

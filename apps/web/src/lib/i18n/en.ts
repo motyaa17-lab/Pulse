@@ -39,7 +39,11 @@ export const en = {
   syncingChats: 'Syncing your chats…',
   noConversationsYet: 'No conversations yet',
   openingChat: 'Opening a chat…',
+  deleteForMe: 'Delete for me',
+  deleteForEveryone: 'Delete for everyone',
+  confirmDeleteForMe: 'Remove this message from your chat history on this device?',
+  confirmDeleteForEveryone:
+    'Delete this message for everyone in the chat? People may still see it on older devices or backups.',
 } as const;
 
 export type I18nKey = keyof typeof en;
-

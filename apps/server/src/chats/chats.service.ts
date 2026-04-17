@@ -90,7 +90,10 @@ export class ChatsService {
         try {
           await this.prisma.hiddenChat.deleteMany({ where: { userId, chatId } });
         } catch (e) {
-          if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === 'P2021' || e.code === 'P2022')) {
+          if (
+            e instanceof Prisma.PrismaClientKnownRequestError &&
+            (e.code === 'P2021' || e.code === 'P2022')
+          ) {
             // Table/column missing (migration not applied) — ignore so DMs still work.
           } else {
             throw e;
@@ -177,10 +180,15 @@ export class ChatsService {
           include: {
             members: {
               where: { leftAt: null },
-              include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+              include: {
+                user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+              },
             },
             messages: {
-              where: { deletedAt: null },
+              where: {
+                deletedAt: null,
+                hiddenForUsers: { none: { userId } },
+              },
               orderBy: { createdAt: 'desc' },
               take: 1,
             },
@@ -196,10 +204,16 @@ export class ChatsService {
     const archived = await this.prisma.archivedChat.findMany({ where: { userId } });
     let hidden: { chatId: string }[] = [];
     try {
-      hidden = await this.prisma.hiddenChat.findMany({ where: { userId }, select: { chatId: true } });
+      hidden = await this.prisma.hiddenChat.findMany({
+        where: { userId },
+        select: { chatId: true },
+      });
     } catch (e) {
       // If the migration hasn't been applied yet, do not blank the entire chat list.
-      if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === 'P2021' || e.code === 'P2022')) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        (e.code === 'P2021' || e.code === 'P2022')
+      ) {
         hidden = [];
       } else {
         throw e;
@@ -233,7 +247,8 @@ export class ChatsService {
 
       const ql = q?.trim().toLowerCase();
       if (ql) {
-        const hay = `${title ?? ''} ${peer?.username ?? ''} ${peer?.displayName ?? ''}`.toLowerCase();
+        const hay =
+          `${title ?? ''} ${peer?.username ?? ''} ${peer?.displayName ?? ''}`.toLowerCase();
         if (!hay.includes(ql)) continue;
       }
 
@@ -245,7 +260,7 @@ export class ChatsService {
         lastMessageAt: last?.createdAt?.toISOString() ?? c.updatedAt.toISOString(),
         lastMessagePreview: last?.deletedAt
           ? ''
-          : last?.text?.slice(0, 160) ?? (last ? '[Media]' : ''),
+          : (last?.text?.slice(0, 160) ?? (last ? '[Media]' : '')),
         unreadCount: unread,
         isPinned: pinSet.has(c.id),
         isArchived: archSet.has(c.id),
@@ -280,6 +295,7 @@ export class ChatsService {
         deletedAt: null,
         senderId: { not: userId },
         createdAt: { gt: after },
+        hiddenForUsers: { none: { userId } },
       },
     });
   }
@@ -461,15 +477,17 @@ export class ChatsService {
   async updateChat(userId: string, chatId: string, dto: UpdateChatDto) {
     const m = await this.assertAdminOrOwner(chatId, userId);
     const chat = m.chat;
-    if (chat.type === ChatType.DIRECT) throw new BadRequestException('Cannot rename direct chat here');
+    if (chat.type === ChatType.DIRECT)
+      throw new BadRequestException('Cannot rename direct chat here');
 
     await this.prisma.chat.update({
       where: { id: chatId },
       data: {
         title: dto.title,
-        groupMeta: chat.type === ChatType.GROUP && dto.description !== undefined
-          ? { update: { description: dto.description } }
-          : undefined,
+        groupMeta:
+          chat.type === ChatType.GROUP && dto.description !== undefined
+            ? { update: { description: dto.description } }
+            : undefined,
         channelMeta:
           chat.type === ChatType.CHANNEL && dto.description !== undefined
             ? { update: { description: dto.description } }

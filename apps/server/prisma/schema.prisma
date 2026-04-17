@@ -56,6 +56,7 @@ model User {
   notificationPrefs NotificationPreference?
   forwardedMessages Message[]               @relation("ForwardedFromUser")
   createdChats      Chat[]                  @relation("ChatCreator")
+  hiddenMessages    MessageHiddenForUser[]
 
   pinnedChatsMessages Chat[] @relation("ChatPinnedByUser")
 }
@@ -169,11 +170,24 @@ model Message {
 
   attachments MessageAttachment[]
   reactions   MessageReaction[]
+  hiddenForUsers MessageHiddenForUser[]
 
   pinnedInChat Chat? @relation("ChatPinnedMessage")
 
   @@index([chatId, createdAt(sort: Desc)])
   @@index([senderId])
+}
+
+/** Per-user: message stays for others; removed only from this user's history. */
+model MessageHiddenForUser {
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hiddenAt  DateTime @default(now())
+
+  @@id([messageId, userId])
+  @@index([userId])
 }
 
 model MessageAttachment {

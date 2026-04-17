@@ -39,5 +39,9 @@ export const ru = {
   syncingChats: 'Синхронизация чатов…',
   noConversationsYet: 'Пока нет диалогов',
   openingChat: 'Открываем чат…',
+  deleteForMe: 'Удалить у меня',
+  deleteForEveryone: 'Удалить у всех',
+  confirmDeleteForMe: 'Удалить это сообщение из вашей истории в этом чате?',
+  confirmDeleteForEveryone:
+    'Удалить это сообщение у всех в чате? На старых устройствах или в копиях оно может ещё отображаться.',
 } as const;
-

@@ -58,7 +58,10 @@ export class MessagesController {
     @CurrentUser() user: JwtUser,
     @Param('chatId') chatId: string,
     @Param('messageId') messageId: string,
+    @Query('forMe') forMe?: string,
   ) {
+    const hide = forMe === '1' || forMe === 'true' || forMe === 'yes' || forMe === 'on';
+    if (hide) return this.messages.hideForUser(user.sub, chatId, messageId);
     return this.messages.softDelete(user.sub, chatId, messageId);
   }
 

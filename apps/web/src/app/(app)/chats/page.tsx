@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
@@ -43,6 +43,7 @@ function ChatsIndexContent() {
   const start = params.get('start');
   const qc = useQueryClient();
   const t = useT();
+  const didAutoOpenDesktop = useRef(false);
 
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats', ''],
@@ -64,6 +65,21 @@ function ChatsIndexContent() {
     };
     void run();
   }, [qc, router, start]);
+
+  // Desktop split-view UX: auto-open the first chat once (never on mobile).
+  useEffect(() => {
+    if (start) return;
+    if (isLoading) return;
+    if (didAutoOpenDesktop.current) return;
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(min-width: 769px)').matches) return;
+
+    const first = data?.[0];
+    if (!first) return;
+
+    didAutoOpenDesktop.current = true;
+    router.replace(`/chats/${first.id}`);
+  }, [data, isLoading, router, start]);
 
   if (isLoading) {
     return (
@@ -113,10 +129,10 @@ function ChatsIndexContent() {
     );
   }
 
-  // When chats exist, we intentionally do not auto-navigate.
-  // Desktop uses split view; mobile shows the list in layout.
+  // Desktop: auto-open happens in effect above; keep a lightweight placeholder while it runs.
+  // Mobile: list is rendered by layout; this panel stays mostly unused.
   return (
-    <div className="flex h-full flex-col items-center justify-center px-6 text-center text-sm text-ink-muted">
+    <div className="hidden h-full flex-col items-center justify-center px-6 text-center text-sm text-ink-muted md:flex">
       <p className="font-medium text-ink">{t('openingChat')}</p>
     </div>
   );

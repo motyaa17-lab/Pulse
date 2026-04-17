@@ -17,6 +17,7 @@ import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { Composer } from './composer';
 import { MessageActionsMenu } from './message-actions-menu';
 import { motion } from 'framer-motion';
+import { useT } from '@/lib/i18n';
 
 /** Messages from the same sender within this window visually stack as one group. */
 const GROUP_GAP_MS = 5 * 60 * 1000;
@@ -276,11 +277,23 @@ export function MessageThread({ chatId }: { chatId: string }) {
       });
     };
 
+    const onMessageHidden = (payload: unknown) => {
+      const p = payload as { chatId?: string; messageId?: string };
+      if (!p?.chatId || p.chatId !== chatId || !p.messageId) return;
+      patchMessages((old) => {
+        if (!old) return old;
+        return { ...old, items: old.items.filter((x) => x.id !== p.messageId) };
+      });
+      void qc.invalidateQueries({ queryKey: ['chats'] });
+      void qc.invalidateQueries({ queryKey: ['chat', chatId] });
+    };
+
     s.on('message:new', onMessageNew);
     s.on('message:updated', onMessageUpdated);
     s.on('reaction:update', onReactionUpdate);
     s.on('message:deliveredUpdate', onDeliveredUpdate);
     s.on('message:readUpdate', onReadUpdate);
+    s.on('message:hidden', onMessageHidden);
     return () => {
       s.off('connect', joinRoom);
       s.emit('chat:leave', { chatId });
@@ -289,6 +302,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
       s.off('reaction:update', onReactionUpdate);
       s.off('message:deliveredUpdate', onDeliveredUpdate);
       s.off('message:readUpdate', onReadUpdate);
+      s.off('message:hidden', onMessageHidden);
     };
   }, [accessToken, chatId, myId, qc]);
 
@@ -648,6 +662,7 @@ function MessageBubble({
   closeOnScrollEl: React.RefObject<HTMLDivElement | null>;
 }) {
   const qc = useQueryClient();
+  const t = useT();
   const isDeleted = Boolean(m.deletedAt);
   const isSystem = m.type === 'SYSTEM';
   const showTrigger = menuOpen;
@@ -725,10 +740,9 @@ function MessageBubble({
 
   const softDelete = async () => {
     const isOutgoing = Boolean(myId && m.senderId === myId);
-    const canDelete = isOutgoing && !isDeleted;
-    if (!canDelete) return;
-    const ok = window.confirm('Delete this message?');
-    if (!ok) return;
+    const canDeleteEveryone = isOutgoing && !isDeleted;
+    if (!canDeleteEveryone) return;
+    if (!window.confirm(t('confirmDeleteForEveryone'))) return;
     onDelete();
     setMenuOpen(false);
 
@@ -752,6 +766,30 @@ function MessageBubble({
         return { ...old, items: old.items.map((x) => (x.id === updated.id ? updated : x)) };
       });
       bumpChatListPreview(qc, chatId, 'Message deleted', updated.createdAt);
+      void qc.invalidateQueries({ queryKey: ['chats'] });
+    } catch {
+      qc.setQueryData(['messages', chatId], snapshot);
+    }
+  };
+
+  const deleteForMe = async () => {
+    if (!window.confirm(t('confirmDeleteForMe'))) return;
+    onDelete();
+    setMenuOpen(false);
+
+    const snapshot = qc.getQueryData<MessagesQueryData>(['messages', chatId]);
+    qc.setQueryData<MessagesQueryData>(['messages', chatId], (old) => {
+      if (!old) return old;
+      return { ...old, items: old.items.filter((x) => x.id !== m.id) };
+    });
+
+    try {
+      await apiFetch<{ ok: boolean; chatId: string; messageId: string }>(
+        `/chats/${chatId}/messages/${m.id}?forMe=1`,
+        { method: 'DELETE' },
+      );
+      void qc.invalidateQueries({ queryKey: ['chats'] });
+      void qc.invalidateQueries({ queryKey: ['chat', chatId] });
     } catch {
       qc.setQueryData(['messages', chatId], snapshot);
     }
@@ -804,7 +842,7 @@ function MessageBubble({
 
   const isOutgoing = Boolean(myId && m.senderId === myId);
   const canEdit = isOutgoing && !isDeleted && m.type === 'TEXT';
-  const canDelete = isOutgoing && !isDeleted;
+  const canDeleteEveryone = isOutgoing && !isDeleted;
   const canCopy = Boolean(m.text && !isDeleted);
   const showDate = !prev || !sameCalendarDay(prev.createdAt, m.createdAt);
   const firstInGroup = !prev || prev.type === 'SYSTEM' || !inSameGroup(prev, m);
@@ -866,14 +904,33 @@ function MessageBubble({
         },
       },
       {
-        id: 'delete',
-        label: 'Delete message',
+        id: 'delete-everyone',
+        label: t('deleteForEveryone'),
         danger: true,
-        disabled: !canDelete,
+        disabled: !canDeleteEveryone,
         onSelect: softDelete,
       },
+      {
+        id: 'delete-me',
+        label: t('deleteForMe'),
+        onSelect: deleteForMe,
+      },
     ],
-    [canCopy, canDelete, canEdit, isDeleted, m.id, m.text, onEdit, onForward, onReply, setMenuOpen],
+    [
+      canCopy,
+      canDeleteEveryone,
+      canEdit,
+      deleteForMe,
+      isDeleted,
+      m.id,
+      m.text,
+      onEdit,
+      onForward,
+      onReply,
+      setMenuOpen,
+      softDelete,
+      t,
+    ],
   );
 
   // Premium-ish grouping: inner corners get flatter so stacks read as one unit.

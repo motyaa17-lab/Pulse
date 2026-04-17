@@ -129,13 +129,24 @@ export class MessagesService {
     });
     const skipDeliveryDetails = otherMemberCount === 0;
 
-    const where: Prisma.MessageWhereInput = { chatId };
+    const where: Prisma.MessageWhereInput = {
+      chatId,
+      NOT: {
+        hiddenForUsers: {
+          some: { userId },
+        },
+      },
+    };
     if (cursor) {
       const cur = await this.prisma.message.findUnique({ where: { id: cursor } });
       if (cur) {
-        where.OR = [
-          { createdAt: { lt: cur.createdAt } },
-          { AND: [{ createdAt: cur.createdAt }, { id: { lt: cur.id } }] },
+        where.AND = [
+          {
+            OR: [
+              { createdAt: { lt: cur.createdAt } },
+              { AND: [{ createdAt: cur.createdAt }, { id: { lt: cur.id } }] },
+            ],
+          },
         ];
       }
     }
@@ -162,7 +173,8 @@ export class MessagesService {
     });
     if (!msg) throw new NotFoundException();
     if (msg.senderId !== userId) throw new ForbiddenException();
-    if (msg.type !== MessageType.TEXT) throw new BadRequestException('Only text messages can be edited');
+    if (msg.type !== MessageType.TEXT)
+      throw new BadRequestException('Only text messages can be edited');
 
     const updated = await this.prisma.message.update({
       where: { id: messageId },
@@ -197,6 +209,22 @@ export class MessagesService {
     this.ws.emitToChat(chatId, 'message:deleted', { id: messageId, chatId });
     this.ws.emitToChat(chatId, 'message:updated', broadcastPayload);
     return this.toDto(updated, userId, dtoOpts);
+  }
+
+  /** Remove message from this user's history only ("delete for me"). */
+  async hideForUser(userId: string, chatId: string, messageId: string) {
+    await this.chats.assertMember(chatId, userId);
+    const msg = await this.prisma.message.findFirst({ where: { id: messageId, chatId } });
+    if (!msg) throw new NotFoundException();
+
+    await this.prisma.messageHiddenForUser.upsert({
+      where: { messageId_userId: { messageId, userId } },
+      create: { messageId, userId },
+      update: {},
+    });
+
+    this.ws.emitToUser(userId, 'message:hidden', { chatId, messageId });
+    return { ok: true as const, chatId, messageId };
   }
 
   async addReaction(userId: string, chatId: string, messageId: string, emoji: string) {
@@ -253,7 +281,11 @@ export class MessagesService {
         lastReadAt: new Date(),
         lastDeliveredMsgId: messageId,
       },
-      update: { lastReadMessageId: messageId, lastReadAt: new Date(), lastDeliveredMsgId: messageId },
+      update: {
+        lastReadMessageId: messageId,
+        lastReadAt: new Date(),
+        lastDeliveredMsgId: messageId,
+      },
     });
 
     await this.users.touchLastSeen(userId);
@@ -324,38 +356,40 @@ export class MessagesService {
         // Realtime broadcast: do not block Socket.IO on read-state fan-out (was delaying other clients).
         deliveryStatus = 'SENT';
       } else {
-      const members = await this.prisma.chatMember.findMany({
-        where: { chatId: msg.chatId, leftAt: null, NOT: { userId: viewerId } },
-        select: { userId: true },
-      });
-      if (members.length === 0) deliveryStatus = 'READ';
-      else {
-        const states = await this.prisma.readState.findMany({
-          where: { chatId: msg.chatId, userId: { in: members.map((m) => m.userId) } },
+        const members = await this.prisma.chatMember.findMany({
+          where: { chatId: msg.chatId, leftAt: null, NOT: { userId: viewerId } },
+          select: { userId: true },
         });
-        const allReadByTime = await Promise.all(
-          members.map(async (m) => {
-            const st = states.find((s) => s.userId === m.userId);
-            if (!st?.lastReadMessageId) return false;
-            const rm = await this.prisma.message.findUnique({ where: { id: st.lastReadMessageId } });
-            return Boolean(rm && rm.createdAt >= msg.createdAt);
-          }),
-        );
-        if (allReadByTime.every(Boolean)) deliveryStatus = 'READ';
+        if (members.length === 0) deliveryStatus = 'READ';
         else {
-          const allDeliveredByTime = await Promise.all(
+          const states = await this.prisma.readState.findMany({
+            where: { chatId: msg.chatId, userId: { in: members.map((m) => m.userId) } },
+          });
+          const allReadByTime = await Promise.all(
             members.map(async (m) => {
               const st = states.find((s) => s.userId === m.userId);
-              if (!st?.lastDeliveredMsgId) return false;
-              const dm = await this.prisma.message.findUnique({
-                where: { id: st.lastDeliveredMsgId },
+              if (!st?.lastReadMessageId) return false;
+              const rm = await this.prisma.message.findUnique({
+                where: { id: st.lastReadMessageId },
               });
-              return Boolean(dm && dm.createdAt >= msg.createdAt);
+              return Boolean(rm && rm.createdAt >= msg.createdAt);
             }),
           );
-          deliveryStatus = allDeliveredByTime.every(Boolean) ? 'DELIVERED' : 'SENT';
+          if (allReadByTime.every(Boolean)) deliveryStatus = 'READ';
+          else {
+            const allDeliveredByTime = await Promise.all(
+              members.map(async (m) => {
+                const st = states.find((s) => s.userId === m.userId);
+                if (!st?.lastDeliveredMsgId) return false;
+                const dm = await this.prisma.message.findUnique({
+                  where: { id: st.lastDeliveredMsgId },
+                });
+                return Boolean(dm && dm.createdAt >= msg.createdAt);
+              }),
+            );
+            deliveryStatus = allDeliveredByTime.every(Boolean) ? 'DELIVERED' : 'SENT';
+          }
         }
-      }
       }
     }
 
