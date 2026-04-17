@@ -7,8 +7,6 @@ import { apiFetch } from '@/lib/api';
 import { getOrCreateDirectChat } from '@/lib/direct-chat';
 import type { ChatListItem } from '@/lib/types';
 import { useT } from '@/lib/i18n';
-import { useMediaQuery } from '@/lib/use-media-query';
-import { ChatSidebar } from '@/components/pulse/chat-sidebar';
 
 export default function ChatsIndexPage() {
   const t = useT();
@@ -45,7 +43,6 @@ function ChatsIndexContent() {
   const start = params.get('start');
   const qc = useQueryClient();
   const t = useT();
-  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats', ''],
@@ -64,14 +61,9 @@ function ChatsIndexContent() {
         }
         return;
       }
-      // On mobile, /chats is the chat list screen (no auto-open of first chat).
-      if (isMobile) return;
-      if (isLoading) return;
-      const first = data?.[0];
-      if (first) router.replace(`/chats/${first.id}`);
     };
     void run();
-  }, [data, isLoading, isMobile, qc, router, start]);
+  }, [qc, router, start]);
 
   if (isLoading) {
     return (
@@ -121,10 +113,8 @@ function ChatsIndexContent() {
     );
   }
 
-  // On mobile, /chats is a real screen (chat list).
-  if (isMobile) return <ChatSidebar />;
-
-  // On desktop, we keep split view and auto-open the first chat.
+  // When chats exist, we intentionally do not auto-navigate.
+  // Desktop uses split view; mobile shows the list in layout.
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center text-sm text-ink-muted">
       <p className="font-medium text-ink">{t('openingChat')}</p>
