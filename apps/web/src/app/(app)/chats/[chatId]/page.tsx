@@ -90,7 +90,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#070B14] text-white md:bg-transparent md:text-inherit">
-      <div className="flex h-full min-h-0 w-full flex-col md:mx-auto md:max-w-[420px]">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
         <header
           className={cn(
             'flex shrink-0 items-center gap-2.5 px-3',
