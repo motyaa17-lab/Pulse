@@ -23,12 +23,7 @@ const GROUP_GAP_MS = 5 * 60 * 1000;
 
 function SingleCheckIcon({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      aria-hidden
-    >
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
         d="M20 6L9 17l-5-5"
         stroke="currentColor"
@@ -175,7 +170,9 @@ export function MessageThread({ chatId }: { chatId: string }) {
     if (s.connected) joinRoom();
     s.on('connect', joinRoom);
 
-    const patchMessages = (fn: (old: MessagesQueryData | undefined) => MessagesQueryData | undefined) => {
+    const patchMessages = (
+      fn: (old: MessagesQueryData | undefined) => MessagesQueryData | undefined,
+    ) => {
       qc.setQueryData<MessagesQueryData>(['messages', chatId], fn);
     };
 
@@ -249,7 +246,8 @@ export function MessageThread({ chatId }: { chatId: string }) {
           items: old.items.map((x) => {
             if (x.senderId !== myId) return x;
             if (x.deliveryStatus === 'READ') return x;
-            if (new Date(x.createdAt).getTime() <= pivotTs) return { ...x, deliveryStatus: 'DELIVERED' };
+            if (new Date(x.createdAt).getTime() <= pivotTs)
+              return { ...x, deliveryStatus: 'DELIVERED' };
             return x;
           }),
         };
@@ -408,7 +406,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         ref={parentRef}
-        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-1.5 md:px-5 md:py-2.5"
+        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 md:px-5 md:py-2.5"
         onDragEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -472,7 +470,9 @@ export function MessageThread({ chatId }: { chatId: string }) {
                 key={i}
                 className={cn(
                   'h-12 animate-pulse rounded-[1.125rem]',
-                  i % 2 === 0 ? 'ml-auto w-[70%] bg-bubble-out/18' : 'mr-auto w-[66%] bg-bubble-in/45',
+                  i % 2 === 0
+                    ? 'ml-auto w-[70%] bg-bubble-out/18'
+                    : 'mr-auto w-[66%] bg-bubble-in/45',
                 )}
               />
             ))}
@@ -523,17 +523,17 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   prev={prev}
                   next={next}
                   myId={myId ?? undefined}
-                    highlighted={highlighted === m.id}
+                  highlighted={highlighted === m.id}
                   onReply={() => setReplyTo(m)}
                   onForward={() => setForwarding(m)}
-                    onEdit={() => {
-                      setReplyTo(null);
-                      setEditing(m);
-                    }}
-                    onDelete={() => {
-                      setReplyTo(null);
-                      setEditing(null);
-                    }}
+                  onEdit={() => {
+                    setReplyTo(null);
+                    setEditing(m);
+                  }}
+                  onDelete={() => {
+                    setReplyTo(null);
+                    setEditing(null);
+                  }}
                   menuOpen={menuFor === m.id}
                   setMenuOpen={(open) => setMenuFor(open ? m.id : null)}
                   chatId={chatId}
@@ -573,7 +573,12 @@ export function MessageThread({ chatId }: { chatId: string }) {
                 aria-label="Close"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -669,13 +674,16 @@ function MessageBubble({
   };
 
   const patchMessageReactions = (id: string, reactions: MessageDto['reactions']) => {
-    qc.setQueryData<MessagesQueryData>(['messages', chatId], (old: MessagesQueryData | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        items: old.items.map((m: MessageDto) => (m.id === id ? { ...m, reactions } : m)),
-      };
-    });
+    qc.setQueryData<MessagesQueryData>(
+      ['messages', chatId],
+      (old: MessagesQueryData | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map((m: MessageDto) => (m.id === id ? { ...m, reactions } : m)),
+        };
+      },
+    );
   };
 
   const toggleReaction = async (messageId: string, emoji: string) => {
@@ -753,10 +761,13 @@ function MessageBubble({
     try {
       const currentPinned = (qc.getQueryData(['chat', chatId]) as any)?.pinnedMessage?.id ?? null;
       const nextId = messageId && currentPinned === messageId ? null : messageId;
-      const res = await apiFetch<{ ok: boolean; pinnedMessageId: string | null }>(`/chats/${chatId}/pin-message`, {
-        method: 'POST',
-        body: { messageId: nextId },
-      });
+      const res = await apiFetch<{ ok: boolean; pinnedMessageId: string | null }>(
+        `/chats/${chatId}/pin-message`,
+        {
+          method: 'POST',
+          body: { messageId: nextId },
+        },
+      );
       qc.setQueryData(['chat', chatId], (old: any) => {
         if (!old) return old;
         return {
@@ -817,7 +828,10 @@ function MessageBubble({
       },
       {
         id: 'pin',
-        label: ((qc.getQueryData(['chat', chatId]) as any)?.pinnedMessage?.id ?? null) === m.id ? 'Unpin message' : 'Pin message',
+        label:
+          ((qc.getQueryData(['chat', chatId]) as any)?.pinnedMessage?.id ?? null) === m.id
+            ? 'Unpin message'
+            : 'Pin message',
         disabled: isDeleted,
         onSelect: () => pinOrUnpin(m.id),
       },
@@ -950,103 +964,115 @@ function MessageBubble({
               void toggleReaction(m.id, '❤️');
             }}
           >
-          {m.replyTo && (
-            <div
-              className={cn(
-                'mb-1 border-l-[2px] pl-2 text-[0.65rem] leading-snug opacity-90',
-                isOutgoing ? 'border-bubble-out-ink/45' : 'border-accent/55 dark:border-accent/45',
-              )}
-            >
-              {m.replyTo.deletedAt ? 'Original message removed' : m.replyTo.text}
-            </div>
-          )}
-          {m.forwardedFromMessageId && (
-            <div
-              className={cn(
-                'mb-1 border-l-[2px] pl-2 text-[0.65rem] leading-snug opacity-90',
-                isOutgoing ? 'border-bubble-out-ink/45' : 'border-accent/55 dark:border-accent/45',
-              )}
-            >
-              <span className="font-bold uppercase tracking-[0.1em]">Forwarded</span>{' '}
-              {m.forwardedFromUser ? (
-                <span className="opacity-90">
-                  from {m.forwardedFromUser.displayName ?? m.forwardedFromUser.username}
-                </span>
-              ) : null}
-            </div>
-          )}
-          <p className={cn('whitespace-pre-wrap break-words', isDeleted && 'italic opacity-75')}>
-            {isDeleted ? 'Message deleted' : m.text ? linkify(m.text) : null}
-          </p>
-          {m.attachments?.length > 0 && (
-            <div className="mt-2 space-y-2">
-              {m.attachments.map((a) =>
-                a.kind === 'image' ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={a.id}
-                    src={a.url}
-                    alt={a.fileName}
-                    className="max-h-56 w-full rounded-xl object-cover"
-                  />
-                ) : (
-                  <a
-                    key={a.id}
-                    href={a.url}
-                    className={cn(
-                      'block rounded-xl px-3 py-2 text-2xs font-medium underline-offset-2 hover:underline',
-                      isOutgoing ? 'bg-black/10 text-bubble-out-ink' : 'bg-black/5 text-accent dark:bg-black/20',
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {a.fileName}
-                  </a>
-                ),
-              )}
-            </div>
-          )}
-          <div
-            className={cn(
-              'mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0 text-[0.625rem] tabular-nums',
-              isOutgoing ? 'justify-end text-bubble-out-ink/70' : 'text-ink-muted',
-            )}
-          >
-            <span>
-              {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-            {m.editedAt && <span className="opacity-75">edited</span>}
-            {isOutgoing && lastInGroup && m.deliveryStatus && (
-              <span className="ml-0.5 inline-flex items-center gap-0.5 opacity-80" aria-label={m.deliveryStatus}>
-                {m.deliveryStatus === 'SENDING' ? (
-                  <span className="text-[9px] font-bold uppercase tracking-[0.06em]">…</span>
-                ) : m.deliveryStatus === 'SENT' ? (
-                  <SingleCheckIcon className="h-3 w-3" />
-                ) : (
-                  <DoubleCheckIcon className="h-3 w-3" />
+            {m.replyTo && (
+              <div
+                className={cn(
+                  'mb-1 border-l-[2px] pl-2 text-[0.65rem] leading-snug opacity-90',
+                  isOutgoing
+                    ? 'border-bubble-out-ink/45'
+                    : 'border-accent/55 dark:border-accent/45',
                 )}
-              </span>
+              >
+                {m.replyTo.deletedAt ? 'Original message removed' : m.replyTo.text}
+              </div>
             )}
-          </div>
-          {m.reactions.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-0.5">
-              {m.reactions.map((r, ri) => (
-                <button
-                  type="button"
-                  key={`${m.id}-${r.emoji}-${ri}`}
-                  className={cn(
-                    'rounded-full border px-1.5 py-px text-[0.65rem] transition',
-                    isOutgoing
-                      ? 'border-white/30 bg-black/12 hover:bg-black/18'
-                      : 'border-line/55 bg-surface-elevated/50 hover:bg-surface-elevated/80 dark:border-line/45',
-                  )}
-                  onClick={() => toggleReaction(m.id, r.emoji)}
+            {m.forwardedFromMessageId && (
+              <div
+                className={cn(
+                  'mb-1 border-l-[2px] pl-2 text-[0.65rem] leading-snug opacity-90',
+                  isOutgoing
+                    ? 'border-bubble-out-ink/45'
+                    : 'border-accent/55 dark:border-accent/45',
+                )}
+              >
+                <span className="font-bold uppercase tracking-[0.1em]">Forwarded</span>{' '}
+                {m.forwardedFromUser ? (
+                  <span className="opacity-90">
+                    from {m.forwardedFromUser.displayName ?? m.forwardedFromUser.username}
+                  </span>
+                ) : null}
+              </div>
+            )}
+            <p className={cn('whitespace-pre-wrap break-words', isDeleted && 'italic opacity-75')}>
+              {isDeleted ? 'Message deleted' : m.text ? linkify(m.text) : null}
+            </p>
+            {m.attachments?.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {m.attachments.map((a) =>
+                  a.kind === 'image' ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={a.id}
+                      src={a.url}
+                      alt={a.fileName}
+                      className="max-h-56 w-full rounded-xl object-cover"
+                    />
+                  ) : (
+                    <a
+                      key={a.id}
+                      href={a.url}
+                      className={cn(
+                        'block rounded-xl px-3 py-2 text-2xs font-medium underline-offset-2 hover:underline',
+                        isOutgoing
+                          ? 'bg-black/10 text-bubble-out-ink'
+                          : 'bg-black/5 text-accent dark:bg-black/20',
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {a.fileName}
+                    </a>
+                  ),
+                )}
+              </div>
+            )}
+            <div
+              className={cn(
+                'mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0 text-[0.625rem] tabular-nums',
+                isOutgoing ? 'justify-end text-bubble-out-ink/70' : 'text-ink-muted',
+              )}
+            >
+              <span>
+                {new Date(m.createdAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              {m.editedAt && <span className="opacity-75">edited</span>}
+              {isOutgoing && lastInGroup && m.deliveryStatus && (
+                <span
+                  className="ml-0.5 inline-flex items-center gap-0.5 opacity-80"
+                  aria-label={m.deliveryStatus}
                 >
-                  {r.emoji} {r.count}
-                </button>
-              ))}
+                  {m.deliveryStatus === 'SENDING' ? (
+                    <span className="text-[9px] font-bold uppercase tracking-[0.06em]">…</span>
+                  ) : m.deliveryStatus === 'SENT' ? (
+                    <SingleCheckIcon className="h-3 w-3" />
+                  ) : (
+                    <DoubleCheckIcon className="h-3 w-3" />
+                  )}
+                </span>
+              )}
             </div>
-          )}
+            {m.reactions.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-0.5">
+                {m.reactions.map((r, ri) => (
+                  <button
+                    type="button"
+                    key={`${m.id}-${r.emoji}-${ri}`}
+                    className={cn(
+                      'rounded-full border px-1.5 py-px text-[0.65rem] transition',
+                      isOutgoing
+                        ? 'border-white/30 bg-black/12 hover:bg-black/18'
+                        : 'border-line/55 bg-surface-elevated/50 hover:bg-surface-elevated/80 dark:border-line/45',
+                    )}
+                    onClick={() => toggleReaction(m.id, r.emoji)}
+                  >
+                    {r.emoji} {r.count}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

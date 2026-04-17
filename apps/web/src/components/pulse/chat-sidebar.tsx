@@ -69,6 +69,7 @@ export function ChatSidebar() {
   const setSearchOpen = useUiStore((s) => s.setSearchOpen);
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats', search],
     queryFn: () =>
@@ -185,7 +186,7 @@ export function ChatSidebar() {
           </div>
 
           <div className="mt-4">
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/9 px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur">
               <MagnifierIcon className="text-white/55" />
               <input
                 value={search}
@@ -199,6 +200,41 @@ export function ChatSidebar() {
         </header>
 
         <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-24">
+          {!isLoading && archived.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className="mx-2 mt-1 flex w-[calc(100%-1rem)] items-center gap-2 rounded-2xl border border-white/10 bg-white/7 px-3 py-3 text-left text-sm text-white/85 shadow-[0_10px_26px_rgba(0,0,0,0.25)] backdrop-blur transition hover:bg-white/10 active:scale-[0.99]"
+              aria-label="Archived chats"
+            >
+              <span className="grid h-9 w-9 place-items-center rounded-2xl bg-white/10 text-white/80">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3V5z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M10 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold leading-tight">Archived Chats</div>
+                <div className="mt-0.5 text-[12.5px] text-white/50">
+                  {showArchived ? 'Tap to hide' : 'Tap to view'}
+                </div>
+              </div>
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/12 px-2 text-[12px] font-bold text-white/80">
+                {archived.length}
+              </span>
+            </button>
+          )}
           {isLoading && (
             <div className="space-y-2 px-2">
               {[1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -276,7 +312,7 @@ export function ChatSidebar() {
               />
             ))}
           </div>
-          {!isLoading && archived.length > 0 && (
+          {!isLoading && archived.length > 0 && showArchived && (
             <div className="mt-2">
               <p className="px-3 pb-1 pt-3 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/45">
                 {t('archived')}

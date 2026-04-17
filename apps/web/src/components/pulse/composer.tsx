@@ -13,6 +13,7 @@ import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
 import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { useT } from '@/lib/i18n';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 type MessagesQueryData = { items: MessageDto[]; nextCursor: string | null };
 const EMPTY_PENDING: never[] = [];
@@ -61,6 +62,7 @@ export function Composer({
   onCancelEdit: () => void;
 }) {
   const t = useT();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [text, setText] = useState('');
   const [uiSending, setUiSending] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -325,7 +327,14 @@ export function Composer({
   }, [text, resizeTextarea]);
 
   return (
-    <div className="shrink-0 border-t border-line/75 bg-surface-elevated/98 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md dark:border-line/45 dark:bg-surface-elevated/98">
+    <div
+      className={cn(
+        'shrink-0 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md',
+        isMobile
+          ? 'border-t border-white/10 bg-white/8'
+          : 'border-t border-line/75 bg-surface-elevated/98 dark:border-line/45 dark:bg-surface-elevated/98',
+      )}
+    >
       {editing && (
         <div className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35">
           <div className="min-w-0 flex-1 border-l-2 border-amber-500/60 pl-2">
