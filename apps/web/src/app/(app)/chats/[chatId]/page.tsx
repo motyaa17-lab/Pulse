@@ -15,6 +15,7 @@ import { cn } from '@/lib/cn';
 import { connectSocket } from '@/lib/socket';
 import type { MeUserDto } from '@/lib/types';
 import { useT } from '@/lib/i18n';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 function typeLabel(t: (k: any) => string, type: string | undefined): string {
   switch (type) {
@@ -42,6 +43,7 @@ export default function ChatPage() {
   const typing = useUiStore((s) => s.typingByChat?.[chatId] ?? false);
   const setTyping = useUiStore((s) => s.setTypingForChat);
   const t = useT();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     setDetailsOpen(false);
@@ -73,8 +75,7 @@ export default function ChatPage() {
     queryFn: () => apiFetch<ChatDetailForDrawer>(`/chats/${chatId}`),
   });
 
-  const title =
-    chat?.title ?? chat?.peer?.displayName ?? chat?.peer?.username ?? 'Conversation';
+  const title = chat?.title ?? chat?.peer?.displayName ?? chat?.peer?.username ?? 'Conversation';
 
   const avatarSrc = chat?.avatarUrl ?? chat?.peer?.avatarUrl ?? null;
   const peerId = chat?.type === 'DIRECT' ? chat?.peer?.id : null;
@@ -96,7 +97,7 @@ export default function ChatPage() {
         <button
           type="button"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line/75 text-ink-muted transition hover:bg-surface-muted/90 hover:text-ink md:hidden dark:border-line/50 dark:hover:bg-surface-muted/45"
-          onClick={() => setSidebar(true)}
+          onClick={() => (isMobile ? router.push('/chats') : setSidebar(true))}
           aria-label="Back to chat list"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -181,16 +182,16 @@ export default function ChatPage() {
             Pinned
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
-            {pinned.deletedAt ? 'Message deleted' : pinned.text?.trim() ? pinned.text : 'Attachment'}
+            {pinned.deletedAt
+              ? 'Message deleted'
+              : pinned.text?.trim()
+                ? pinned.text
+                : 'Attachment'}
           </span>
           <span className="shrink-0 text-[11px] font-semibold text-accent">View</span>
         </button>
       )}
-      <ChatDetailsDrawer
-        open={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        chat={chat}
-      />
+      <ChatDetailsDrawer open={detailsOpen} onClose={() => setDetailsOpen(false)} chat={chat} />
       {chatId && <MessageThread chatId={chatId} />}
     </div>
   );

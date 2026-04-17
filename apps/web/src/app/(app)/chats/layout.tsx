@@ -3,10 +3,30 @@
 import { ChatSidebar } from '@/components/pulse/chat-sidebar';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
+import { usePathname } from 'next/navigation';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 export default function ChatsLayout({ children }: { children: React.ReactNode }) {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const pathname = usePathname();
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
+  // True mobile layout: one screen at a time.
+  if (isMobile) {
+    const isChatRoute = pathname?.startsWith('/chats/') ?? false;
+    return (
+      <div className="h-dvh w-full overflow-hidden bg-[#070B14]">
+        {isChatRoute ? (
+          <main className="h-full w-full">{children}</main>
+        ) : (
+          <div className="h-full w-full">
+            <ChatSidebar />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-dvh min-h-0 w-full overflow-hidden bg-[#070B14]">

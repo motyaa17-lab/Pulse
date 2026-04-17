@@ -306,7 +306,7 @@ export function ChatSidebar() {
       </div>
 
       {/* Floating bottom navigation */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-4">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-4 md:hidden">
         <div className="mx-auto w-full max-w-[420px] px-4">
           <nav className="pointer-events-auto rounded-[22px] border border-white/12 bg-white/10 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-[28px]">
             <div className="grid grid-cols-5 items-center gap-1">

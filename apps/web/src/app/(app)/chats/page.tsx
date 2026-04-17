@@ -7,6 +7,8 @@ import { apiFetch } from '@/lib/api';
 import { getOrCreateDirectChat } from '@/lib/direct-chat';
 import type { ChatListItem } from '@/lib/types';
 import { useT } from '@/lib/i18n';
+import { useMediaQuery } from '@/lib/use-media-query';
+import { ChatSidebar } from '@/components/pulse/chat-sidebar';
 
 export default function ChatsIndexPage() {
   const t = useT();
@@ -43,6 +45,7 @@ function ChatsIndexContent() {
   const start = params.get('start');
   const qc = useQueryClient();
   const t = useT();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats', ''],
@@ -61,12 +64,14 @@ function ChatsIndexContent() {
         }
         return;
       }
+      // On mobile, /chats is the chat list screen (no auto-open of first chat).
+      if (isMobile) return;
       if (isLoading) return;
       const first = data?.[0];
       if (first) router.replace(`/chats/${first.id}`);
     };
     void run();
-  }, [data, isLoading, qc, router, start]);
+  }, [data, isLoading, isMobile, qc, router, start]);
 
   if (isLoading) {
     return (
@@ -103,16 +108,23 @@ function ChatsIndexContent() {
             />
           </svg>
         </div>
-        <p className="mt-4 font-display text-xl font-semibold text-ink">{t('noConversationsYet')}</p>
+        <p className="mt-4 font-display text-xl font-semibold text-ink">
+          {t('noConversationsYet')}
+        </p>
         <p className="mt-1 max-w-sm text-sm leading-relaxed text-ink-muted">
-          Start a direct chat from Search (<kbd className="rounded border border-line/70 px-1 py-px text-[11px]">Ctrl</kbd>
-          +<kbd className="rounded border border-line/70 px-1 py-px text-[11px]">K</kbd>), or invite someone to message you.
+          Start a direct chat from Search (
+          <kbd className="rounded border border-line/70 px-1 py-px text-[11px]">Ctrl</kbd>+
+          <kbd className="rounded border border-line/70 px-1 py-px text-[11px]">K</kbd>), or invite
+          someone to message you.
         </p>
       </div>
     );
   }
 
-  // When there are chats, we redirect to the first one in the effect above.
+  // On mobile, /chats is a real screen (chat list).
+  if (isMobile) return <ChatSidebar />;
+
+  // On desktop, we keep split view and auto-open the first chat.
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center text-sm text-ink-muted">
       <p className="font-medium text-ink">{t('openingChat')}</p>
