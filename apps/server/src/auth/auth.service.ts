@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -57,6 +53,7 @@ export class AuthService {
   async register(dto: RegisterDto, meta: { userAgent?: string; ip?: string }) {
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ email: dto.email.toLowerCase() }, { username: dto.username.toLowerCase() }] },
+      select: { id: true },
     });
     if (existing) {
       throw new ConflictException('Email or username already in use');
@@ -97,9 +94,17 @@ export class AuthService {
   async login(dto: LoginDto, meta: { userAgent?: string; ip?: string }) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
+      // Narrow select so login still works if the DB is behind the latest migrations
+      // (e.g. new columns exist in Prisma but not yet in Postgres).
+      select: { id: true, email: true, username: true, passwordHash: true },
     });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-    const ok = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!user?.passwordHash) throw new UnauthorizedException('Invalid credentials');
+    let ok = false;
+    try {
+      ok = await bcrypt.compare(dto.password, user.passwordHash);
+    } catch {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     if (!ok) throw new UnauthorizedException('Invalid credentials');
     return this.issueTokens(user.id, user.email, user.username, meta);
   }
@@ -108,7 +113,7 @@ export class AuthService {
     const hash = hashRefreshToken(refreshToken);
     const session = await this.prisma.session.findFirst({
       where: { refreshTokenHash: hash, revokedAt: null },
-      include: { user: true },
+      include: { user: { select: { id: true, email: true, username: true } } },
     });
     if (!session) throw new UnauthorizedException('Invalid refresh token');
 
@@ -174,7 +179,7 @@ export class AuthService {
     const hash = hashRefreshToken(refreshToken);
     return this.prisma.session.findFirst({
       where: { refreshTokenHash: hash, revokedAt: null },
-      include: { user: true },
+      include: { user: { select: { id: true, email: true, username: true } } },
     });
   }
 }
