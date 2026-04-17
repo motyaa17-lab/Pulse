@@ -44,22 +44,20 @@ export default function UserProfilePage() {
       <section className="mt-6 rounded-2xl border border-line bg-surface-elevated p-5">
         <div className="flex items-center gap-3">
           <div className="relative h-14 w-14 shrink-0">
-            {toPublicUrl(user?.avatarUrl) ? (
+            {user?.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={toPublicUrl(user.avatarUrl)!}
+                src={toPublicUrl(user.avatarUrl) ?? '/default-avatar.png'}
                 alt=""
                 className="h-14 w-14 rounded-full object-cover ring-1 ring-line/45"
               />
             ) : (
-              <div
-                className={cn(
-                  'flex h-14 w-14 items-center justify-center rounded-full text-lg font-semibold ring-1 ring-line/40',
-                  'bg-gradient-to-br from-accent/35 to-accent/10 text-accent',
-                )}
-              >
-                {initial}
-              </div>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/default-avatar.png"
+                alt=""
+                className="h-14 w-14 rounded-full object-cover ring-1 ring-line/45"
+              />
             )}
           </div>
           <div className="min-w-0 flex-1">
