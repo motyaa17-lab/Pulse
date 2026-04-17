@@ -71,33 +71,35 @@ export default function SignupPage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-line/80 bg-surface-elevated/90 p-8 shadow-soft backdrop-blur dark:bg-surface-elevated/70"
+      className="w-full rounded-[26px] border border-white/12 bg-white/10 p-8 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-[28px] transition"
     >
       <div className="mb-8 space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-muted">Pulse</p>
-        <h1 className="font-display text-3xl font-semibold text-ink">Create your space</h1>
-        <p className="text-sm text-ink-muted">Original identity, familiar rhythm.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">Pulse</p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-white">SIGN UP</h1>
+        <p className="text-sm text-white/70">Original identity, familiar rhythm.</p>
       </div>
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="email">
+          <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="email">
             Email
           </label>
           <input
             id="email"
             type="email"
-            className="w-full rounded-xl border border-line bg-surface-muted/60 px-3 py-2.5 text-sm outline-none ring-accent/40 focus:ring-2"
+            placeholder="you@domain.com"
+            className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-sky-400/20"
             {...register('email')}
           />
           {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="username">
+          <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="username">
             Username
           </label>
           <input
             id="username"
-            className="w-full rounded-xl border border-line bg-surface-muted/60 px-3 py-2.5 text-sm outline-none ring-accent/40 focus:ring-2"
+            placeholder="handle"
+            className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-emerald-400/20"
             {...register('username')}
           />
           {errors.username && (
@@ -105,19 +107,25 @@ export default function SignupPage() {
           )}
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="dn">
+          <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="dn">
             Display name (optional)
           </label>
-          <input id="dn" className="w-full rounded-xl border border-line bg-surface-muted/60 px-3 py-2.5 text-sm outline-none ring-accent/40 focus:ring-2" {...register('displayName')} />
+          <input
+            id="dn"
+            placeholder="Your name"
+            className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-white/15"
+            {...register('displayName')}
+          />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="password">
+          <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="password">
             Password
           </label>
           <input
             id="password"
             type="password"
-            className="w-full rounded-xl border border-line bg-surface-muted/60 px-3 py-2.5 text-sm outline-none ring-accent/40 focus:ring-2"
+            placeholder="••••••••"
+            className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-sky-400/20"
             {...register('password')}
           />
           {errors.password && (
@@ -125,13 +133,14 @@ export default function SignupPage() {
           )}
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="confirm">
+          <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="confirm">
             Confirm password
           </label>
           <input
             id="confirm"
             type="password"
-            className="w-full rounded-xl border border-line bg-surface-muted/60 px-3 py-2.5 text-sm outline-none ring-accent/40 focus:ring-2"
+            placeholder="••••••••"
+            className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-emerald-400/20"
             {...register('confirm')}
           />
           {errors.confirm && <p className="mt-1 text-xs text-red-500">{errors.confirm.message}</p>}
@@ -140,14 +149,15 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-xl bg-accent py-2.5 text-sm font-semibold text-accent-foreground shadow-sm disabled:opacity-60"
+          className="group relative flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-400 via-sky-500 to-blue-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,211,238,0.22)] transition duration-200 hover:brightness-110 active:scale-[0.99] disabled:opacity-60 disabled:shadow-none"
         >
+          <span className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-r from-emerald-400 via-sky-500 to-blue-500 blur-xl opacity-40 transition group-hover:opacity-55" />
           {isSubmitting ? 'Creating…' : 'Create account'}
         </button>
       </form>
-      <p className="mt-6 text-center text-sm text-ink-muted">
+      <p className="mt-6 text-center text-sm text-white/70">
         Already have an account?{' '}
-        <Link className="font-medium text-accent underline-offset-4 hover:underline" href="/login">
+        <Link className="font-medium text-white underline-offset-4 hover:underline" href="/login">
           Sign in
         </Link>
       </p>

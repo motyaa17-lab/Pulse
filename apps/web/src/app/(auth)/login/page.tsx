@@ -56,23 +56,24 @@ export default function LoginPage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-line/80 bg-surface-elevated/90 p-8 shadow-soft backdrop-blur dark:bg-surface-elevated/70"
+      className="w-full rounded-[26px] border border-white/12 bg-white/10 p-8 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-[28px] transition"
     >
       <div className="mb-8 space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-muted">Pulse</p>
-        <h1 className="font-display text-3xl font-semibold text-ink">Welcome back</h1>
-        <p className="text-sm text-ink-muted">Sign in to continue your conversations.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">Pulse</p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-white">LOGIN</h1>
+        <p className="text-sm text-white/70">Sign in to continue your conversations.</p>
       </div>
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="email">
+          <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="email">
             Email
           </label>
           <input
             id="email"
             type="email"
             autoComplete="email"
-            className="w-full rounded-xl border border-line bg-surface-muted/60 px-3 py-2.5 text-sm text-ink outline-none ring-accent/40 focus:ring-2 dark:bg-surface-muted/30"
+            placeholder="you@domain.com"
+            className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-sky-400/20"
             {...register('email')}
           />
           {errors.email && (
@@ -82,14 +83,15 @@ export default function LoginPage() {
           )}
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="password">
+          <label className="mb-1 block text-xs font-medium text-white/70" htmlFor="password">
             Password
           </label>
           <input
             id="password"
             type="password"
             autoComplete="current-password"
-            className="w-full rounded-xl border border-line bg-surface-muted/60 px-3 py-2.5 text-sm text-ink outline-none ring-accent/40 focus:ring-2 dark:bg-surface-muted/30"
+            placeholder="••••••••"
+            className="w-full rounded-2xl border border-white/12 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/25 focus:bg-white/8 focus:ring-4 focus:ring-emerald-400/20"
             {...register('password')}
           />
           {errors.password && (
@@ -106,14 +108,15 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex w-full items-center justify-center rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground shadow-sm transition hover:opacity-95 disabled:opacity-60"
+          className="group relative flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-emerald-400 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(56,189,248,0.25)] transition duration-200 hover:brightness-110 active:scale-[0.99] disabled:opacity-60 disabled:shadow-none"
         >
+          <span className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-emerald-400 blur-xl opacity-40 transition group-hover:opacity-55" />
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      <p className="mt-6 text-center text-sm text-ink-muted">
+      <p className="mt-6 text-center text-sm text-white/70">
         New to Pulse?{' '}
-        <Link className="font-medium text-accent underline-offset-4 hover:underline" href="/signup">
+        <Link className="font-medium text-white underline-offset-4 hover:underline" href="/signup">
           Create an account
         </Link>
       </p>
