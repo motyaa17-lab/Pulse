@@ -21,6 +21,8 @@ export default function SettingsPage() {
   const setVisualPreset = useUiStore((s) => s.setVisualPreset);
   const soundEnabled = useUiStore((s) => s.soundEnabled);
   const setSoundEnabled = useUiStore((s) => s.setSoundEnabled);
+  const hideChatListPreviews = useUiStore((s) => s.hideChatListPreviews);
+  const setHideChatListPreviews = useUiStore((s) => s.setHideChatListPreviews);
   const clear = useAuthStore((s) => s.clear);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const language = useLanguageStore((s) => s.language);
@@ -211,6 +213,22 @@ export default function SettingsPage() {
               }}
             />
             <span className="text-sm text-ink">{t('showLastSeenToOthers')}</span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
+              checked={hideChatListPreviews}
+              onChange={(e) => setHideChatListPreviews(e.target.checked)}
+            />
+            <span>
+              <span className="block text-sm font-medium text-ink">
+                {t('privacyHideChatPreviews')}
+              </span>
+              <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
+                {t('privacyHideChatPreviewsHint')}
+              </span>
+            </span>
           </label>
         </section>
       )}

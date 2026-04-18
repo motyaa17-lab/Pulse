@@ -136,6 +136,15 @@ export const ru = {
   privacyLastSeenTitle: 'Время захода',
   privacyLastSeenHint:
     'Если выключить, другие не увидят, когда вы были в сети (ваше время захода для них скрыто).',
+  privacyHideChatPreviews: 'Скрывать текст превью в списке чатов',
+  privacyHideChatPreviewsHint:
+    'Вместо последней строки сообщения показывается нейтральная заглушка (набор текста по-прежнему виден).',
+  filterUnreadOnly: 'Только непрочитанные',
+  filterUnreadOnlyAria: 'Показывать только чаты с непрочитанными сообщениями',
+  listPreviewHidden: 'Скрыто',
+  swipeReplyHint: 'Ответить',
+  voiceNote: 'Голосовое сообщение',
+  voiceRecordingHint: 'Прикрепите аудиофайл, чтобы отправить голосовое.',
   showLastSeenToOthers: 'Показывать другим моё время захода',
   wordEnglish: 'English',
   wordRussian: 'Русский',

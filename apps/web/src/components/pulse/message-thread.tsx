@@ -1038,8 +1038,15 @@ function MessageBubble({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const bubbleRef = useRef<HTMLDivElement | null>(null);
   const longPressTimer = useRef<number | null>(null);
-  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
+  const gestureRef = useRef<{
+    startX: number;
+    startY: number;
+    swipeLocked: boolean;
+    pointerId: number;
+  } | null>(null);
   const [bubblePressing, setBubblePressing] = useState(false);
+  const [swipePx, setSwipePx] = useState(0);
+  const [swipeDragging, setSwipeDragging] = useState(false);
   const isNew = useMemo(() => Date.now() - new Date(m.createdAt).getTime() < 2500, [m.createdAt]);
 
   const clearLongPressTimer = () => {
@@ -1047,7 +1054,6 @@ function MessageBubble({
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
-    pressOrigin.current = null;
     setBubblePressing(false);
   };
 
@@ -1315,104 +1321,46 @@ function MessageBubble({
       <div className={cn('flex w-full', isOutgoing ? 'justify-end' : 'justify-start')}>
         <div
           className={cn(
-            'group relative max-w-[min(85vw,34rem)] pt-8 -mt-8',
+            'group relative max-w-[min(85vw,34rem)] overflow-x-hidden pt-8 -mt-8 max-md:touch-pan-y',
             isOutgoing ? 'ml-auto' : 'mr-auto',
             mobileReactionPickId === m.id && 'max-md:opacity-0 max-md:pointer-events-none',
           )}
           onMouseEnter={() => onMessageRowEnter(m.id)}
           onMouseLeave={onMessageRowLeave}
-        >
-          {!isDeleted && (
-            <div
-              className={cn(
-                'pointer-events-none absolute -top-8 z-[44] hidden max-w-full gap-0.5 rounded-full border border-line/60 bg-surface-elevated/95 px-1 py-0.5 opacity-0 shadow-md backdrop-blur-sm transition group-hover:pointer-events-auto group-hover:opacity-100 dark:border-line/45 dark:bg-surface-elevated/90 md:flex',
-                isOutgoing ? 'right-0' : 'left-0',
-              )}
-            >
-              {QUICK_REACTION_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  className="pointer-events-auto rounded-md px-1 text-[0.95rem] leading-none text-ink transition hover:bg-surface-muted/90 dark:hover:bg-surface-muted/50"
-                  onClick={() => void toggleReaction(m.id, emoji)}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
-          <div
-            className={cn(
-              'absolute top-1 z-[45] hidden md:block',
-              isOutgoing ? 'right-0' : 'left-0',
-            )}
-          >
-            <button
-              ref={triggerRef}
-              type="button"
-              className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-full border border-line/80 bg-surface-elevated text-ink-muted shadow-sm transition',
-                'hover:bg-surface-muted hover:text-ink dark:border-line/55 dark:bg-surface-muted/35',
-                menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-              )}
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label={t('messageActionsButtonAria')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M5 12h.01M12 12h.01M19 12h.01"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
-          <MessageActionsMenu
-            open={menuOpen}
-            anchorRef={triggerRef}
-            onClose={() => setMenuOpen(false)}
-            actions={actions}
-            showReactions={!isDeleted}
-            onReact={(emoji) => toggleReaction(m.id, emoji)}
-            closeOnScrollEl={closeOnScrollEl}
-          />
-          <div
-            ref={bubbleRef}
-            className={cn(
-              'chat-bubble-touch relative z-[1] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42] max-md:transition-[transform,box-shadow,filter] max-md:duration-200 max-md:ease-out',
-              bubbleRadius,
-              isOutgoing
-                ? 'bg-bubble-out text-bubble-out-ink shadow-md shadow-black/[0.07] ring-1 ring-black/[0.06] dark:shadow-lg dark:shadow-black/40 dark:ring-white/10'
-                : 'bg-bubble-in/98 text-ink shadow-sm ring-1 ring-line/45 dark:bg-bubble-in dark:text-ink/95 dark:ring-line/40 dark:shadow-black/20',
-              highlighted && 'ring-2 ring-accent/55',
-              isDeleted && 'opacity-75',
-              bubblePressing &&
-                'max-md:scale-[0.97] max-md:shadow-lg max-md:ring-2 max-md:ring-accent/50 max-md:brightness-[0.96]',
-            )}
-            onContextMenu={(e) => {
-              if (typeof window === 'undefined') return;
-              if (window.matchMedia('(max-width: 767px)').matches) e.preventDefault();
-            }}
-            onPointerDown={(e) => {
-              if (!onRequestMobileReactionPicker || isDeleted) return;
-              if (typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches)
-                return;
-              if (menuOpen) return;
-              if (e.button !== 0) return;
-              clearLongPressTimer();
-              setBubblePressing(true);
-              pressOrigin.current = { x: e.clientX, y: e.clientY };
-              try {
-                (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-              } catch {
-                /* ignore */
-              }
-              longPressTimer.current = window.setTimeout(() => {
-                longPressTimer.current = null;
-                const el = bubbleRef.current;
-                if (!el || !onRequestMobileReactionPicker) return;
+          onPointerDown={(e) => {
+            if (!onRequestMobileReactionPicker || isDeleted) return;
+            if (typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches)
+              return;
+            if (menuOpen) return;
+            if (e.button !== 0) return;
+            clearLongPressTimer();
+            setSwipePx(0);
+            setSwipeDragging(false);
+            gestureRef.current = {
+              startX: e.clientX,
+              startY: e.clientY,
+              swipeLocked: false,
+              pointerId: e.pointerId,
+            };
+            setBubblePressing(true);
+            try {
+              (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+            } catch {
+              /* ignore */
+            }
+            longPressTimer.current = window.setTimeout(() => {
+              longPressTimer.current = null;
+              const g = gestureRef.current;
+              if (g?.swipeLocked) {
                 setBubblePressing(false);
+                return;
+              }
+              if (!onRequestMobileReactionPicker) {
+                setBubblePressing(false);
+                return;
+              }
+              const el = bubbleRef.current;
+              if (el) {
                 onRequestMobileReactionPicker(
                   m.id,
                   el.getBoundingClientRect(),
@@ -1424,146 +1372,320 @@ function MessageBubble({
                 } catch {
                   /* ignore */
                 }
-              }, 440);
-            }}
-            onPointerMove={(e) => {
-              const o = pressOrigin.current;
-              if (o == null || longPressTimer.current == null) return;
-              if (Math.hypot(e.clientX - o.x, e.clientY - o.y) > 14) clearLongPressTimer();
-            }}
-            onPointerUp={(e) => {
-              try {
-                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-              } catch {
-                /* ignore */
               }
-              clearLongPressTimer();
-            }}
-            onPointerCancel={(e) => {
-              try {
-                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-              } catch {
-                /* ignore */
+              setBubblePressing(false);
+            }, 440);
+          }}
+          onPointerMove={(e) => {
+            const g = gestureRef.current;
+            if (!g || e.pointerId !== g.pointerId) return;
+            const dx = e.clientX - g.startX;
+            const dy = e.clientY - g.startY;
+            if (!g.swipeLocked) {
+              if (longPressTimer.current != null) {
+                if (Math.hypot(dx, dy) > 14) {
+                  if (dx > 10 && dx > Math.abs(dy) * 1.15) {
+                    g.swipeLocked = true;
+                    setSwipeDragging(true);
+                    clearLongPressTimer();
+                    setSwipePx(Math.min(72, Math.max(0, dx)));
+                  } else {
+                    clearLongPressTimer();
+                  }
+                }
               }
-              clearLongPressTimer();
-            }}
-            onDoubleClick={() => {
-              if (isSystem || isDeleted) return;
-              void toggleReaction(m.id, '❤️');
+            } else {
+              setSwipePx(Math.min(72, Math.max(0, dx)));
+            }
+          }}
+          onPointerUp={(e) => {
+            const g = gestureRef.current;
+            if (g && e.pointerId === g.pointerId && g.swipeLocked) {
+              const dx = e.clientX - g.startX;
+              if (dx > 48) onReply();
+            }
+            try {
+              (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+            } catch {
+              /* ignore */
+            }
+            gestureRef.current = null;
+            setSwipePx(0);
+            setSwipeDragging(false);
+            clearLongPressTimer();
+          }}
+          onPointerCancel={(e) => {
+            try {
+              (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+            } catch {
+              /* ignore */
+            }
+            gestureRef.current = null;
+            setSwipePx(0);
+            setSwipeDragging(false);
+            clearLongPressTimer();
+          }}
+        >
+          <div
+            className="pointer-events-none absolute bottom-2 left-1 top-10 z-0 flex w-11 items-center justify-center rounded-xl bg-[#3390ec]/35 max-md:flex md:hidden"
+            style={{ opacity: Math.min(1, swipePx / 56) }}
+            aria-hidden
+          >
+            <span className="sr-only">{t('swipeReplyHint')}</span>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="text-white"
+              aria-hidden
+            >
+              <path
+                d="M9 14l-4-4 4-4M5 10h11a4 4 0 014 4v1"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <div
+            className={cn(
+              'relative z-[1]',
+              !swipeDragging && 'max-md:transition-transform max-md:duration-150 max-md:ease-out',
+            )}
+            style={{
+              transform: swipePx ? `translateX(${swipePx}px)` : undefined,
             }}
           >
-            {m.replyTo && (
+            {!isDeleted && (
               <div
                 className={cn(
-                  'mb-1 border-l-[2px] pl-2 text-[0.65rem] leading-snug opacity-90',
-                  isOutgoing
-                    ? 'border-bubble-out-ink/45'
-                    : 'border-accent/55 dark:border-accent/45',
+                  'pointer-events-none absolute -top-8 z-[44] hidden max-w-full gap-0.5 rounded-full border border-line/60 bg-surface-elevated/95 px-1 py-0.5 opacity-0 shadow-md backdrop-blur-sm transition group-hover:pointer-events-auto group-hover:opacity-100 dark:border-line/45 dark:bg-surface-elevated/90 md:flex',
+                  isOutgoing ? 'right-0' : 'left-0',
                 )}
               >
-                <span className="line-clamp-2 block">
-                  {m.replyTo.deletedAt ? t('originalMessageRemoved') : m.replyTo.text}
-                </span>
-              </div>
-            )}
-            {m.forwardedFromMessageId && (
-              <div
-                className={cn(
-                  'mb-1 rounded-md border-l-[2px] bg-black/[0.04] pl-2 py-0.5 text-[0.65rem] leading-snug opacity-95 dark:bg-white/[0.06]',
-                  isOutgoing
-                    ? 'border-bubble-out-ink/45'
-                    : 'border-accent/55 dark:border-accent/45',
-                )}
-              >
-                <span className="font-bold uppercase tracking-[0.1em]">{t('forwarded')}</span>{' '}
-                {m.forwardedFromUser ? (
-                  <span className="opacity-90">
-                    {t('forwardedFrom')}{' '}
-                    {m.forwardedFromUser.displayName ?? m.forwardedFromUser.username}
-                  </span>
-                ) : null}
-              </div>
-            )}
-            <p className={cn('whitespace-pre-wrap break-words', isDeleted && 'italic opacity-75')}>
-              {isDeleted ? t('messageDeleted') : m.text ? linkify(m.text) : null}
-            </p>
-            {m.attachments?.length > 0 && (
-              <div className="mt-2 space-y-2">
-                {m.attachments.map((a) =>
-                  a.kind === 'image' ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={a.id}
-                      src={a.url}
-                      alt={a.fileName}
-                      className="max-h-56 w-full rounded-xl object-cover"
-                    />
-                  ) : (
-                    <a
-                      key={a.id}
-                      href={a.url}
-                      className={cn(
-                        'block rounded-xl px-3 py-2 text-2xs font-medium underline-offset-2 hover:underline',
-                        isOutgoing
-                          ? 'bg-black/10 text-bubble-out-ink'
-                          : 'bg-black/5 text-accent dark:bg-black/20',
-                      )}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {a.fileName}
-                    </a>
-                  ),
-                )}
-              </div>
-            )}
-            <div
-              className={cn(
-                'mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0 text-[0.625rem] tabular-nums',
-                isOutgoing ? 'justify-end text-bubble-out-ink/70' : 'text-ink-muted',
-              )}
-            >
-              <span>
-                {new Date(m.createdAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-              {m.editedAt && <span className="opacity-75">{t('edited')}</span>}
-              {isOutgoing && lastInGroup && m.deliveryStatus && (
-                <span
-                  className="ml-0.5 inline-flex items-center gap-0.5 opacity-80"
-                  aria-label={m.deliveryStatus}
-                >
-                  {m.deliveryStatus === 'SENDING' ? (
-                    <span className="text-[9px] font-bold uppercase tracking-[0.06em]">…</span>
-                  ) : m.deliveryStatus === 'SENT' ? (
-                    <SingleCheckIcon className="h-3 w-3" />
-                  ) : (
-                    <DoubleCheckIcon className="h-3 w-3" />
-                  )}
-                </span>
-              )}
-            </div>
-            {m.reactions.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-0.5">
-                {m.reactions.map((r, ri) => (
+                {QUICK_REACTION_EMOJIS.map((emoji) => (
                   <button
+                    key={emoji}
                     type="button"
-                    key={`${m.id}-${r.emoji}-${ri}`}
-                    className={cn(
-                      'rounded-full border px-1.5 py-px text-[0.65rem] transition',
-                      isOutgoing
-                        ? 'border-white/30 bg-black/12 hover:bg-black/18'
-                        : 'border-line/55 bg-surface-elevated/50 hover:bg-surface-elevated/80 dark:border-line/45',
-                    )}
-                    onClick={() => toggleReaction(m.id, r.emoji)}
+                    className="pointer-events-auto rounded-md px-1 text-[0.95rem] leading-none text-ink transition hover:bg-surface-muted/90 dark:hover:bg-surface-muted/50"
+                    onClick={() => void toggleReaction(m.id, emoji)}
                   >
-                    {r.emoji} {r.count}
+                    {emoji}
                   </button>
                 ))}
               </div>
             )}
+            <div
+              className={cn(
+                'absolute top-1 z-[45] hidden md:block',
+                isOutgoing ? 'right-0' : 'left-0',
+              )}
+            >
+              <button
+                ref={triggerRef}
+                type="button"
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded-full border border-line/80 bg-surface-elevated text-ink-muted shadow-sm transition',
+                  'hover:bg-surface-muted hover:text-ink dark:border-line/55 dark:bg-surface-muted/35',
+                  menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                )}
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label={t('messageActionsButtonAria')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M5 12h.01M12 12h.01M19 12h.01"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <MessageActionsMenu
+              open={menuOpen}
+              anchorRef={triggerRef}
+              onClose={() => setMenuOpen(false)}
+              actions={actions}
+              showReactions={!isDeleted}
+              onReact={(emoji) => toggleReaction(m.id, emoji)}
+              closeOnScrollEl={closeOnScrollEl}
+            />
+            <div
+              ref={bubbleRef}
+              className={cn(
+                'chat-bubble-touch relative z-[1] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42] max-md:transition-[transform,box-shadow,filter] max-md:duration-200 max-md:ease-out',
+                bubbleRadius,
+                isOutgoing
+                  ? 'bg-bubble-out text-bubble-out-ink shadow-md shadow-black/[0.07] ring-1 ring-black/[0.06] dark:shadow-lg dark:shadow-black/40 dark:ring-white/10'
+                  : 'bg-bubble-in/98 text-ink shadow-sm ring-1 ring-line/45 dark:bg-bubble-in dark:text-ink/95 dark:ring-line/40 dark:shadow-black/20',
+                highlighted && 'ring-2 ring-accent/55',
+                isDeleted && 'opacity-75',
+                bubblePressing &&
+                  'max-md:scale-[0.97] max-md:shadow-lg max-md:ring-2 max-md:ring-accent/50 max-md:brightness-[0.96]',
+              )}
+              onContextMenu={(e) => {
+                if (typeof window === 'undefined') return;
+                if (window.matchMedia('(max-width: 767px)').matches) e.preventDefault();
+              }}
+              onDoubleClick={() => {
+                if (isSystem || isDeleted) return;
+                void toggleReaction(m.id, '❤️');
+              }}
+            >
+              {m.replyTo && (
+                <div
+                  className={cn(
+                    'mb-1 border-l-[2px] pl-2 text-[0.65rem] leading-snug opacity-90',
+                    isOutgoing
+                      ? 'border-bubble-out-ink/45'
+                      : 'border-accent/55 dark:border-accent/45',
+                  )}
+                >
+                  <span className="line-clamp-2 block">
+                    {m.replyTo.deletedAt ? t('originalMessageRemoved') : m.replyTo.text}
+                  </span>
+                </div>
+              )}
+              {m.forwardedFromMessageId && (
+                <div
+                  className={cn(
+                    'mb-1 rounded-md border-l-[2px] bg-black/[0.04] pl-2 py-0.5 text-[0.65rem] leading-snug opacity-95 dark:bg-white/[0.06]',
+                    isOutgoing
+                      ? 'border-bubble-out-ink/45'
+                      : 'border-accent/55 dark:border-accent/45',
+                  )}
+                >
+                  <span className="font-bold uppercase tracking-[0.1em]">{t('forwarded')}</span>{' '}
+                  {m.forwardedFromUser ? (
+                    <span className="opacity-90">
+                      {t('forwardedFrom')}{' '}
+                      {m.forwardedFromUser.displayName ?? m.forwardedFromUser.username}
+                    </span>
+                  ) : null}
+                </div>
+              )}
+              <p
+                className={cn('whitespace-pre-wrap break-words', isDeleted && 'italic opacity-75')}
+              >
+                {isDeleted ? t('messageDeleted') : m.text ? linkify(m.text) : null}
+              </p>
+              {m.attachments?.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {m.attachments.map((a) =>
+                    a.kind === 'image' ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={a.id}
+                        src={a.url}
+                        alt={a.fileName}
+                        className="max-h-56 w-full rounded-xl object-cover"
+                      />
+                    ) : a.kind === 'voice' ? (
+                      <div
+                        key={a.id}
+                        className={cn(
+                          'rounded-xl px-2 py-2',
+                          isOutgoing
+                            ? 'bg-black/12 text-bubble-out-ink'
+                            : 'bg-black/[0.06] text-ink dark:bg-white/[0.08]',
+                        )}
+                      >
+                        <div className="mb-2 flex h-7 items-end justify-center gap-0.5 opacity-90">
+                          {[5, 9, 6, 11, 7, 10, 6, 12, 5, 8, 6].map((h, i) => (
+                            <span
+                              key={i}
+                              className={cn(
+                                'w-0.5 rounded-full',
+                                isOutgoing
+                                  ? 'bg-bubble-out-ink/50'
+                                  : 'bg-accent/60 dark:bg-accent/50',
+                              )}
+                              style={{ height: `${h}px` }}
+                            />
+                          ))}
+                        </div>
+                        <audio
+                          src={a.url}
+                          controls
+                          className="h-8 w-full max-w-[min(100%,18rem)]"
+                          preload="metadata"
+                        />
+                        <p className="mt-1 text-[0.65rem] opacity-75">{t('voiceNote')}</p>
+                      </div>
+                    ) : (
+                      <a
+                        key={a.id}
+                        href={a.url}
+                        className={cn(
+                          'block rounded-xl px-3 py-2 text-2xs font-medium underline-offset-2 hover:underline',
+                          isOutgoing
+                            ? 'bg-black/10 text-bubble-out-ink'
+                            : 'bg-black/5 text-accent dark:bg-black/20',
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {a.fileName}
+                      </a>
+                    ),
+                  )}
+                </div>
+              )}
+              <div
+                className={cn(
+                  'mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0 text-[0.625rem] tabular-nums',
+                  isOutgoing ? 'justify-end text-bubble-out-ink/70' : 'text-ink-muted',
+                )}
+              >
+                <span>
+                  {new Date(m.createdAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+                {m.editedAt && <span className="opacity-75">{t('edited')}</span>}
+                {isOutgoing && lastInGroup && m.deliveryStatus && (
+                  <motion.span
+                    key={m.deliveryStatus}
+                    initial={{ scale: 0.88, opacity: 0.5 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 26 }}
+                    className="ml-0.5 inline-flex items-center gap-0.5 opacity-80"
+                    aria-label={m.deliveryStatus}
+                  >
+                    {m.deliveryStatus === 'SENDING' ? (
+                      <span className="text-[9px] font-bold uppercase tracking-[0.06em]">…</span>
+                    ) : m.deliveryStatus === 'SENT' ? (
+                      <SingleCheckIcon className="h-3 w-3" />
+                    ) : (
+                      <DoubleCheckIcon className="h-3 w-3" />
+                    )}
+                  </motion.span>
+                )}
+              </div>
+              {m.reactions.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-0.5">
+                  {m.reactions.map((r, ri) => (
+                    <button
+                      type="button"
+                      key={`${m.id}-${r.emoji}-${ri}`}
+                      className={cn(
+                        'rounded-full border px-1.5 py-px text-[0.65rem] transition',
+                        isOutgoing
+                          ? 'border-white/30 bg-black/12 hover:bg-black/18'
+                          : 'border-line/55 bg-surface-elevated/50 hover:bg-surface-elevated/80 dark:border-line/45',
+                      )}
+                      onClick={() => toggleReaction(m.id, r.emoji)}
+                    >
+                      {r.emoji} {r.count}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

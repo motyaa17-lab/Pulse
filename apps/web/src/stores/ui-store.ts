@@ -9,6 +9,8 @@ type UiState = {
   theme: 'light' | 'dark' | 'system';
   visualPreset: VisualPreset;
   soundEnabled: boolean;
+  /** When true, chat list hides last message text (previews) for shoulder-surfing resistance. */
+  hideChatListPreviews: boolean;
   sidebarOpen: boolean;
   detailsOpen: boolean;
   searchOpen: boolean;
@@ -16,6 +18,7 @@ type UiState = {
   setTheme: (t: 'light' | 'dark' | 'system') => void;
   setVisualPreset: (v: VisualPreset) => void;
   setSoundEnabled: (v: boolean) => void;
+  setHideChatListPreviews: (v: boolean) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (v: boolean) => void;
   setDetailsOpen: (v: boolean) => void;
@@ -29,6 +32,7 @@ export const useUiStore = create<UiState>()(
       theme: 'system',
       visualPreset: 'default',
       soundEnabled: true,
+      hideChatListPreviews: false,
       sidebarOpen: true,
       detailsOpen: false,
       searchOpen: false,
@@ -36,6 +40,7 @@ export const useUiStore = create<UiState>()(
       setTheme: (theme) => set({ theme }),
       setVisualPreset: (visualPreset) => set({ visualPreset }),
       setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
+      setHideChatListPreviews: (hideChatListPreviews) => set({ hideChatListPreviews }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setDetailsOpen: (detailsOpen) => set({ detailsOpen }),
@@ -52,6 +57,7 @@ export const useUiStore = create<UiState>()(
       partialize: (s) => ({
         visualPreset: s.visualPreset,
         soundEnabled: s.soundEnabled,
+        hideChatListPreviews: s.hideChatListPreviews,
       }),
       storage: createJSONStorage(() => localStorage),
     },

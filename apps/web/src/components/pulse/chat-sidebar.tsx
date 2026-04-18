@@ -188,6 +188,7 @@ export function ChatSidebar() {
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats', search],
     queryFn: () =>
@@ -300,9 +301,14 @@ export function ChatSidebar() {
     };
   }, [qc]);
 
-  const pinned = data?.filter((c: ChatListItem) => c.isPinned && !c.isArchived) ?? [];
-  const rest = data?.filter((c: ChatListItem) => !c.isPinned && !c.isArchived) ?? [];
-  const archived = data?.filter((c: ChatListItem) => c.isArchived) ?? [];
+  const pinnedRaw = data?.filter((c: ChatListItem) => c.isPinned && !c.isArchived) ?? [];
+  const restRaw = data?.filter((c: ChatListItem) => !c.isPinned && !c.isArchived) ?? [];
+  const archivedRaw = data?.filter((c: ChatListItem) => c.isArchived) ?? [];
+  const unreadFilter = (list: ChatListItem[]) =>
+    !showUnreadOnly ? list : list.filter((c) => c.unreadCount > 0);
+  const pinned = unreadFilter(pinnedRaw);
+  const rest = unreadFilter(restRaw);
+  const archived = unreadFilter(archivedRaw);
 
   const reorderPinned = useMutation({
     mutationFn: (chatIds: string[]) =>
@@ -341,11 +347,27 @@ export function ChatSidebar() {
                 aria-label={t('filterConversations')}
               />
             </div>
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowUnreadOnly((v) => !v)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition touch-manipulation',
+                  showUnreadOnly
+                    ? 'border-[#3390ec] bg-[#3390ec]/25 text-white'
+                    : 'border-white/12 bg-white/[0.06] text-white/65 hover:bg-white/10 hover:text-white/90',
+                )}
+                aria-pressed={showUnreadOnly}
+                aria-label={t('filterUnreadOnlyAria')}
+              >
+                {t('filterUnreadOnly')}
+              </button>
+            </div>
           </div>
         </header>
 
         <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-24">
-          {!isLoading && archived.length > 0 && (
+          {!isLoading && archivedRaw.length > 0 && (
             <button
               type="button"
               onClick={() => setShowArchived((v) => !v)}
@@ -376,7 +398,7 @@ export function ChatSidebar() {
                 </div>
               </div>
               <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/12 px-2 text-[12px] font-bold text-white/80">
-                {archived.length}
+                {archivedRaw.length}
               </span>
             </button>
           )}
@@ -459,7 +481,7 @@ export function ChatSidebar() {
               />
             ))}
           </div>
-          {!isLoading && archived.length > 0 && showArchived && (
+          {!isLoading && archivedRaw.length > 0 && showArchived && (
             <div className="mt-2">
               <p className="px-3 pb-1 pt-3 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/45">
                 {t('archived')}
@@ -578,7 +600,12 @@ function ChatRow({
   const src = toPublicUrl(avatarSrc(chat));
   const label = chatLabel(chat, t);
   const isTyping = useUiStore((s) => s.typingByChat?.[chat.id] ?? false);
-  const preview = isTyping ? t('typing') : formatChatListPreviewLine(chat, t);
+  const hideListPreviews = useUiStore((s) => s.hideChatListPreviews);
+  const preview = isTyping
+    ? t('typing')
+    : hideListPreviews
+      ? t('listPreviewHidden')
+      : formatChatListPreviewLine(chat, t);
 
   const confirmHide = () => {
     if (!window.confirm(t('hideChatConfirm'))) {

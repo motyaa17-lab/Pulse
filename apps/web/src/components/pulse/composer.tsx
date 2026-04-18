@@ -413,15 +413,29 @@ export function Composer({
                   alt=""
                   className="h-9 w-9 rounded-lg object-cover ring-1 ring-line/45 dark:ring-line/35"
                 />
+              ) : p.kind === 'voice' ? (
+                <div className="flex h-9 w-12 items-end justify-center gap-0.5 rounded-lg bg-surface-elevated/70 px-1 ring-1 ring-line/45 dark:bg-surface-elevated/40 dark:ring-line/35">
+                  {[4, 7, 5, 9, 6, 8, 5, 7, 4].map((h, i) => (
+                    <span
+                      key={i}
+                      className="w-0.5 shrink-0 rounded-full bg-accent/80"
+                      style={{ height: `${h}px` }}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated/70 text-xs font-semibold text-ink-muted ring-1 ring-line/45 dark:bg-surface-elevated/40 dark:ring-line/35">
                   {p.kind === 'video' ? t('videoKind') : t('fileKind')}
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[12.5px] font-medium text-ink">{p.fileName}</p>
+                <p className="truncate text-[12.5px] font-medium text-ink">
+                  {p.kind === 'voice' ? t('voiceNote') : p.fileName}
+                </p>
                 <p className="text-[11px] text-ink-muted">
-                  {Math.max(1, Math.round(p.sizeBytes / 1024))} KB
+                  {p.kind === 'voice'
+                    ? t('voiceRecordingHint')
+                    : `${Math.max(1, Math.round(p.sizeBytes / 1024))} KB`}
                 </p>
               </div>
               <button
@@ -462,7 +476,9 @@ export function Composer({
                 ? 'image'
                 : f.type.startsWith('video/')
                   ? 'video'
-                  : 'file';
+                  : f.type.startsWith('audio/')
+                    ? 'voice'
+                    : 'file';
               if (!token) return;
               const meta = await uploadMedia(f, kind, token, sessionId);
               addPending(chatId, {
