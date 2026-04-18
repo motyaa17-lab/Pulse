@@ -1,4 +1,4 @@
-import { API_URL } from '@/lib/api';
+import { effectiveApiBase } from '@/lib/api';
 
 export async function uploadMedia(
   file: File,
@@ -18,7 +18,7 @@ export async function uploadMedia(
   fd.append('kind', kind);
   const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   if (sessionId) headers['x-session-fingerprint'] = sessionId;
-  const res = await fetch(`${API_URL}/media/upload`, {
+  const res = await fetch(`${effectiveApiBase()}/media/upload`, {
     method: 'POST',
     headers,
     body: fd,
@@ -33,4 +33,3 @@ export async function uploadMedia(
     kind: string;
   };
 }
-

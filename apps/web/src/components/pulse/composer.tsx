@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch, ApiError, toPublicUrl } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDraftStore } from '@/stores/draft-store';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
@@ -633,7 +633,7 @@ export function Composer({
               {p.kind === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={p.url}
+                  src={toPublicUrl(p.url) ?? p.url}
                   alt=""
                   className="h-9 w-9 rounded-lg object-cover ring-1 ring-line/45 dark:ring-line/35"
                 />

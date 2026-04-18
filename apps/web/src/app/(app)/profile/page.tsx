@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, API_URL, toPublicUrl } from '@/lib/api';
+import { apiFetch, effectiveApiBase, toPublicUrl } from '@/lib/api';
 import type { MeUserDto } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/auth-store';
@@ -81,7 +81,11 @@ export default function MyProfilePage() {
     fd.append('kind', 'image');
     const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
     if (sessionId) headers['x-session-fingerprint'] = sessionId;
-    const res = await fetch(`${API_URL}/media/upload`, { method: 'POST', headers, body: fd });
+    const res = await fetch(`${effectiveApiBase()}/media/upload`, {
+      method: 'POST',
+      headers,
+      body: fd,
+    });
     try {
       if (!res.ok) throw new Error('upload failed');
       const meta = (await res.json()) as { url: string };

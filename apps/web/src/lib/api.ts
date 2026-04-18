@@ -1,14 +1,54 @@
 import { useAuthStore } from '@/stores/auth-store';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const DEFAULT_API_URL = 'http://localhost:4000';
+
+/** Build-time API base (no browser heuristics). */
+export function getApiUrl(): string {
+  return (process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL).replace(/\/$/, '');
+}
+
+/**
+ * API/media base for the current runtime. On HTTPS production, if the bundle still
+ * defaults to localhost (missing `NEXT_PUBLIC_API_URL`), use same-origin so uploads
+ * and fetches hit the deployed host (typical Railway single-service setup).
+ */
+export function effectiveApiBase(): string {
+  const configured = getApiUrl();
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configured)) {
+      return window.location.origin;
+    }
+  }
+  return configured;
+}
+
+/** @deprecated Prefer getApiUrl() or effectiveApiBase() — fixed at module load for legacy imports. */
+export const API_URL = getApiUrl();
 
 export function toPublicUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  // Already absolute (http/https) or protocol-relative.
-  if (/^(https?:)?\/\//i.test(url)) return url;
-  // Relative to API host.
-  if (url.startsWith('/')) return `${API_URL}${url}`;
-  return `${API_URL}/${url}`;
+  const base = effectiveApiBase();
+
+  if (url.startsWith('/')) {
+    return `${base}${url}`;
+  }
+
+  if (/^(https?:)?\/\//i.test(url)) {
+    try {
+      const normalized = url.startsWith('//') ? `https:${url}` : url;
+      const u = new URL(normalized);
+      const devHost =
+        u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]';
+      if (devHost) {
+        return `${base}${u.pathname}${u.search}${u.hash}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  }
+
+  return `${base}/${url}`;
 }
 
 export class ApiError extends Error {
@@ -24,7 +64,7 @@ export class ApiError extends Error {
 async function refreshAccess(): Promise<string | null> {
   const rt = useAuthStore.getState().refreshToken;
   if (!rt) return null;
-  const res = await fetch(`${API_URL}/auth/refresh`, {
+  const res = await fetch(`${effectiveApiBase()}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken: rt }),
@@ -69,12 +109,13 @@ export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T> 
       headers.set('Content-Type', 'application/json');
     }
   }
-  let res = await fetch(`${API_URL}${path}`, { ...rest, body: payload, headers });
+  const origin = effectiveApiBase();
+  let res = await fetch(`${origin}${path}`, { ...rest, body: payload, headers });
   if (res.status === 401 && !skipAuth) {
     const next = await refreshAccess();
     if (next) {
       headers.set('Authorization', `Bearer ${next}`);
-      res = await fetch(`${API_URL}${path}`, { ...rest, body: payload, headers });
+      res = await fetch(`${origin}${path}`, { ...rest, body: payload, headers });
     }
   }
   const text = await res.text();
@@ -95,5 +136,3 @@ export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T> 
   }
   return json as T;
 }
-
-export { API_URL };

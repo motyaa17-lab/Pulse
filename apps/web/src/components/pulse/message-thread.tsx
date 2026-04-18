@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useSearchParams } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, toPublicUrl } from '@/lib/api';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 import { bumpMetaFromMessage } from '@/lib/chat-preview-meta';
 import { applyOptimisticReaction } from '@/lib/reaction-optimistic';
@@ -1579,7 +1579,7 @@ function MessageBubble({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         key={a.id}
-                        src={a.url}
+                        src={toPublicUrl(a.url) ?? a.url}
                         alt={a.fileName}
                         className="max-h-56 w-full rounded-xl object-cover"
                       />
@@ -1608,7 +1608,7 @@ function MessageBubble({
                           ))}
                         </div>
                         <audio
-                          src={a.url}
+                          src={toPublicUrl(a.url) ?? a.url}
                           controls
                           className="h-8 w-full max-w-[min(100%,18rem)]"
                           preload="metadata"
@@ -1618,7 +1618,7 @@ function MessageBubble({
                     ) : (
                       <a
                         key={a.id}
-                        href={a.url}
+                        href={toPublicUrl(a.url) ?? a.url}
                         className={cn(
                           'block rounded-xl px-3 py-2 text-2xs font-medium underline-offset-2 hover:underline',
                           isOutgoing
