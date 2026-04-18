@@ -195,6 +195,13 @@ export class ChatsService {
               },
               orderBy: { createdAt: 'desc' },
               take: 1,
+              select: {
+                deletedAt: true,
+                text: true,
+                type: true,
+                createdAt: true,
+                attachments: { take: 1, select: { kind: true } },
+              },
             },
           },
         },
@@ -256,15 +263,22 @@ export class ChatsService {
         if (!hay.includes(ql)) continue;
       }
 
+      const lastPreview = last?.deletedAt
+        ? ''
+        : last?.text?.trim()
+          ? last.text.trim().slice(0, 160)
+          : '';
+      const lastAttKind = last?.attachments?.[0]?.kind;
+
       items.push({
         id: c.id,
         type: c.type,
         title,
         avatarUrl: c.avatarUrl,
         lastMessageAt: last?.createdAt?.toISOString() ?? c.updatedAt.toISOString(),
-        lastMessagePreview: last?.deletedAt
-          ? ''
-          : (last?.text?.slice(0, 160) ?? (last ? '[Media]' : '')),
+        lastMessagePreview: lastPreview,
+        lastMessageType: last?.deletedAt ? undefined : last?.type,
+        lastAttachmentKind: last?.deletedAt ? undefined : lastAttKind,
         unreadCount: unread,
         isPinned: pinSet.has(c.id),
         isArchived: archSet.has(c.id),

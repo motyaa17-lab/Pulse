@@ -11,6 +11,8 @@ import { useUiStore } from '@/stores/ui-store';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
+import { connectSocket } from '@/lib/socket';
+import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 
 function formatListTime(iso: string, t: (k: I18nKey) => string, locale: string): string {
   const d = new Date(iso);
@@ -28,6 +30,20 @@ function formatListTime(iso: string, t: (k: I18nKey) => string, locale: string):
 
 function chatLabel(chat: ChatListItem, t: (k: I18nKey) => string): string {
   return chat.title ?? chat.peer?.displayName ?? chat.peer?.username ?? t('chatFallback');
+}
+
+function formatChatListPreviewLine(chat: ChatListItem, t: (k: I18nKey) => string): string {
+  const raw = chat.lastMessagePreview?.trim();
+  if (raw) return raw;
+  const type = chat.lastMessageType;
+  const kind = chat.lastAttachmentKind;
+  if (type === 'SYSTEM') return t('previewSystem');
+  if (type === 'VOICE' || kind === 'voice') return t('previewVoice');
+  if (type === 'IMAGE' || kind === 'image') return t('previewPhoto');
+  if (type === 'VIDEO' || kind === 'video') return t('previewVideo');
+  if (type === 'FILE' || kind === 'file') return t('previewFile');
+  if (type && type !== 'TEXT') return t('previewMediaGeneric');
+  return ' ';
 }
 
 function chatInitial(chat: ChatListItem, t: (k: I18nKey) => string): string {
@@ -261,6 +277,28 @@ export function ChatSidebar() {
       window.removeEventListener('click', close);
     };
   }, [openMenuId]);
+
+  useEffect(() => {
+    const s = connectSocket();
+    const onChatUpdated = (payload: unknown) => {
+      const p = payload as {
+        chatId?: string;
+        lastMessageAt?: string;
+        preview?: string;
+        lastMessageType?: string;
+        lastAttachmentKind?: string | null;
+      };
+      if (!p?.chatId || !p.lastMessageAt) return;
+      bumpChatListPreview(qc, p.chatId, p.preview ?? '', p.lastMessageAt, {
+        lastMessageType: p.lastMessageType,
+        lastAttachmentKind: p.lastAttachmentKind ?? undefined,
+      });
+    };
+    s.on('chat:updated', onChatUpdated);
+    return () => {
+      s.off('chat:updated', onChatUpdated);
+    };
+  }, [qc]);
 
   const pinned = data?.filter((c: ChatListItem) => c.isPinned && !c.isArchived) ?? [];
   const rest = data?.filter((c: ChatListItem) => !c.isPinned && !c.isArchived) ?? [];
@@ -540,7 +578,7 @@ function ChatRow({
   const src = toPublicUrl(avatarSrc(chat));
   const label = chatLabel(chat, t);
   const isTyping = useUiStore((s) => s.typingByChat?.[chat.id] ?? false);
-  const preview = isTyping ? t('typing') : chat.lastMessagePreview?.trim() || ' ';
+  const preview = isTyping ? t('typing') : formatChatListPreviewLine(chat, t);
 
   const confirmHide = () => {
     if (!window.confirm(t('hideChatConfirm'))) {

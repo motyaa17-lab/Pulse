@@ -6,6 +6,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
+import { bumpMetaFromMessage } from '@/lib/chat-preview-meta';
 import { applyOptimisticReaction } from '@/lib/reaction-optimistic';
 import type { ChatListItem, MessageDto, MeUserDto } from '@/lib/types';
 import { connectSocket, getSocket } from '@/lib/socket';
@@ -15,8 +16,8 @@ import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
 import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { Composer } from './composer';
-import { MessageActionsMenu } from './message-actions-menu';
-import { motion } from 'framer-motion';
+import { MessageActionsMenu, QUICK_REACTION_EMOJIS } from './message-actions-menu';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
 
@@ -203,8 +204,11 @@ export function MessageThread({ chatId }: { chatId: string }) {
         });
         return { ...old, items: [...withoutMatchingOptimistic, msg] };
       });
-      const preview = msg.text?.trim() ? msg.text.slice(0, 160) : t('previewMedia');
-      bumpChatListPreview(qc, chatId, preview, msg.createdAt);
+      const meta = bumpMetaFromMessage(msg);
+      bumpChatListPreview(qc, chatId, meta.preview, msg.createdAt, {
+        lastMessageType: meta.lastMessageType,
+        lastAttachmentKind: meta.lastAttachmentKind,
+      });
     };
 
     const onMessageUpdated = (payload: unknown) => {
@@ -361,11 +365,16 @@ export function MessageThread({ chatId }: { chatId: string }) {
           forwardedFromMessageId: src.id,
         },
       });
+      const meta = bumpMetaFromMessage(created);
       bumpChatListPreview(
         qc,
         targetChatId,
-        created.text?.trim() ? created.text.slice(0, 160) : t('previewForwarded'),
+        created.text?.trim() ? created.text.slice(0, 160) : meta.preview || t('previewForwarded'),
         created.createdAt,
+        {
+          lastMessageType: meta.lastMessageType,
+          lastAttachmentKind: meta.lastAttachmentKind,
+        },
       );
       setForwarding(null);
     } catch {
@@ -568,28 +577,34 @@ export function MessageThread({ chatId }: { chatId: string }) {
           })}
         </div>
       </div>
-      {showScrollToBottom && (
-        <button
-          type="button"
-          className="pointer-events-auto absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#17212b]/95 text-white shadow-lg backdrop-blur-md transition hover:bg-[#1c2a38] active:scale-[0.97] md:bottom-[4.5rem] md:right-5"
-          onClick={() => {
-            const el = parentRef.current;
-            if (!el) return;
-            el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-          }}
-          aria-label={t('scrollToBottomAria')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M6 9l6 6 6-6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      )}
+      <AnimatePresence>
+        {showScrollToBottom && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, scale: 0.9, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 6 }}
+            transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+            className="pointer-events-auto absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#17212b]/95 text-white shadow-lg backdrop-blur-md transition hover:bg-[#1c2a38] active:scale-[0.97] md:bottom-[4.5rem] md:right-5"
+            onClick={() => {
+              const el = parentRef.current;
+              if (!el) return;
+              el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+            }}
+            aria-label={t('scrollToBottomAria')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M6 9l6 6 6-6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </motion.button>
+        )}
+      </AnimatePresence>
       <Composer
         chatId={chatId}
         replyTo={replyTo}
@@ -801,7 +816,9 @@ function MessageBubble({
         if (!old) return old;
         return { ...old, items: old.items.map((x) => (x.id === updated.id ? updated : x)) };
       });
-      bumpChatListPreview(qc, chatId, t('previewMessageDeleted'), updated.createdAt);
+      bumpChatListPreview(qc, chatId, t('previewMessageDeleted'), updated.createdAt, {
+        clearListMeta: true,
+      });
       void qc.invalidateQueries({ queryKey: ['chats'] });
     } catch {
       qc.setQueryData(['messages', chatId], snapshot);
@@ -1015,6 +1032,25 @@ function MessageBubble({
           onMouseEnter={() => onMessageRowEnter(m.id)}
           onMouseLeave={onMessageRowLeave}
         >
+          {!isDeleted && (
+            <div
+              className={cn(
+                'pointer-events-none absolute -top-8 z-[44] flex gap-0.5 rounded-full border border-line/60 bg-surface-elevated/95 px-1 py-0.5 opacity-0 shadow-md backdrop-blur-sm transition group-hover:pointer-events-auto group-hover:opacity-100 dark:border-line/45 dark:bg-surface-elevated/90',
+                isOutgoing ? 'right-0' : 'left-0',
+              )}
+            >
+              {QUICK_REACTION_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  className="pointer-events-auto rounded-md px-1 text-[0.95rem] leading-none text-ink transition hover:bg-surface-muted/90 dark:hover:bg-surface-muted/50"
+                  onClick={() => void toggleReaction(m.id, emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             ref={triggerRef}
             type="button"
@@ -1069,13 +1105,15 @@ function MessageBubble({
                     : 'border-accent/55 dark:border-accent/45',
                 )}
               >
-                {m.replyTo.deletedAt ? t('originalMessageRemoved') : m.replyTo.text}
+                <span className="line-clamp-2 block">
+                  {m.replyTo.deletedAt ? t('originalMessageRemoved') : m.replyTo.text}
+                </span>
               </div>
             )}
             {m.forwardedFromMessageId && (
               <div
                 className={cn(
-                  'mb-1 border-l-[2px] pl-2 text-[0.65rem] leading-snug opacity-90',
+                  'mb-1 rounded-md border-l-[2px] bg-black/[0.04] pl-2 py-0.5 text-[0.65rem] leading-snug opacity-95 dark:bg-white/[0.06]',
                   isOutgoing
                     ? 'border-bubble-out-ink/45'
                     : 'border-accent/55 dark:border-accent/45',

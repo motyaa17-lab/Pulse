@@ -93,3 +93,28 @@ body {
       rgb(255 255 255 / 0.012) 13px
     );
 }
+
+/* Optional accent presets (dark). `default` clears data-visual-preset on <html>. */
+.dark[data-visual-preset='ocean'] {
+  --accent: 45 212 191;
+  --accent-fg: 10 20 24;
+  --bubble-out: 13 148 136;
+  --bubble-in: 28 52 58;
+  --bubble-out-ink: 236 254 255;
+}
+
+.dark[data-visual-preset='sunset'] {
+  --accent: 251 146 60;
+  --accent-fg: 24 12 8;
+  --bubble-out: 194 65 12;
+  --bubble-in: 58 38 32;
+  --bubble-out-ink: 255 247 237;
+}
+
+.dark[data-visual-preset='forest'] {
+  --accent: 74 222 128;
+  --accent-fg: 10 24 14;
+  --bubble-out: 22 101 52;
+  --bubble-in: 32 48 36;
+  --bubble-out-ink: 240 253 244;
+}

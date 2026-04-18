@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, toPublicUrl } from '@/lib/api';
@@ -10,6 +10,7 @@ import {
   ChatDetailsDrawer,
   type ChatDetailForDrawer,
 } from '@/components/pulse/chat-details-drawer';
+import { ChatSearchOverlay } from '@/components/pulse/chat-search-overlay';
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import { connectSocket } from '@/lib/socket';
@@ -44,6 +45,7 @@ export default function ChatPage() {
   const setTyping = useUiStore((s) => s.setTypingForChat);
   const t = useT();
   const language = useLanguageStore((s) => s.language);
+  const [inChatSearchOpen, setInChatSearchOpen] = useState(false);
 
   useEffect(() => {
     setDetailsOpen(false);
@@ -214,6 +216,24 @@ export default function ChatPage() {
           <button
             type="button"
             className={cn(
+              'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/80 transition hover:bg-white/12 active:scale-[0.99]',
+              'md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 dark:md:border-line/50',
+            )}
+            onClick={() => setInChatSearchOpen(true)}
+            aria-label={t('chatSearchTitle')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16zM21 21l-4.35-4.35"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={cn(
               'inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition',
               'border border-white/12 bg-white/8 text-white/75 hover:bg-white/12 hover:text-white active:scale-[0.99]',
               'md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 md:hover:text-ink dark:md:border-line/50 dark:md:hover:bg-surface-elevated/55',
@@ -252,6 +272,13 @@ export default function ChatPage() {
           </button>
         )}
         <ChatDetailsDrawer open={detailsOpen} onClose={() => setDetailsOpen(false)} chat={chat} />
+        {chatId && (
+          <ChatSearchOverlay
+            open={inChatSearchOpen}
+            onClose={() => setInChatSearchOpen(false)}
+            chatId={chatId}
+          />
+        )}
         {chatId && <MessageThread chatId={chatId} />}
       </div>
     </div>

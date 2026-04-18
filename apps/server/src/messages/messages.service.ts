@@ -115,11 +115,54 @@ export class MessagesService {
       {
         chatId,
         lastMessageAt: msg.createdAt.toISOString(),
-        preview: broadcastPayload.text?.slice(0, 160),
+        preview: broadcastPayload.text?.slice(0, 160) ?? '',
+        lastMessageType: broadcastPayload.type,
+        lastAttachmentKind: broadcastPayload.attachments?.[0]?.kind ?? null,
       },
     );
 
     return this.toDto(msg, userId, dtoOpts);
+  }
+
+  async searchInChat(chatId: string, userId: string, q: string) {
+    await this.chats.assertMember(chatId, userId);
+    const query = q.trim();
+    if (query.length < 2)
+      return { results: [] as { id: string; createdAt: string; snippet: string }[] };
+
+    const rows = await this.prisma.message.findMany({
+      where: {
+        chatId,
+        deletedAt: null,
+        text: { contains: query, mode: 'insensitive' },
+        hiddenForUsers: { none: { userId } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, createdAt: true, text: true },
+    });
+
+    const snippet = (text: string | null, needle: string): string => {
+      if (!text) return '';
+      const hay = text;
+      const i = hay.toLowerCase().indexOf(needle.toLowerCase());
+      if (i < 0) return hay.slice(0, 140);
+      const before = 40;
+      const after = 80;
+      const start = Math.max(0, i - before);
+      const end = Math.min(hay.length, i + needle.length + after);
+      const prefix = start > 0 ? '…' : '';
+      const suffix = end < hay.length ? '…' : '';
+      return `${prefix}${hay.slice(start, end)}${suffix}`;
+    };
+
+    return {
+      results: rows.map((r) => ({
+        id: r.id,
+        createdAt: r.createdAt.toISOString(),
+        snippet: snippet(r.text, query),
+      })),
+    };
   }
 
   async list(chatId: string, userId: string, cursor?: string, take = 40) {

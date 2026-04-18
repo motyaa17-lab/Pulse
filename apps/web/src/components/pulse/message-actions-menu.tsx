@@ -13,7 +13,8 @@ type Action = {
   onSelect: () => void;
 };
 
-const EMOJIS = ['👍', '❤️', '😂', '🎉', '👀'] as const;
+export const QUICK_REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '👀'] as const;
+const EMOJIS = QUICK_REACTION_EMOJIS;
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));

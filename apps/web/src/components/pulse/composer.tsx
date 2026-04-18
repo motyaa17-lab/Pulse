@@ -6,6 +6,9 @@ import { apiFetch, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDraftStore } from '@/stores/draft-store';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
+import { bumpMetaFromMessage } from '@/lib/chat-preview-meta';
+import { playMessageSendSound } from '@/lib/sound-feedback';
+import { useUiStore } from '@/stores/ui-store';
 import type { MessageDto, MeUserDto } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { getSocket } from '@/lib/socket';
@@ -76,6 +79,7 @@ export function Composer({
   const addPending = usePendingAttachmentsStore((s) => s.add);
   const removePending = usePendingAttachmentsStore((s) => s.remove);
   const clearPending = usePendingAttachmentsStore((s) => s.clear);
+  const soundEnabled = useUiStore((s) => s.soundEnabled);
 
   const { data: meUser } = useQuery({
     queryKey: ['me'],
@@ -197,8 +201,12 @@ export function Composer({
             return { ...old, items: merged };
           },
         );
-        const preview = serverMsg.text?.trim() ? serverMsg.text.slice(0, 160) : t('previewMedia');
-        bumpChatListPreview(qc, chatId, preview, serverMsg.createdAt);
+        const meta = bumpMetaFromMessage(serverMsg);
+        bumpChatListPreview(qc, chatId, meta.preview, serverMsg.createdAt, {
+          lastMessageType: meta.lastMessageType,
+          lastAttachmentKind: meta.lastAttachmentKind,
+        });
+        if (soundEnabled) playMessageSendSound();
       }
     },
     onSettled: () => {
@@ -247,8 +255,11 @@ export function Composer({
           return { ...old, items: old.items.map((m) => (m.id === updated.id ? updated : m)) };
         },
       );
-      const preview = updated.text?.trim() ? updated.text.slice(0, 160) : t('previewMedia');
-      bumpChatListPreview(qc, chatId, preview, updated.createdAt);
+      const meta = bumpMetaFromMessage(updated);
+      bumpChatListPreview(qc, chatId, meta.preview, updated.createdAt, {
+        lastMessageType: meta.lastMessageType,
+        lastAttachmentKind: meta.lastAttachmentKind,
+      });
     },
     onSettled: () => setUiSending(false),
   });

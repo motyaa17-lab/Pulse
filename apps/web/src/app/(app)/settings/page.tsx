@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useUiStore } from '@/stores/ui-store';
+import { useUiStore, type VisualPreset } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { apiFetch } from '@/lib/api';
 import { disconnectSocket } from '@/lib/socket';
@@ -17,6 +17,10 @@ type SettingsTab = 'general' | 'privacy';
 export default function SettingsPage() {
   const theme = useUiStore((s) => s.theme);
   const setTheme = useUiStore((s) => s.setTheme);
+  const visualPreset = useUiStore((s) => s.visualPreset);
+  const setVisualPreset = useUiStore((s) => s.setVisualPreset);
+  const soundEnabled = useUiStore((s) => s.soundEnabled);
+  const setSoundEnabled = useUiStore((s) => s.setSoundEnabled);
   const clear = useAuthStore((s) => s.clear);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const language = useLanguageStore((s) => s.language);
@@ -103,6 +107,47 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </section>
+
+          <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
+            <h2 className="text-sm font-semibold text-ink">{t('chatVisualPresetTitle')}</h2>
+            <p className="text-xs text-ink-muted">{t('chatVisualPresetHint')}</p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                ['default', 'ocean', 'sunset', 'forest'] as const satisfies readonly VisualPreset[]
+              ).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setVisualPreset(p)}
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    visualPreset === p
+                      ? 'border-accent bg-accent/10 text-ink'
+                      : 'border-line text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  {p === 'default'
+                    ? t('presetDefault')
+                    : p === 'ocean'
+                      ? t('presetOcean')
+                      : p === 'sunset'
+                        ? t('presetSunset')
+                        : t('presetForest')}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-4 rounded-2xl border border-line bg-surface-elevated p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-line text-accent"
+                checked={soundEnabled}
+                onChange={(e) => setSoundEnabled(e.target.checked)}
+              />
+              <span className="text-sm text-ink">{t('soundEffectsLabel')}</span>
+            </label>
           </section>
 
           <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">

@@ -34,6 +34,15 @@ export class MessagesController {
     return this.messages.list(chatId, user.sub, cursor, take ? Number(take) : 40);
   }
 
+  @Get('search')
+  searchInChat(
+    @CurrentUser() user: JwtUser,
+    @Param('chatId') chatId: string,
+    @Query('q') q?: string,
+  ) {
+    return this.messages.searchInChat(chatId, user.sub, q ?? '');
+  }
+
   @Post()
   create(
     @CurrentUser() user: JwtUser,

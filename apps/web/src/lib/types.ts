@@ -7,6 +7,10 @@ export interface ChatListItem {
   avatarUrl: string | null;
   lastMessageAt: string;
   lastMessagePreview: string | null;
+  /** Last message `MessageType` (for media-only previews). */
+  lastMessageType?: string;
+  /** First attachment `kind` when useful for preview. */
+  lastAttachmentKind?: string;
   unreadCount: number;
   isPinned: boolean;
   pinOrder?: number | null;

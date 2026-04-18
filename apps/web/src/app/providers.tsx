@@ -6,6 +6,15 @@ import { BootstrapSplash } from '@/components/pulse/bootstrap-splash';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUiStore } from '@/stores/ui-store';
 
+function applyVisualPreset(preset: string) {
+  if (typeof document === 'undefined') return;
+  if (!preset || preset === 'default') {
+    delete document.documentElement.dataset.visualPreset;
+  } else {
+    document.documentElement.dataset.visualPreset = preset;
+  }
+}
+
 function logBootstrapState(reason: string) {
   const s = useAuthStore.getState();
   const p = useAuthStore.persist;
@@ -20,6 +29,7 @@ function logBootstrapState(reason: string) {
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(() => new QueryClient());
   const theme = useUiStore((s) => s.theme);
+  const visualPreset = useUiStore((s) => s.visualPreset);
 
   useEffect(() => {
     console.log('[pulse-bootstrap] Providers mount: bootstrap effect start');
@@ -80,6 +90,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       return () => mq.removeEventListener('change', fn);
     }
   }, [theme]);
+
+  useEffect(() => {
+    applyVisualPreset(visualPreset);
+  }, [visualPreset]);
 
   return (
     <QueryClientProvider client={client}>
