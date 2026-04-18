@@ -64,6 +64,7 @@ export const en = {
   chatActionsAria: 'Chat actions',
   mobileOpenChatsAria: 'Open chats',
   mobileCloseChatsListAria: 'Close chat list',
+  mobileReactionPickerAria: 'Choose a reaction',
   mutedTooltip: 'Muted',
   // Thread
   commonLoading: 'Loading…',

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
@@ -96,6 +97,210 @@ function inSameGroup(prev: MessageDto, curr: MessageDto): boolean {
 
 type MessagesQueryData = { items: MessageDto[]; nextCursor: string | null };
 
+function patchMessageReactionsForChat(
+  qc: QueryClient,
+  chatId: string,
+  messageId: string,
+  reactions: MessageDto['reactions'],
+) {
+  qc.setQueryData<MessagesQueryData>(['messages', chatId], (old) => {
+    if (!old) return old;
+    return {
+      ...old,
+      items: old.items.map((x: MessageDto) => (x.id === messageId ? { ...x, reactions } : x)),
+    };
+  });
+}
+
+async function commitMessageReactionToggle(
+  qc: QueryClient,
+  chatId: string,
+  messageId: string,
+  emoji: string,
+  myId: string,
+): Promise<void> {
+  const current = qc.getQueryData<MessagesQueryData>(['messages', chatId]);
+  const msg = current?.items?.find((x: MessageDto) => x.id === messageId);
+  if (!msg) return;
+  const r = msg.reactions.find((x: MessageDto['reactions'][number]) => x.emoji === emoji);
+  const hasMine = Boolean(r?.userIds.includes(myId));
+  const snapshot = msg.reactions.map((x: MessageDto['reactions'][number]) => ({
+    emoji: x.emoji,
+    count: x.count,
+    userIds: [...x.userIds],
+  }));
+  const optimistic = applyOptimisticReaction(msg.reactions, emoji, myId, !hasMine);
+  patchMessageReactionsForChat(qc, chatId, messageId, optimistic);
+  try {
+    let reactions: MessageDto['reactions'];
+    if (hasMine) {
+      reactions = await apiFetch<MessageDto['reactions']>(
+        `/chats/${chatId}/messages/${messageId}/reactions?emoji=${encodeURIComponent(emoji)}`,
+        { method: 'DELETE' },
+      );
+    } else {
+      reactions = await apiFetch<MessageDto['reactions']>(
+        `/chats/${chatId}/messages/${messageId}/reactions`,
+        {
+          method: 'POST',
+          body: { emoji },
+        },
+      );
+    }
+    patchMessageReactionsForChat(qc, chatId, messageId, reactions);
+  } catch {
+    patchMessageReactionsForChat(qc, chatId, messageId, snapshot);
+  }
+}
+
+type MobileReactionPick = {
+  messageId: string;
+  isOutgoing: boolean;
+  rect: { top: number; left: number; width: number; height: number };
+};
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function MobileReactionSheet({
+  pick,
+  message,
+  qc,
+  chatId,
+  myId,
+  onClose,
+}: {
+  pick: MobileReactionPick;
+  message: MessageDto | undefined;
+  qc: QueryClient;
+  chatId: string;
+  myId: string | null;
+  onClose: () => void;
+}) {
+  const t = useT();
+  const [emojiBar, setEmojiBar] = useState({ top: 0, left: 0 });
+  const barW = 268;
+
+  useLayoutEffect(() => {
+    const { rect } = pick;
+    const margin = 10;
+    const vh = window.innerHeight;
+    const barH = 52;
+    const safeTop = Math.max(margin, 0);
+    let top = rect.top - barH - 10;
+    if (top < safeTop) top = rect.top + rect.height + 10;
+    top = clamp(top, safeTop, vh - barH - margin);
+    let left = rect.left + rect.width / 2 - barW / 2;
+    left = clamp(left, margin, window.innerWidth - barW - margin);
+    setEmojiBar({ top, left });
+  }, [pick]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    const onResize = () => onClose();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [onClose]);
+
+  if (
+    typeof document === 'undefined' ||
+    !message ||
+    message.deletedAt ||
+    message.type === 'SYSTEM'
+  ) {
+    return null;
+  }
+
+  const { rect, isOutgoing } = pick;
+  const text = message.text?.trim() ?? '';
+
+  const onPick = async (emoji: string) => {
+    const uid = myId ?? qc.getQueryData<{ id: string }>(['me'])?.id;
+    if (!uid) return;
+    await commitMessageReactionToggle(qc, chatId, message.id, emoji, uid);
+    onClose();
+  };
+
+  return createPortal(
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-[118] touch-none bg-black/45 backdrop-blur-[14px] md:hidden"
+        aria-label={t('close')}
+        onClick={onClose}
+      />
+      <div
+        className="pointer-events-none fixed inset-0 z-[119] md:hidden"
+        aria-hidden
+        style={{
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <div
+          className="pointer-events-auto absolute rounded-[1.25rem] shadow-[0_12px_40px_rgba(0,0,0,0.45)] ring-2 ring-white/35 transition-transform duration-150 ease-out"
+          style={{
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+            transform: 'scale(1.03)',
+          }}
+        >
+          <div
+            className={cn(
+              'flex h-full flex-col overflow-hidden rounded-[1.2rem] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42]',
+              isOutgoing
+                ? 'bg-bubble-out text-bubble-out-ink ring-1 ring-white/15'
+                : 'bg-bubble-in/98 text-ink ring-1 ring-line/45 dark:bg-bubble-in dark:text-ink/95 dark:ring-line/40',
+            )}
+          >
+            <p className="line-clamp-[12] min-h-0 flex-1 whitespace-pre-wrap break-words">
+              {text || (message.attachments?.length ? t('attachment') : '')}
+            </p>
+            <div
+              className={cn(
+                'mt-1 shrink-0 text-[0.625rem] tabular-nums',
+                isOutgoing ? 'text-right text-bubble-out-ink/70' : 'text-ink-muted',
+              )}
+            >
+              {new Date(message.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          </div>
+        </div>
+        <div
+          role="toolbar"
+          aria-label={t('mobileReactionPickerAria')}
+          className="pointer-events-auto fixed z-[120] flex items-center gap-0.5 rounded-full border border-white/14 bg-[#1c2834]/95 px-2 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          style={{ top: emojiBar.top, left: emojiBar.left, width: barW }}
+        >
+          {QUICK_REACTION_EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              className="flex h-11 min-w-[2.75rem] flex-1 touch-manipulation items-center justify-center rounded-full text-[1.35rem] transition active:scale-[0.92] hover:bg-white/10"
+              onClick={() => void onPick(emoji)}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
+
 export function MessageThread({ chatId }: { chatId: string }) {
   const qc = useQueryClient();
   const t = useT();
@@ -114,6 +319,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const [forwarding, setForwarding] = useState<MessageDto | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [mobileReactionPick, setMobileReactionPick] = useState<MobileReactionPick | null>(null);
   const params = useSearchParams();
   const highlightId = params.get('highlight');
   const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -146,6 +352,21 @@ export function MessageThread({ chatId }: { chatId: string }) {
       if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mobileReactionPick) return;
+    const el = parentRef.current;
+    const close = () => setMobileReactionPick(null);
+    el?.addEventListener('scroll', close, { passive: true });
+    return () => el?.removeEventListener('scroll', close);
+  }, [mobileReactionPick]);
+
+  useEffect(() => {
+    if (!mobileReactionPick) return;
+    if (!messages.some((x) => x.id === mobileReactionPick.messageId)) {
+      setMobileReactionPick(null);
+    }
+  }, [messages, mobileReactionPick]);
 
   const cancelHoverLeaveTimer = () => {
     if (hoverLeaveTimer.current) {
@@ -571,6 +792,20 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   onMessageRowEnter={onMessageRowEnter}
                   onMessageRowLeave={onMessageRowLeave}
                   closeOnScrollEl={parentRef}
+                  mobileReactionPickId={mobileReactionPick?.messageId ?? null}
+                  onRequestMobileReactionPicker={(messageId, rect, isOutgoing) => {
+                    setMenuFor(null);
+                    setMobileReactionPick({
+                      messageId,
+                      isOutgoing,
+                      rect: {
+                        top: rect.top,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height,
+                      },
+                    });
+                  }}
                 />
               </div>
             );
@@ -605,6 +840,16 @@ export function MessageThread({ chatId }: { chatId: string }) {
           </motion.button>
         )}
       </AnimatePresence>
+      {mobileReactionPick && messages.some((x) => x.id === mobileReactionPick.messageId) ? (
+        <MobileReactionSheet
+          pick={mobileReactionPick}
+          message={messages.find((x) => x.id === mobileReactionPick.messageId)!}
+          qc={qc}
+          chatId={chatId}
+          myId={myId}
+          onClose={() => setMobileReactionPick(null)}
+        />
+      ) : null}
       <Composer
         chatId={chatId}
         replyTo={replyTo}
@@ -694,6 +939,8 @@ function MessageBubble({
   onMessageRowEnter,
   onMessageRowLeave,
   closeOnScrollEl,
+  mobileReactionPickId,
+  onRequestMobileReactionPicker,
 }: {
   m: MessageDto;
   prev?: MessageDto;
@@ -710,6 +957,8 @@ function MessageBubble({
   onMessageRowEnter: (id: string) => void;
   onMessageRowLeave: () => void;
   closeOnScrollEl: React.RefObject<HTMLDivElement | null>;
+  mobileReactionPickId: string | null;
+  onRequestMobileReactionPicker?: (messageId: string, rect: DOMRect, isOutgoing: boolean) => void;
 }) {
   const qc = useQueryClient();
   const t = useT();
@@ -718,7 +967,20 @@ function MessageBubble({
   const isSystem = m.type === 'SYSTEM';
   const showTrigger = menuOpen;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const bubbleRef = useRef<HTMLDivElement | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
   const isNew = useMemo(() => Date.now() - new Date(m.createdAt).getTime() < 2500, [m.createdAt]);
+
+  const clearLongPressTimer = () => {
+    if (longPressTimer.current != null) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    pressOrigin.current = null;
+  };
+
+  useEffect(() => () => clearLongPressTimer(), []);
 
   const linkify = (t: string) => {
     const parts = t.split(/(https?:\/\/[^\s]+)/g);
@@ -739,54 +1001,10 @@ function MessageBubble({
     );
   };
 
-  const patchMessageReactions = (id: string, reactions: MessageDto['reactions']) => {
-    qc.setQueryData<MessagesQueryData>(
-      ['messages', chatId],
-      (old: MessagesQueryData | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((m: MessageDto) => (m.id === id ? { ...m, reactions } : m)),
-        };
-      },
-    );
-  };
-
   const toggleReaction = async (messageId: string, emoji: string) => {
     const uid = myId ?? qc.getQueryData<{ id: string }>(['me'])?.id;
     if (!uid) return;
-    const current = qc.getQueryData<MessagesQueryData>(['messages', chatId]);
-    const msg = current?.items?.find((x: MessageDto) => x.id === messageId);
-    if (!msg) return;
-    const r = msg.reactions.find((x: MessageDto['reactions'][number]) => x.emoji === emoji);
-    const hasMine = Boolean(r?.userIds.includes(uid));
-    const snapshot = msg.reactions.map((x: MessageDto['reactions'][number]) => ({
-      emoji: x.emoji,
-      count: x.count,
-      userIds: [...x.userIds],
-    }));
-    const optimistic = applyOptimisticReaction(msg.reactions, emoji, uid, !hasMine);
-    patchMessageReactions(messageId, optimistic);
-    try {
-      let reactions: MessageDto['reactions'];
-      if (hasMine) {
-        reactions = await apiFetch<MessageDto['reactions']>(
-          `/chats/${chatId}/messages/${messageId}/reactions?emoji=${encodeURIComponent(emoji)}`,
-          { method: 'DELETE' },
-        );
-      } else {
-        reactions = await apiFetch<MessageDto['reactions']>(
-          `/chats/${chatId}/messages/${messageId}/reactions`,
-          {
-            method: 'POST',
-            body: { emoji },
-          },
-        );
-      }
-      patchMessageReactions(messageId, reactions);
-    } catch {
-      patchMessageReactions(messageId, snapshot);
-    }
+    await commitMessageReactionToggle(qc, chatId, messageId, emoji, uid);
   };
 
   const softDelete = async () => {
@@ -1028,6 +1246,7 @@ function MessageBubble({
           className={cn(
             'group relative max-w-[min(85vw,34rem)] pt-8 -mt-8',
             isOutgoing ? 'ml-auto' : 'mr-auto',
+            mobileReactionPickId === m.id && 'max-md:opacity-0 max-md:pointer-events-none',
           )}
           onMouseEnter={() => onMessageRowEnter(m.id)}
           onMouseLeave={onMessageRowLeave}
@@ -1035,7 +1254,7 @@ function MessageBubble({
           {!isDeleted && (
             <div
               className={cn(
-                'pointer-events-none absolute -top-8 z-[44] flex gap-0.5 rounded-full border border-line/60 bg-surface-elevated/95 px-1 py-0.5 opacity-0 shadow-md backdrop-blur-sm transition group-hover:pointer-events-auto group-hover:opacity-100 dark:border-line/45 dark:bg-surface-elevated/90',
+                'pointer-events-none absolute -top-8 z-[44] hidden max-w-full gap-0.5 rounded-full border border-line/60 bg-surface-elevated/95 px-1 py-0.5 opacity-0 shadow-md backdrop-blur-sm transition group-hover:pointer-events-auto group-hover:opacity-100 dark:border-line/45 dark:bg-surface-elevated/90 md:flex',
                 isOutgoing ? 'right-0' : 'left-0',
               )}
             >
@@ -1058,7 +1277,7 @@ function MessageBubble({
               'absolute top-1 z-[45] flex h-7 w-7 items-center justify-center rounded-full border border-line/80 bg-surface-elevated text-ink-muted shadow-sm transition',
               'hover:bg-surface-muted hover:text-ink dark:border-line/55 dark:bg-surface-muted/35',
               isOutgoing ? 'right-0' : 'left-0',
-              menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+              menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100',
             )}
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={t('messageActionsButtonAria')}
@@ -1082,8 +1301,9 @@ function MessageBubble({
             closeOnScrollEl={closeOnScrollEl}
           />
           <div
+            ref={bubbleRef}
             className={cn(
-              'relative z-[1] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42]',
+              'chat-bubble-touch relative z-[1] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42]',
               bubbleRadius,
               isOutgoing
                 ? 'bg-bubble-out text-bubble-out-ink shadow-md shadow-black/[0.07] ring-1 ring-black/[0.06] dark:shadow-lg dark:shadow-black/40 dark:ring-white/10'
@@ -1091,6 +1311,56 @@ function MessageBubble({
               highlighted && 'ring-2 ring-accent/55',
               isDeleted && 'opacity-75',
             )}
+            onContextMenu={(e) => {
+              if (typeof window === 'undefined') return;
+              if (window.matchMedia('(max-width: 767px)').matches) e.preventDefault();
+            }}
+            onPointerDown={(e) => {
+              if (!onRequestMobileReactionPicker || isDeleted) return;
+              if (typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches)
+                return;
+              if (menuOpen) return;
+              if (e.button !== 0) return;
+              clearLongPressTimer();
+              pressOrigin.current = { x: e.clientX, y: e.clientY };
+              try {
+                (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
+              longPressTimer.current = window.setTimeout(() => {
+                longPressTimer.current = null;
+                const el = bubbleRef.current;
+                if (!el) return;
+                onRequestMobileReactionPicker(m.id, el.getBoundingClientRect(), isOutgoing);
+                try {
+                  navigator.vibrate?.(12);
+                } catch {
+                  /* ignore */
+                }
+              }, 440);
+            }}
+            onPointerMove={(e) => {
+              const o = pressOrigin.current;
+              if (o == null || longPressTimer.current == null) return;
+              if (Math.hypot(e.clientX - o.x, e.clientY - o.y) > 14) clearLongPressTimer();
+            }}
+            onPointerUp={(e) => {
+              try {
+                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
+              clearLongPressTimer();
+            }}
+            onPointerCancel={(e) => {
+              try {
+                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
+              clearLongPressTimer();
+            }}
             onDoubleClick={() => {
               if (isSystem || isDeleted) return;
               void toggleReaction(m.id, '❤️');

@@ -123,3 +123,12 @@ body {
 .mobile-chats-shell {
   overscroll-behavior-y: none;
 }
+
+/* Long-press reactions: no callout / selection on message bubbles (mobile). */
+@media (max-width: 767px) {
+  .chat-bubble-touch {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

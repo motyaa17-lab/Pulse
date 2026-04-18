@@ -97,7 +97,7 @@ export function ChatSearchOverlay({
             onChange={(e) => setQ(e.target.value)}
             placeholder={t('chatSearchPlaceholder')}
             className={cn(
-              'w-full rounded-xl border border-line/70 bg-surface-muted/40 px-3 py-2.5 text-sm text-ink outline-none ring-accent/25 placeholder:text-ink-muted focus:ring-2 dark:border-white/[0.08] dark:bg-[#111921] dark:text-white dark:placeholder:text-white/45 md:dark:border-line/45 md:dark:bg-surface-muted/25 md:dark:text-ink md:dark:placeholder:text-ink-muted/65',
+              'w-full rounded-xl border border-line/70 bg-surface-muted/40 px-3 py-2.5 text-base text-ink outline-none ring-accent/25 placeholder:text-ink-muted focus:ring-2 dark:border-white/[0.08] dark:bg-[#111921] dark:text-white dark:placeholder:text-white/45 md:text-sm md:dark:border-line/45 md:dark:bg-surface-muted/25 md:dark:text-ink md:dark:placeholder:text-ink-muted/65',
             )}
             autoFocus
           />

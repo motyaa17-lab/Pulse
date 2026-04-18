@@ -62,6 +62,7 @@ export const ru = {
   chatActionsAria: 'Действия с чатом',
   mobileOpenChatsAria: 'Открыть чаты',
   mobileCloseChatsListAria: 'Закрыть список чатов',
+  mobileReactionPickerAria: 'Выберите реакцию',
   mutedTooltip: 'Без звука',
   commonLoading: 'Загрузка…',
   dropFilesToUpload: 'Перетащите файлы, чтобы прикрепить',

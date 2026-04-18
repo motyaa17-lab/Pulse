@@ -521,7 +521,7 @@ export function Composer({
           }}
           placeholder={editing ? t('editMessage') : t('message')}
           className={cn(
-            'mb-px max-h-[8.25rem] min-h-[2.5rem] flex-1 resize-none bg-transparent py-2.5 pr-1 text-[15px] leading-[1.45] text-ink placeholder:text-ink-muted/65 outline-none dark:text-white dark:placeholder:text-white/45 md:dark:text-ink md:dark:placeholder:text-ink-muted/65',
+            'mb-px max-h-[8.25rem] min-h-[2.5rem] flex-1 resize-none bg-transparent py-2.5 pr-1 text-[16px] leading-snug text-ink placeholder:text-ink-muted/65 outline-none dark:text-white dark:placeholder:text-white/45 md:text-[15px] md:leading-[1.45] md:dark:text-ink md:dark:placeholder:text-ink-muted/65',
           )}
           aria-label={t('messageTextAria')}
         />
