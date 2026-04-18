@@ -274,6 +274,8 @@ export const en = {
   videoNoteFlash: 'Flash',
   videoNoteRecordIdleHint: 'Tap the red button to start recording (up to 60 s).',
   videoNoteCloseHint: 'Close camera',
+  videoNotePlayAria: 'Play video message with sound',
+  videoNotePauseAria: 'Pause video message',
   voicePlayAria: 'Play voice message',
   voicePauseAria: 'Pause',
   voicePlayError: 'Could not play',

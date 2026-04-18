@@ -18,6 +18,7 @@ import { uploadMedia } from '@/lib/upload-media';
 import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { Composer } from './composer';
 import { VoiceMessageBubble } from '@/components/pulse/voice-message-bubble';
+import { VideoNoteCircle } from '@/components/pulse/video-note-circle';
 import {
   MessageActionsMenu,
   QUICK_REACTION_EMOJIS,
@@ -1325,6 +1326,52 @@ function MessageBubble({
     !lastInGroup && !isOutgoing && 'rounded-bl-[0.55rem]',
   );
 
+  const isRoundVideoNote = useMemo(() => {
+    if (isDeleted || !m.attachments || m.attachments.length !== 1) return false;
+    const a = m.attachments[0];
+    if (a.kind !== 'video') return false;
+    const d = a.durationSec ?? 0;
+    return d > 0 && d <= 120;
+  }, [isDeleted, m.attachments]);
+
+  const isRoundVideoNoteLayout = useMemo(
+    () => isRoundVideoNote && !m.replyTo && !m.forwardedFromMessageId && !m.text?.trim(),
+    [isRoundVideoNote, m.forwardedFromMessageId, m.replyTo, m.text],
+  );
+
+  const messageMetaFooter = useMemo(
+    () => (
+      <>
+        <span>
+          {new Date(m.createdAt).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
+        {m.editedAt && <span className="opacity-75">{t('edited')}</span>}
+        {isOutgoing && lastInGroup && m.deliveryStatus && (
+          <motion.span
+            key={m.deliveryStatus}
+            initial={{ scale: 0.88, opacity: 0.5 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 26 }}
+            className="ml-0.5 inline-flex items-center gap-0.5 opacity-80"
+            aria-label={m.deliveryStatus}
+          >
+            {m.deliveryStatus === 'SENDING' ? (
+              <span className="text-[9px] font-bold uppercase tracking-[0.06em]">…</span>
+            ) : m.deliveryStatus === 'SENT' ? (
+              <SingleCheckIcon className="h-3 w-3" />
+            ) : (
+              <DoubleCheckIcon className="h-3 w-3" />
+            )}
+          </motion.span>
+        )}
+      </>
+    ),
+    [isOutgoing, lastInGroup, m.createdAt, m.deliveryStatus, m.editedAt, t],
+  );
+
   const rowTopSpace = showDate
     ? firstInGroup
       ? 'mt-5'
@@ -1546,12 +1593,17 @@ function MessageBubble({
             <div
               ref={bubbleRef}
               className={cn(
-                'chat-bubble-touch relative z-[1] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42] max-md:transition-[transform,box-shadow,filter] max-md:duration-200 max-md:ease-out',
-                bubbleRadius,
-                isOutgoing
-                  ? 'bg-bubble-out text-bubble-out-ink shadow-md shadow-black/[0.07] ring-1 ring-black/[0.06] dark:shadow-lg dark:shadow-black/40 dark:ring-white/10'
-                  : 'bg-bubble-in/98 text-ink shadow-sm ring-1 ring-line/45 dark:bg-bubble-in dark:text-ink/95 dark:ring-line/40 dark:shadow-black/20',
-                highlighted && 'ring-2 ring-accent/55',
+                'chat-bubble-touch relative z-[1] text-[13.5px] leading-[1.42] max-md:transition-[transform,box-shadow,filter] max-md:duration-200 max-md:ease-out',
+                isRoundVideoNoteLayout
+                  ? 'rounded-none bg-transparent p-0 text-ink shadow-none ring-0 dark:bg-transparent dark:text-ink/95 dark:shadow-none dark:ring-0'
+                  : cn(
+                      'px-[0.7rem] py-[0.45rem]',
+                      bubbleRadius,
+                      isOutgoing
+                        ? 'bg-bubble-out text-bubble-out-ink shadow-md shadow-black/[0.07] ring-1 ring-black/[0.06] dark:shadow-lg dark:shadow-black/40 dark:ring-white/10'
+                        : 'bg-bubble-in/98 text-ink shadow-sm ring-1 ring-line/45 dark:bg-bubble-in dark:text-ink/95 dark:ring-line/40 dark:shadow-black/20',
+                    ),
+                highlighted && !isRoundVideoNoteLayout && 'ring-2 ring-accent/55',
                 isDeleted && 'opacity-75',
                 bubblePressing &&
                   'max-md:scale-[0.97] max-md:shadow-lg max-md:ring-2 max-md:ring-accent/50 max-md:brightness-[0.96]',
@@ -1597,13 +1649,18 @@ function MessageBubble({
                   ) : null}
                 </div>
               )}
-              <p
-                className={cn('whitespace-pre-wrap break-words', isDeleted && 'italic opacity-75')}
-              >
-                {isDeleted ? t('messageDeleted') : m.text ? linkify(m.text) : null}
-              </p>
+              {(!isRoundVideoNoteLayout || isDeleted || Boolean(m.text?.trim())) && (
+                <p
+                  className={cn(
+                    'whitespace-pre-wrap break-words',
+                    isDeleted && 'italic opacity-75',
+                  )}
+                >
+                  {isDeleted ? t('messageDeleted') : m.text ? linkify(m.text) : null}
+                </p>
+              )}
               {m.attachments?.length > 0 && (
-                <div className="mt-2 space-y-2">
+                <div className={cn('space-y-2', !isRoundVideoNoteLayout && 'mt-2')}>
                   {m.attachments.map((a) =>
                     a.kind === 'image' ? (
                       <ThreadInlineImage
@@ -1620,19 +1677,28 @@ function MessageBubble({
                         isOutgoing={isOutgoing}
                       />
                     ) : a.kind === 'video' ? (
-                      <video
-                        key={a.id}
-                        src={toPublicUrl(a.url) ?? a.url}
-                        className={cn(
-                          'object-cover shadow-md ring-1 ring-black/15 dark:ring-white/15',
-                          (a.durationSec ?? 0) > 0 && (a.durationSec ?? 999) <= 120
-                            ? 'aspect-square w-[min(72vw,260px)] max-w-[260px] rounded-full'
-                            : 'max-h-72 w-full max-w-[min(100%,20rem)] rounded-2xl',
-                        )}
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
+                      (a.durationSec ?? 0) > 0 && (a.durationSec ?? 999) <= 120 ? (
+                        <div key={a.id} className="relative inline-block">
+                          <VideoNoteCircle
+                            src={a.url}
+                            className="aspect-square w-[min(72vw,260px)] max-w-[260px] shadow-md ring-1 ring-black/20 dark:ring-white/15"
+                          />
+                          {isRoundVideoNoteLayout && (
+                            <div className="pointer-events-none absolute bottom-1 right-1 z-[2] flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-x-1 gap-y-0 text-[0.625rem] tabular-nums text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                              {messageMetaFooter}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <video
+                          key={a.id}
+                          src={toPublicUrl(a.url) ?? a.url}
+                          className="max-h-72 w-full max-w-[min(100%,20rem)] rounded-2xl object-cover shadow-md ring-1 ring-black/15 dark:ring-white/15"
+                          controls
+                          playsInline
+                          preload="metadata"
+                        />
+                      )
                     ) : (
                       <a
                         key={a.id}
@@ -1652,38 +1718,16 @@ function MessageBubble({
                   )}
                 </div>
               )}
-              <div
-                className={cn(
-                  'mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0 text-[0.625rem] tabular-nums',
-                  isOutgoing ? 'justify-end text-bubble-out-ink/70' : 'text-ink-muted',
-                )}
-              >
-                <span>
-                  {new Date(m.createdAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-                {m.editedAt && <span className="opacity-75">{t('edited')}</span>}
-                {isOutgoing && lastInGroup && m.deliveryStatus && (
-                  <motion.span
-                    key={m.deliveryStatus}
-                    initial={{ scale: 0.88, opacity: 0.5 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 520, damping: 26 }}
-                    className="ml-0.5 inline-flex items-center gap-0.5 opacity-80"
-                    aria-label={m.deliveryStatus}
-                  >
-                    {m.deliveryStatus === 'SENDING' ? (
-                      <span className="text-[9px] font-bold uppercase tracking-[0.06em]">…</span>
-                    ) : m.deliveryStatus === 'SENT' ? (
-                      <SingleCheckIcon className="h-3 w-3" />
-                    ) : (
-                      <DoubleCheckIcon className="h-3 w-3" />
-                    )}
-                  </motion.span>
-                )}
-              </div>
+              {!isRoundVideoNoteLayout && (
+                <div
+                  className={cn(
+                    'mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0 text-[0.625rem] tabular-nums',
+                    isOutgoing ? 'justify-end text-bubble-out-ink/70' : 'text-ink-muted',
+                  )}
+                >
+                  {messageMetaFooter}
+                </div>
+              )}
               {m.reactions.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-0.5">
                   {m.reactions.map((r, ri) => (

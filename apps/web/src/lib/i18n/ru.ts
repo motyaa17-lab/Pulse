@@ -262,6 +262,8 @@ export const ru = {
   videoNoteFlash: 'Вспышка',
   videoNoteRecordIdleHint: 'Нажмите красную кнопку, чтобы начать запись (до 60 сек).',
   videoNoteCloseHint: 'Закрыть камеру',
+  videoNotePlayAria: 'Воспроизвести видеосообщение со звуком',
+  videoNotePauseAria: 'Пауза видеосообщения',
   voicePlayAria: 'Воспроизвести',
   voicePauseAria: 'Пауза',
   voicePlayError: 'Не удалось воспроизвести',
