@@ -21,6 +21,8 @@ type SharedMediaItem = {
   createdAt: string;
 };
 
+type SharedMediaResponse = { items: SharedMediaItem[] };
+
 export type ChatDetailForDrawer = {
   id: string;
   type: string;
@@ -97,15 +99,18 @@ export function ChatDetailsDrawer({
   onCloseRef.current = onClose;
 
   const chatId = chat?.id;
-  const { data: sharedMedia, isPending: sharedMediaPending } = useQuery({
+  const { data: sharedMedia, isPending: sharedMediaPending } = useQuery<SharedMediaResponse>({
     queryKey: ['chat', chatId ?? '', 'shared-media'],
-    queryFn: async () => {
-      if (!chatId) return { items: [] as SharedMediaItem[] };
-      return apiFetch<{ items: SharedMediaItem[] }>(`/chats/${chatId}/shared-media`);
+    queryFn: async (): Promise<SharedMediaResponse> => {
+      if (!chatId) return { items: [] };
+      return apiFetch<SharedMediaResponse>(`/chats/${chatId}/shared-media`);
     },
     enabled: open && Boolean(chatId),
     staleTime: 30_000,
   });
+  const sharedMediaItems = sharedMedia?.items ?? [];
+  const showSharedMediaLoading = sharedMediaPending && sharedMediaItems.length === 0;
+  const showSharedMediaGrid = sharedMediaItems.length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -269,20 +274,20 @@ export function ChatDetailsDrawer({
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
               {t('drawerShared')}
             </p>
-            {sharedMediaPending && !sharedMedia?.items?.length ? (
+            {showSharedMediaLoading ? (
               <section className="rounded-xl border border-line/55 bg-surface-muted/25 px-3 py-3 dark:border-line/40 dark:bg-surface-muted/15">
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
                   {t('drawerMedia')}
                 </h3>
                 <p className="mt-1.5 text-[13px] text-ink-muted/90">{t('commonLoading')}</p>
               </section>
-            ) : sharedMedia?.items && sharedMedia.items.length > 0 ? (
+            ) : showSharedMediaGrid ? (
               <section className="rounded-xl border border-line/55 bg-surface-muted/25 px-3 py-3 dark:border-line/40 dark:bg-surface-muted/15">
                 <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
                   {t('drawerMedia')}
                 </h3>
                 <div className="mt-2 grid grid-cols-3 gap-1.5">
-                  {sharedMedia.items.map((it) => {
+                  {sharedMediaItems.map((it) => {
                     const pub = toPublicUrl(it.url) ?? it.url;
                     const isVideo = it.kind === 'video' || it.mimeType.startsWith('video/');
                     return (
