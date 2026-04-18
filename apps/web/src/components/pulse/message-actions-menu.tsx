@@ -5,13 +5,15 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { useT } from '@/lib/i18n';
 
-type Action = {
+export type MessageMenuAction = {
   id: string;
   label: string;
   danger?: boolean;
   disabled?: boolean;
   onSelect: () => void;
 };
+
+type Action = MessageMenuAction;
 
 export const QUICK_REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '👀'] as const;
 const EMOJIS = QUICK_REACTION_EMOJIS;

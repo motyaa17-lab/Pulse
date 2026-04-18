@@ -17,7 +17,11 @@ import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
 import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { Composer } from './composer';
-import { MessageActionsMenu, QUICK_REACTION_EMOJIS } from './message-actions-menu';
+import {
+  MessageActionsMenu,
+  QUICK_REACTION_EMOJIS,
+  type MessageMenuAction,
+} from './message-actions-menu';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
@@ -157,13 +161,14 @@ type MobileReactionPick = {
   messageId: string;
   isOutgoing: boolean;
   rect: { top: number; left: number; width: number; height: number };
+  actions: MessageMenuAction[];
 };
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function MobileReactionSheet({
+function MobileMessageActionSheet({
   pick,
   message,
   qc,
@@ -180,20 +185,38 @@ function MobileReactionSheet({
 }) {
   const t = useT();
   const [emojiBar, setEmojiBar] = useState({ top: 0, left: 0 });
+  const [actionsBox, setActionsBox] = useState({ top: 0, left: 0, width: 280, maxH: 280 });
   const barW = 268;
 
   useLayoutEffect(() => {
     const { rect } = pick;
     const margin = 10;
     const vh = window.innerHeight;
+    const vw = window.innerWidth;
     const barH = 52;
     const safeTop = Math.max(margin, 0);
     let top = rect.top - barH - 10;
     if (top < safeTop) top = rect.top + rect.height + 10;
     top = clamp(top, safeTop, vh - barH - margin);
     let left = rect.left + rect.width / 2 - barW / 2;
-    left = clamp(left, margin, window.innerWidth - barW - margin);
+    left = clamp(left, margin, vw - barW - margin);
     setEmojiBar({ top, left });
+
+    const panelW = Math.min(280, vw - margin * 2);
+    let panelLeft = rect.left + rect.width / 2 - panelW / 2;
+    panelLeft = clamp(panelLeft, margin, vw - panelW - margin);
+    const gap = 10;
+    const defaultTop = rect.top + rect.height + gap;
+    const availableBelow = vh - defaultTop - margin;
+    const availableAbove = rect.top - margin;
+    let actionsTop = defaultTop;
+    let maxH = Math.min(300, Math.max(120, availableBelow));
+    if (availableBelow < 120 && availableAbove > availableBelow) {
+      maxH = Math.min(300, Math.max(120, availableAbove - gap));
+      actionsTop = rect.top - gap - maxH;
+      actionsTop = Math.max(margin, actionsTop);
+    }
+    setActionsBox({ top: actionsTop, left: panelLeft, width: panelW, maxH });
   }, [pick]);
 
   useEffect(() => {
@@ -221,6 +244,7 @@ function MobileReactionSheet({
 
   const { rect, isOutgoing } = pick;
   const text = message.text?.trim() ?? '';
+  const enabledActions = pick.actions.filter((a) => !a.disabled);
 
   const onPick = async (emoji: string) => {
     const uid = myId ?? qc.getQueryData<{ id: string }>(['me'])?.id;
@@ -231,27 +255,31 @@ function MobileReactionSheet({
 
   return createPortal(
     <>
-      <button
+      <motion.button
         type="button"
-        className="fixed inset-0 z-[118] touch-none bg-black/45 backdrop-blur-[14px] md:hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-[118] touch-none bg-black/50 backdrop-blur-[16px] md:hidden"
         aria-label={t('close')}
         onClick={onClose}
       />
       <div
         className="pointer-events-none fixed inset-0 z-[119] md:hidden"
         aria-hidden
-        style={{
-          WebkitTapHighlightColor: 'transparent',
-        }}
+        style={{ WebkitTapHighlightColor: 'transparent' }}
       >
-        <div
-          className="pointer-events-auto absolute rounded-[1.25rem] shadow-[0_12px_40px_rgba(0,0,0,0.45)] ring-2 ring-white/35 transition-transform duration-150 ease-out"
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1.03 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+          className="pointer-events-auto absolute rounded-[1.25rem] shadow-[0_16px_48px_rgba(0,0,0,0.5)] ring-2 ring-white/40"
           style={{
             top: rect.top,
             left: rect.left,
             width: rect.width,
             height: rect.height,
-            transform: 'scale(1.03)',
+            transformOrigin: 'center center',
           }}
         >
           <div
@@ -262,12 +290,12 @@ function MobileReactionSheet({
                 : 'bg-bubble-in/98 text-ink ring-1 ring-line/45 dark:bg-bubble-in dark:text-ink/95 dark:ring-line/40',
             )}
           >
-            <p className="line-clamp-[12] min-h-0 flex-1 whitespace-pre-wrap break-words">
+            <p className="min-h-0 flex-1 select-text whitespace-pre-wrap break-words [-webkit-user-select:text] [user-select:text]">
               {text || (message.attachments?.length ? t('attachment') : '')}
             </p>
             <div
               className={cn(
-                'mt-1 shrink-0 text-[0.625rem] tabular-nums',
+                'mt-1 shrink-0 select-none text-[0.625rem] tabular-nums',
                 isOutgoing ? 'text-right text-bubble-out-ink/70' : 'text-ink-muted',
               )}
             >
@@ -277,10 +305,13 @@ function MobileReactionSheet({
               })}
             </div>
           </div>
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           role="toolbar"
           aria-label={t('mobileReactionPickerAria')}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.04, type: 'spring', stiffness: 460, damping: 32 }}
           className="pointer-events-auto fixed z-[120] flex items-center gap-0.5 rounded-full border border-white/14 bg-[#1c2834]/95 px-2 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.55)] backdrop-blur-xl"
           style={{ top: emojiBar.top, left: emojiBar.left, width: barW }}
         >
@@ -294,7 +325,39 @@ function MobileReactionSheet({
               {emoji}
             </button>
           ))}
-        </div>
+        </motion.div>
+        <motion.div
+          role="menu"
+          aria-label={t('messageActionsButtonAria')}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.06, type: 'spring', stiffness: 420, damping: 34 }}
+          className="pointer-events-auto fixed z-[120] overflow-y-auto overflow-x-hidden rounded-2xl border border-white/12 bg-[#1c2834]/98 py-1 shadow-[0_14px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl scrollbar-thin"
+          style={{
+            top: actionsBox.top,
+            left: actionsBox.left,
+            width: actionsBox.width,
+            maxHeight: actionsBox.maxH,
+          }}
+        >
+          {enabledActions.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              className={cn(
+                'flex w-full touch-manipulation items-center px-3.5 py-3 text-left text-[15px] font-medium transition active:bg-white/10',
+                a.danger ? 'text-red-300 hover:bg-red-500/15' : 'text-white/95 hover:bg-white/8',
+              )}
+              onClick={() => {
+                a.onSelect();
+                onClose();
+              }}
+              role="menuitem"
+            >
+              <span className="truncate">{a.label}</span>
+            </button>
+          ))}
+        </motion.div>
       </div>
     </>,
     document.body,
@@ -793,11 +856,12 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   onMessageRowLeave={onMessageRowLeave}
                   closeOnScrollEl={parentRef}
                   mobileReactionPickId={mobileReactionPick?.messageId ?? null}
-                  onRequestMobileReactionPicker={(messageId, rect, isOutgoing) => {
+                  onRequestMobileReactionPicker={(messageId, rect, isOutgoing, sheetActions) => {
                     setMenuFor(null);
                     setMobileReactionPick({
                       messageId,
                       isOutgoing,
+                      actions: sheetActions,
                       rect: {
                         top: rect.top,
                         left: rect.left,
@@ -841,7 +905,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
         )}
       </AnimatePresence>
       {mobileReactionPick && messages.some((x) => x.id === mobileReactionPick.messageId) ? (
-        <MobileReactionSheet
+        <MobileMessageActionSheet
           pick={mobileReactionPick}
           message={messages.find((x) => x.id === mobileReactionPick.messageId)!}
           qc={qc}
@@ -958,7 +1022,12 @@ function MessageBubble({
   onMessageRowLeave: () => void;
   closeOnScrollEl: React.RefObject<HTMLDivElement | null>;
   mobileReactionPickId: string | null;
-  onRequestMobileReactionPicker?: (messageId: string, rect: DOMRect, isOutgoing: boolean) => void;
+  onRequestMobileReactionPicker?: (
+    messageId: string,
+    rect: DOMRect,
+    isOutgoing: boolean,
+    actions: MessageMenuAction[],
+  ) => void;
 }) {
   const qc = useQueryClient();
   const t = useT();
@@ -970,6 +1039,7 @@ function MessageBubble({
   const bubbleRef = useRef<HTMLDivElement | null>(null);
   const longPressTimer = useRef<number | null>(null);
   const pressOrigin = useRef<{ x: number; y: number } | null>(null);
+  const [bubblePressing, setBubblePressing] = useState(false);
   const isNew = useMemo(() => Date.now() - new Date(m.createdAt).getTime() < 2500, [m.createdAt]);
 
   const clearLongPressTimer = () => {
@@ -978,6 +1048,7 @@ function MessageBubble({
       longPressTimer.current = null;
     }
     pressOrigin.current = null;
+    setBubblePressing(false);
   };
 
   useEffect(() => () => clearLongPressTimer(), []);
@@ -1270,27 +1341,33 @@ function MessageBubble({
               ))}
             </div>
           )}
-          <button
-            ref={triggerRef}
-            type="button"
+          <div
             className={cn(
-              'absolute top-1 z-[45] flex h-7 w-7 items-center justify-center rounded-full border border-line/80 bg-surface-elevated text-ink-muted shadow-sm transition',
-              'hover:bg-surface-muted hover:text-ink dark:border-line/55 dark:bg-surface-muted/35',
+              'absolute top-1 z-[45] hidden md:block',
               isOutgoing ? 'right-0' : 'left-0',
-              menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100',
             )}
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label={t('messageActionsButtonAria')}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M5 12h.01M12 12h.01M19 12h.01"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+            <button
+              ref={triggerRef}
+              type="button"
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-full border border-line/80 bg-surface-elevated text-ink-muted shadow-sm transition',
+                'hover:bg-surface-muted hover:text-ink dark:border-line/55 dark:bg-surface-muted/35',
+                menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+              )}
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label={t('messageActionsButtonAria')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M5 12h.01M12 12h.01M19 12h.01"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
           <MessageActionsMenu
             open={menuOpen}
             anchorRef={triggerRef}
@@ -1303,13 +1380,15 @@ function MessageBubble({
           <div
             ref={bubbleRef}
             className={cn(
-              'chat-bubble-touch relative z-[1] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42]',
+              'chat-bubble-touch relative z-[1] px-[0.7rem] py-[0.45rem] text-[13.5px] leading-[1.42] max-md:transition-[transform,box-shadow,filter] max-md:duration-200 max-md:ease-out',
               bubbleRadius,
               isOutgoing
                 ? 'bg-bubble-out text-bubble-out-ink shadow-md shadow-black/[0.07] ring-1 ring-black/[0.06] dark:shadow-lg dark:shadow-black/40 dark:ring-white/10'
                 : 'bg-bubble-in/98 text-ink shadow-sm ring-1 ring-line/45 dark:bg-bubble-in dark:text-ink/95 dark:ring-line/40 dark:shadow-black/20',
               highlighted && 'ring-2 ring-accent/55',
               isDeleted && 'opacity-75',
+              bubblePressing &&
+                'max-md:scale-[0.97] max-md:shadow-lg max-md:ring-2 max-md:ring-accent/50 max-md:brightness-[0.96]',
             )}
             onContextMenu={(e) => {
               if (typeof window === 'undefined') return;
@@ -1322,6 +1401,7 @@ function MessageBubble({
               if (menuOpen) return;
               if (e.button !== 0) return;
               clearLongPressTimer();
+              setBubblePressing(true);
               pressOrigin.current = { x: e.clientX, y: e.clientY };
               try {
                 (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
@@ -1331,8 +1411,14 @@ function MessageBubble({
               longPressTimer.current = window.setTimeout(() => {
                 longPressTimer.current = null;
                 const el = bubbleRef.current;
-                if (!el) return;
-                onRequestMobileReactionPicker(m.id, el.getBoundingClientRect(), isOutgoing);
+                if (!el || !onRequestMobileReactionPicker) return;
+                setBubblePressing(false);
+                onRequestMobileReactionPicker(
+                  m.id,
+                  el.getBoundingClientRect(),
+                  isOutgoing,
+                  actions,
+                );
                 try {
                   navigator.vibrate?.(12);
                 } catch {
