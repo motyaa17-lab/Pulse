@@ -432,7 +432,7 @@ export function Composer({
           ))}
         </div>
       )}
-      <div className="flex items-end gap-1 rounded-[1.35rem] border border-line/80 bg-surface-muted/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-line/50 dark:bg-surface-muted/30 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="flex items-end gap-1 rounded-[1.65rem] border border-line/80 bg-surface-muted/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-white/[0.08] dark:bg-[#111921] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         <label
           className={cn(
             'mb-px flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[1rem] text-ink-muted transition',

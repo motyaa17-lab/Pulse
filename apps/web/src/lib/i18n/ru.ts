@@ -33,6 +33,7 @@ export const ru = {
   messages: 'Сообщения',
   noMatches: 'Ничего не найдено',
   typing: 'Печатает…',
+  scrollToBottomAria: 'К последним сообщениям',
   directMessage: 'Личные сообщения',
   group: 'Группа',
   channel: 'Канал',

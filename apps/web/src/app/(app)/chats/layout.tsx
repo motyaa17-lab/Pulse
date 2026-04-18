@@ -14,7 +14,7 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
   const isChatRoute = pathname?.startsWith('/chats/') ?? false;
 
   return (
-    <div className="flex h-dvh min-h-0 w-full overflow-hidden bg-[#070B14]">
+    <div className="flex h-dvh min-h-0 w-full overflow-hidden bg-[#0e1621]">
       <div
         className={cn(
           'absolute inset-y-0 left-0 z-20 w-full transition-transform md:static md:w-[min(100%,420px)] md:translate-x-0',
@@ -23,7 +23,7 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
           isChatRoute && 'hidden md:block',
         )}
       >
-        <div className="flex h-full flex-col border-r border-white/10 bg-[#070B14]">
+        <div className="flex h-full flex-col border-r border-black/20 bg-[#17212b]">
           <ChatSidebar />
         </div>
       </div>

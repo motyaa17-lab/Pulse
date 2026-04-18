@@ -18,19 +18,19 @@
 }
 
 .dark {
-  /* Premium dark: deep base, lifted panels, readable contrast */
-  --surface: 11 14 18;
-  --surface-muted: 18 22 28;
-  --surface-elevated: 26 31 40;
-  --sidebar: 15 19 25;
+  /* Telegram-inspired dark: list panel #17212b, chat #0e1621, outgoing #2b5278 */
+  --surface: 14 22 33;
+  --surface-muted: 23 33 43;
+  --surface-elevated: 30 43 57;
+  --sidebar: 23 33 43;
   --ink: 238 242 247;
-  --ink-muted: 148 156 172;
-  --accent: 125 211 192;
-  --accent-fg: 11 14 18;
-  --line: 42 50 64;
-  --bubble-in: 38 45 58;
-  --bubble-out: 45 110 126;
-  --bubble-out-ink: 240 253 250;
+  --ink-muted: 142 154 170;
+  --accent: 51 144 236;
+  --accent-fg: 255 255 255;
+  --line: 48 60 76;
+  --bubble-in: 36 47 61;
+  --bubble-out: 43 82 120;
+  --bubble-out-ink: 228 244 255;
 }
 
 html,
@@ -73,12 +73,23 @@ body {
   background: transparent;
 }
 
-/* Subtle chat backdrop in dark (original, not TG wallpaper) */
-.dark .chat-thread-bg {
+.chat-thread-bg {
   background-color: rgb(var(--surface) / 1);
+}
+
+/* Chat backdrop: Telegram-like flat base + very subtle texture */
+.dark .chat-thread-bg {
+  background-color: rgb(14 22 33);
   background-image: radial-gradient(
-    ellipse 120% 80% at 50% -20%,
-    rgb(var(--bubble-out) / 0.08),
-    transparent 55%
-  );
+      ellipse 130% 70% at 50% 0%,
+      rgb(43 82 120 / 0.06),
+      transparent 52%
+    ),
+    repeating-linear-gradient(
+      -8deg,
+      transparent 0,
+      transparent 12px,
+      rgb(255 255 255 / 0.012) 12px,
+      rgb(255 255 255 / 0.012) 13px
+    );
 }

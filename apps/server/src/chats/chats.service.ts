@@ -274,7 +274,21 @@ export class ChatsService {
       });
     }
 
-    items.sort((a, b) => {
+    const directPeerIds = [
+      ...new Set(
+        items.filter((i) => i.type === ChatType.DIRECT && i.peer?.id).map((i) => i.peer!.id),
+      ),
+    ];
+    const listOnlineMap = await this.presence.areUsersOnline(directPeerIds);
+    const listWithPresence = items.map((it) => {
+      if (it.type !== ChatType.DIRECT || !it.peer) return it;
+      return {
+        ...it,
+        peer: { ...it.peer, isOnline: Boolean(listOnlineMap[it.peer.id]) },
+      };
+    });
+
+    listWithPresence.sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       if (a.isPinned && b.isPinned) {
         const ao = a.pinOrder ?? 0;
@@ -284,7 +298,7 @@ export class ChatsService {
       return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
     });
 
-    return items;
+    return listWithPresence;
   }
 
   private async unreadCount(chatId: string, userId: string, lastReadMessageId: string | null) {

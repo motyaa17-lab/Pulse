@@ -17,6 +17,7 @@ export interface ChatListItem {
     username: string;
     displayName: string | null;
     avatarUrl: string | null;
+    isOnline?: boolean;
   } | null;
 }
 

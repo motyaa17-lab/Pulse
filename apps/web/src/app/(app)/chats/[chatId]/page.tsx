@@ -13,7 +13,7 @@ import {
 import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import { connectSocket } from '@/lib/socket';
-import type { MeUserDto } from '@/lib/types';
+import type { ChatListItem, MeUserDto } from '@/lib/types';
 import { useT } from '@/lib/i18n';
 import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
 import { useLanguageStore } from '@/stores/language-store';
@@ -63,11 +63,23 @@ export default function ChatPage() {
     };
     const onPresence = (payload: unknown) => {
       const p = payload as { userId?: string; online?: boolean };
+      if (!p?.userId) return;
       const peer = qc.getQueryData<ChatDetailForDrawer>(['chat', chatId])?.peer;
-      if (!p?.userId || !peer?.id || p.userId !== peer.id) return;
-      qc.setQueryData<ChatDetailForDrawer | undefined>(['chat', chatId], (old) => {
-        if (!old?.peer || old.peer.id !== p.userId) return old;
-        return { ...old, peer: { ...old.peer, isOnline: Boolean(p.online) } };
+      if (peer?.id === p.userId) {
+        qc.setQueryData<ChatDetailForDrawer | undefined>(['chat', chatId], (old) => {
+          if (!old?.peer || old.peer.id !== p.userId) return old;
+          return { ...old, peer: { ...old.peer, isOnline: Boolean(p.online) } };
+        });
+      }
+      qc.setQueriesData<ChatListItem[]>({ queryKey: ['chats'] }, (old) => {
+        if (!old) return old;
+        let hit = false;
+        const next = old.map((c) => {
+          if (c.type !== 'DIRECT' || c.peer?.id !== p.userId) return c;
+          hit = true;
+          return { ...c, peer: c.peer ? { ...c.peer, isOnline: Boolean(p.online) } : c.peer };
+        });
+        return hit ? next : old;
       });
     };
     s.on('typing:update', onTyping);
@@ -100,12 +112,12 @@ export default function ChatPage() {
   const pinned = chat?.pinnedMessage ?? null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#070B14] text-white md:bg-transparent md:text-inherit">
+    <div className="flex h-full min-h-0 flex-col bg-[#0e1621] text-white md:bg-transparent md:text-inherit">
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
         <header
           className={cn(
             'flex shrink-0 items-center gap-2.5 px-3',
-            'sticky top-0 z-20 border-b border-white/10 bg-white/8 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-[28px]',
+            'sticky top-0 z-20 border-b border-black/25 bg-[#17212b]/95 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-[0_6px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl',
             'md:static md:z-auto md:border-b md:border-line/75 md:bg-surface-elevated/98 md:py-1.5 md:pt-1.5 md:shadow-[0_1px_0_rgba(0,0,0,0.04)] md:backdrop-blur-md dark:md:border-line/45 dark:md:bg-surface-elevated/95 dark:md:shadow-[0_1px_0_rgba(255,255,255,0.04)]',
           )}
         >

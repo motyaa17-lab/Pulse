@@ -33,6 +33,7 @@ export const en = {
   messages: 'Messages',
   noMatches: 'No matches',
   typing: 'Typing…',
+  scrollToBottomAria: 'Scroll to latest messages',
   directMessage: 'Direct message',
   group: 'Group',
   channel: 'Channel',

@@ -112,6 +112,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const [editing, setEditing] = useState<MessageDto | null>(null);
   const [forwarding, setForwarding] = useState<MessageDto | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const params = useSearchParams();
   const highlightId = params.get('highlight');
   const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -373,13 +374,17 @@ export function MessageThread({ chatId }: { chatId: string }) {
   };
 
   useEffect(() => {
-    // If the thread scrolls, close the menu (anchored positioning becomes stale).
     const el = parentRef.current;
     if (!el) return;
-    const onScroll = () => setMenuFor(null);
+    const onScroll = () => {
+      setMenuFor(null);
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowScrollToBottom(dist > 180);
+    };
+    onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [chatId]);
 
   const markRead = async (last: MessageDto) => {
     const s = getSocket();
@@ -420,7 +425,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         ref={parentRef}
         className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 md:px-5 md:py-2.5"
@@ -563,6 +568,28 @@ export function MessageThread({ chatId }: { chatId: string }) {
           })}
         </div>
       </div>
+      {showScrollToBottom && (
+        <button
+          type="button"
+          className="pointer-events-auto absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#17212b]/95 text-white shadow-lg backdrop-blur-md transition hover:bg-[#1c2a38] active:scale-[0.97] md:bottom-[4.5rem] md:right-5"
+          onClick={() => {
+            const el = parentRef.current;
+            if (!el) return;
+            el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+          }}
+          aria-label={t('scrollToBottomAria')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M6 9l6 6 6-6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
       <Composer
         chatId={chatId}
         replyTo={replyTo}

@@ -272,28 +272,28 @@ export function ChatSidebar() {
   });
 
   return (
-    <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#070B14] text-white">
+    <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#17212b] text-white">
       {/* Full width on mobile, centered preview on desktop */}
       <div className="flex h-full w-full flex-col md:mx-auto md:max-w-[420px]">
-        <header className="shrink-0 px-4 pb-3 pt-10">
-          <div className="flex items-end justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-end gap-3">
+        <header className="shrink-0 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4 md:pt-10">
+          <div className="flex items-end justify-between gap-2.5 md:gap-3">
+            <div className="flex min-w-0 flex-1 items-end gap-2.5 md:gap-3">
               <AppMenu pathname={pathname} variant="header" />
-              <h1 className="min-w-0 flex-1 truncate font-display text-4xl font-semibold tracking-tight text-white">
+              <h1 className="min-w-0 flex-1 truncate font-display text-2xl font-semibold tracking-tight text-white md:text-4xl">
                 {t('chats')}
               </h1>
             </div>
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]"
+              className="rounded-full border border-white/10 bg-white/[0.07] px-3 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-white/75 backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]"
             >
               {t('search')}
             </button>
           </div>
 
-          <div className="mt-4">
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/9 px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur">
+          <div className="mt-3 md:mt-4">
+            <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#111921] px-3.5 py-2.5 shadow-inner md:px-4 md:py-3">
               <MagnifierIcon className="text-white/55" />
               <input
                 value={search}
@@ -454,7 +454,7 @@ export function ChatSidebar() {
       {/* Floating bottom navigation */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-4 md:hidden">
         <div className="mx-auto w-full max-w-[420px] px-4">
-          <nav className="pointer-events-auto rounded-[22px] border border-white/12 bg-white/10 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-[28px]">
+          <nav className="pointer-events-auto rounded-[22px] border border-white/[0.08] bg-[#111921]/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-[24px]">
             <div className="grid grid-cols-4 items-center gap-1">
               <div className="flex justify-center">
                 <AppMenu pathname={pathname} variant="dock" />
@@ -557,9 +557,10 @@ function ChatRow({
     >
       <div
         className={cn(
-          'flex items-stretch gap-0 rounded-2xl transition',
+          'flex items-stretch gap-0 rounded-xl transition md:rounded-2xl',
           'active:scale-[0.99]',
-          active ? 'bg-white/12 shadow-[0_14px_40px_rgba(0,0,0,0.4)]' : 'hover:bg-white/6',
+          active ? 'bg-white/[0.1] shadow-[0_8px_28px_rgba(0,0,0,0.35)]' : 'hover:bg-white/[0.05]',
+          chat.isMuted && 'opacity-[0.88]',
         )}
       >
         <Link
@@ -572,23 +573,32 @@ function ChatRow({
               <img
                 src={src}
                 alt=""
-                className="h-12 w-12 rounded-full object-cover ring-1 ring-white/15"
+                className="h-12 w-12 rounded-full object-cover ring-1 ring-white/12"
               />
             ) : (
               <div
                 className={cn(
-                  'flex h-12 w-12 items-center justify-center rounded-full text-[0.95rem] font-semibold ring-1 ring-white/15',
+                  'flex h-12 w-12 items-center justify-center rounded-full text-[0.95rem] font-semibold ring-1 ring-white/12',
                   'bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white',
                 )}
               >
                 {chatInitial(chat, t)}
               </div>
             )}
-            {chat.isMuted && (
+            {chat.isMuted ? (
               <span
-                className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-white/65 ring-2 ring-[#070B14]"
+                className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-white/65 ring-2 ring-[#17212b]"
                 title={t('mutedTooltip')}
               />
+            ) : (
+              chat.type === 'DIRECT' &&
+              chat.peer?.isOnline && (
+                <span
+                  className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#4dcd5e] ring-[2.5px] ring-[#17212b]"
+                  title={t('online')}
+                  aria-hidden
+                />
+              )
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -603,7 +613,7 @@ function ChatRow({
               <span
                 className={cn(
                   'shrink-0 text-[0.72rem] tabular-nums text-white/55',
-                  chat.unreadCount > 0 && 'font-bold text-sky-300',
+                  chat.unreadCount > 0 && 'font-semibold text-[#3390ec]',
                 )}
               >
                 {timeLabel}
@@ -619,7 +629,7 @@ function ChatRow({
                 {preview}
               </p>
               {chat.unreadCount > 0 && (
-                <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-400 px-1.5 text-[10px] font-bold leading-none text-[#06101f] shadow-[0_8px_18px_rgba(56,189,248,0.25)]">
+                <span className="flex h-[1.125rem] min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-[#3390ec] px-1 text-[10px] font-bold leading-none text-white shadow-none">
                   {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                 </span>
               )}
