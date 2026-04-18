@@ -263,6 +263,7 @@ export const en = {
   videoNoteCameraDenied: 'Camera or microphone access denied. Allow it in browser settings.',
   videoNoteTooShort: 'Record a bit longer.',
   videoNoteRecordError: 'Could not record video.',
+  videoNoteUploadError: 'Could not upload video. Check your connection and try again.',
   videoNoteHint:
     'Background is blurred while this screen is open. Tap the red button to start and again to stop (up to 60 seconds).',
   videoNoteRetake: 'Retake',

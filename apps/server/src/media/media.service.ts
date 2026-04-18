@@ -35,7 +35,8 @@ export class MediaService {
   private assertMime(kind: string, mime: string) {
     const list = ALLOWED.get(kind);
     if (kind === 'file') return;
-    if (!list?.includes(mime)) {
+    const base = mime.split(';')[0]?.trim().toLowerCase() ?? '';
+    if (!list?.includes(mime) && !list?.includes(base)) {
       throw new BadRequestException(`Unsupported mime for ${kind}`);
     }
   }
@@ -99,6 +100,7 @@ export class MediaService {
     if (mime === 'image/png') return '.png';
     if (mime === 'image/webp') return '.webp';
     if (mime === 'video/mp4') return '.mp4';
+    if (mime === 'video/webm') return '.webm';
     if (mime === 'audio/webm') return '.webm';
     return '';
   }

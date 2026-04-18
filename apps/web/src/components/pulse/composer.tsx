@@ -927,7 +927,7 @@ export function Composer({
               durationSec,
             });
           } catch {
-            setVoiceErr(t('videoNoteRecordError'));
+            setVoiceErr(t('videoNoteUploadError'));
             window.setTimeout(() => setVoiceErr(null), 2800);
           }
         }}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { useT } from '@/lib/i18n';
 
@@ -8,12 +9,13 @@ const MAX_MS = 60_000;
 const RING_R = 48;
 const RING_C = 2 * Math.PI * RING_R;
 
+/** Pick a supported mime; Safari/iOS need mp4 early. Empty string = browser default. */
 function pickVideoMime(): string {
   const cands = [
+    'video/mp4',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm',
-    'video/mp4',
   ];
   for (const c of cands) {
     try {
@@ -23,6 +25,33 @@ function pickVideoMime(): string {
     }
   }
   return '';
+}
+
+function createMediaRecorder(stream: MediaStream): MediaRecorder {
+  if (typeof MediaRecorder === 'undefined') {
+    throw new TypeError('MediaRecorder unavailable');
+  }
+  const tried = new Set<string>();
+  const tryMime = (mime: string) => {
+    const key = mime || '(default)';
+    if (tried.has(key)) return null;
+    tried.add(key);
+    if (mime && !MediaRecorder.isTypeSupported(mime)) return null;
+    try {
+      return mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    } catch {
+      return null;
+    }
+  };
+  const primary = pickVideoMime();
+  const order = [primary, 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm', ''].filter(
+    (m, i, a) => a.indexOf(m) === i,
+  );
+  for (const mime of order) {
+    const rec = tryMime(mime);
+    if (rec) return rec;
+  }
+  throw new TypeError('No working MediaRecorder mime for this device');
 }
 
 /** Minimal constraints — tall `ideal` height often causes heavy crop / “zoom” on front cameras. */
@@ -174,9 +203,8 @@ export function VideoNoteCaptureModal({
     if (!stream) return;
     setErr(null);
     chunksRef.current = [];
-    const mime = pickVideoMime();
     try {
-      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const rec = createMediaRecorder(stream);
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
@@ -278,9 +306,16 @@ export function VideoNoteCaptureModal({
   const sendPreview = useCallback(() => {
     if (!previewBlob) return;
     const dur = Math.max(1, Math.round(recordMs / 1000));
-    const ext = previewBlob.type.includes('mp4') ? 'mp4' : 'webm';
+    const rawType = previewBlob.type?.split(';')[0]?.trim() ?? '';
+    const ext = rawType === 'video/mp4' || previewBlob.type.includes('mp4') ? 'mp4' : 'webm';
+    const normalizedType =
+      rawType && rawType !== 'application/octet-stream'
+        ? rawType
+        : ext === 'mp4'
+          ? 'video/mp4'
+          : 'video/webm';
     const file = new File([previewBlob], `video-note-${Date.now()}.${ext}`, {
-      type: previewBlob.type,
+      type: normalizedType,
     });
     onRecorded(file, dur);
     onClose();
@@ -296,16 +331,16 @@ export function VideoNoteCaptureModal({
   const progressPct = Math.min(100, (recordMs / MAX_MS) * 100);
   const dash = (progressPct / 100) * RING_C;
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex flex-col bg-black/40 backdrop-blur-[32px]"
+      className="fixed inset-0 z-[10000] flex min-h-0 flex-col bg-black/40 backdrop-blur-[32px]"
       role="dialog"
       aria-modal="true"
       aria-label={t('videoNoteCaptureAria')}
     >
-      <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 flex-1 flex-col px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="flex min-h-0 flex-1 flex-col px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-0 [min-height:100dvh]">
         {err && (
           <p
             className="mb-2 max-w-sm shrink-0 self-center text-center text-[13px] text-red-200"
@@ -317,7 +352,7 @@ export function VideoNoteCaptureModal({
 
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden py-1">
-            <div className="relative mx-auto w-[min(88vw,340px)] shrink-0 aspect-square max-h-[min(50dvh,calc(100dvh-15rem))]">
+            <div className="relative mx-auto aspect-square size-[min(20rem,min(88vw,56dvh,calc(100dvh-12.5rem)))] min-h-0 shrink-0">
               <svg
                 className="absolute inset-0 h-full w-full -rotate-90"
                 viewBox="0 0 100 100"
@@ -529,6 +564,7 @@ export function VideoNoteCaptureModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
