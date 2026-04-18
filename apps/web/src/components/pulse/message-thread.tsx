@@ -17,6 +17,7 @@ import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
 import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { Composer } from './composer';
+import { VoiceMessageBubble } from '@/components/pulse/voice-message-bubble';
 import {
   MessageActionsMenu,
   QUICK_REACTION_EMOJIS,
@@ -1612,60 +1613,22 @@ function MessageBubble({
                         className="max-h-56 w-full rounded-xl object-cover"
                       />
                     ) : a.kind === 'voice' ? (
-                      <div
+                      <VoiceMessageBubble
                         key={a.id}
-                        className={cn(
-                          'inline-flex max-w-[min(260px,88vw)] items-center gap-2 rounded-[1.2rem] px-2.5 py-1.5',
-                          isOutgoing
-                            ? 'bg-bubble-out-ink/[0.12] ring-1 ring-bubble-out-ink/[0.18] dark:bg-black/20'
-                            : 'bg-black/[0.04] ring-1 ring-black/[0.08] dark:bg-white/[0.07] dark:ring-white/10',
-                        )}
-                      >
-                        <div className="flex h-7 shrink-0 items-end gap-px px-0.5 opacity-90">
-                          {[3, 7, 4, 9, 5, 8, 4, 7, 3, 6, 4].map((h, i) => (
-                            <span
-                              key={i}
-                              className={cn(
-                                'w-[2px] shrink-0 rounded-full',
-                                isOutgoing
-                                  ? 'bg-bubble-out-ink/40'
-                                  : 'bg-accent/55 dark:bg-accent/45',
-                              )}
-                              style={{ height: `${h}px` }}
-                            />
-                          ))}
-                        </div>
-                        <audio
-                          src={toPublicUrl(a.url) ?? a.url}
-                          controls
-                          controlsList="nodownload"
-                          className={cn(
-                            'h-7 min-w-0 flex-1 max-w-[11.5rem] opacity-95',
-                            '[&::-webkit-media-controls-panel]:rounded-lg',
-                          )}
-                          preload="metadata"
-                        />
-                        {a.durationSec != null ? (
-                          <span
-                            className={cn(
-                              'shrink-0 text-[11px] font-semibold tabular-nums opacity-70',
-                              isOutgoing ? 'text-bubble-out-ink' : 'text-ink-muted',
-                            )}
-                          >
-                            {(() => {
-                              const ds = a.durationSec ?? 0;
-                              const mm = Math.floor(ds / 60);
-                              const ss = ds % 60;
-                              return `${mm}:${String(ss).padStart(2, '0')}`;
-                            })()}
-                          </span>
-                        ) : null}
-                      </div>
+                        url={a.url}
+                        durationSec={a.durationSec}
+                        isOutgoing={isOutgoing}
+                      />
                     ) : a.kind === 'video' ? (
                       <video
                         key={a.id}
                         src={toPublicUrl(a.url) ?? a.url}
-                        className="max-h-72 w-full max-w-[min(100%,20rem)] rounded-2xl object-cover shadow-sm ring-1 ring-black/10 dark:ring-white/10"
+                        className={cn(
+                          'object-cover shadow-md ring-1 ring-black/15 dark:ring-white/15',
+                          (a.durationSec ?? 0) > 0 && (a.durationSec ?? 999) <= 120
+                            ? 'aspect-square w-[min(72vw,260px)] max-w-[260px] rounded-full'
+                            : 'max-h-72 w-full max-w-[min(100%,20rem)] rounded-2xl',
+                        )}
                         controls
                         playsInline
                         preload="metadata"

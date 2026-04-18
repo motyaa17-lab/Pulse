@@ -259,12 +259,23 @@ export const en = {
   videoNoteCaptureAria: 'Video message recording',
   videoNoteFlipCamera: 'Flip camera',
   videoNoteStart: 'Start recording',
-  videoNoteStop: 'Stop and send',
+  videoNoteStop: 'Stop',
   videoNoteCameraDenied: 'Camera or microphone access denied. Allow it in browser settings.',
   videoNoteTooShort: 'Record a bit longer.',
   videoNoteRecordError: 'Could not record video.',
   videoNoteHint:
     'Background is blurred while this screen is open. Tap the red button to start and again to stop (up to 60 seconds).',
+  videoNoteRetake: 'Retake',
+  videoNoteSend: 'Send',
+  videoNotePause: 'Pause',
+  videoNoteResume: 'Resume',
+  videoNoteCancel: 'Cancel',
+  videoNoteFlash: 'Flash',
+  videoNoteRecordIdleHint: 'Tap the red button to start recording (up to 60 s).',
+  videoNoteCloseHint: 'Close camera',
+  voicePlayAria: 'Play voice message',
+  voicePauseAria: 'Pause',
+  voicePlayError: 'Could not play',
 } as const;
 
 export type I18nKey = keyof typeof en;
