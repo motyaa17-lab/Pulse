@@ -74,10 +74,7 @@ export function VoiceMessageBubble({
   return (
     <div
       className={cn(
-        'inline-flex max-w-[min(280px,90vw)] items-center gap-2 rounded-full py-1 pl-1 pr-3',
-        isOutgoing
-          ? 'bg-black/[0.14] text-bubble-out-ink dark:bg-black/25'
-          : 'bg-black/[0.06] text-ink dark:bg-white/[0.1]',
+        'inline-flex max-w-[min(280px,90vw)] items-center gap-2 py-0.5 pl-0.5 pr-2 text-inherit',
       )}
     >
       <audio ref={audioRef} src={src} preload="metadata" className="hidden" />
@@ -114,12 +111,7 @@ export function VoiceMessageBubble({
         {[3, 7, 4, 9, 5, 8, 5, 7, 4, 6, 3].map((h, i) => (
           <span
             key={i}
-            className={cn(
-              'w-[2px] shrink-0 rounded-full',
-              isOutgoing
-                ? 'bg-bubble-out-ink/35 dark:bg-bubble-out-ink/45'
-                : 'bg-accent/50 dark:bg-accent/40',
-            )}
+            className="w-[2px] shrink-0 rounded-full bg-current opacity-35"
             style={{ height: `${h}px` }}
           />
         ))}
@@ -127,12 +119,7 @@ export function VoiceMessageBubble({
       {broken ? (
         <span className="text-[11px] font-medium opacity-80">{t('voicePlayError')}</span>
       ) : (
-        <span
-          className={cn(
-            'min-w-[2.25rem] text-right text-[11px] font-semibold tabular-nums opacity-80',
-            isOutgoing ? 'text-bubble-out-ink/90' : 'text-ink-muted',
-          )}
-        >
+        <span className="min-w-[2.25rem] text-right text-[11px] font-semibold tabular-nums opacity-80">
           {playing ? `${formatClock(cur)} / ${formatClock(total)}` : formatClock(total)}
         </span>
       )}

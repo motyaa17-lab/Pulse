@@ -620,6 +620,46 @@ export class ChatsService {
     return { ok: true };
   }
 
+  async listSharedMedia(userId: string, chatId: string, limit = 48) {
+    await this.assertMember(chatId, userId);
+    const take = Math.min(120, Math.max(1, Math.floor(limit)));
+    const rows = await this.prisma.messageAttachment.findMany({
+      where: {
+        message: {
+          chatId,
+          deletedAt: null,
+        },
+        OR: [
+          { kind: { in: ['image', 'video'] } },
+          { kind: 'file', mimeType: { startsWith: 'image/' } },
+          { kind: 'file', mimeType: { startsWith: 'video/' } },
+        ],
+      },
+      orderBy: { message: { createdAt: 'desc' } },
+      take,
+      select: {
+        id: true,
+        kind: true,
+        url: true,
+        mimeType: true,
+        fileName: true,
+        messageId: true,
+        message: { select: { createdAt: true } },
+      },
+    });
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        url: r.url,
+        mimeType: r.mimeType,
+        fileName: r.fileName,
+        messageId: r.messageId,
+        createdAt: r.message.createdAt.toISOString(),
+      })),
+    };
+  }
+
   async subscribePublicChannel(userId: string, channelId: string) {
     const chat = await this.prisma.chat.findFirst({
       where: { id: channelId, type: ChatType.CHANNEL, isPrivate: false },

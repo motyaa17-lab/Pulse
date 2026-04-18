@@ -3,11 +3,23 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
 import { useLanguageStore } from '@/stores/language-store';
+import { apiFetch, toPublicUrl } from '@/lib/api';
+
+type SharedMediaItem = {
+  id: string;
+  kind: string;
+  url: string;
+  mimeType: string;
+  fileName: string;
+  messageId: string;
+  createdAt: string;
+};
 
 export type ChatDetailForDrawer = {
   id: string;
@@ -83,6 +95,17 @@ export function ChatDetailsDrawer({
   const language = useLanguageStore((s) => s.language);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+
+  const chatId = chat?.id;
+  const { data: sharedMedia, isPending: sharedMediaPending } = useQuery({
+    queryKey: ['chat', chatId ?? '', 'shared-media'],
+    queryFn: async () => {
+      if (!chatId) return { items: [] as SharedMediaItem[] };
+      return apiFetch<{ items: SharedMediaItem[] }>(`/chats/${chatId}/shared-media`);
+    },
+    enabled: open && Boolean(chatId),
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -246,7 +269,67 @@ export function ChatDetailsDrawer({
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
               {t('drawerShared')}
             </p>
-            <PlaceholderSection title={t('drawerMedia')} hint={t('drawerMediaHint')} />
+            {sharedMediaPending && !sharedMedia?.items?.length ? (
+              <section className="rounded-xl border border-line/55 bg-surface-muted/25 px-3 py-3 dark:border-line/40 dark:bg-surface-muted/15">
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
+                  {t('drawerMedia')}
+                </h3>
+                <p className="mt-1.5 text-[13px] text-ink-muted/90">{t('commonLoading')}</p>
+              </section>
+            ) : sharedMedia?.items && sharedMedia.items.length > 0 ? (
+              <section className="rounded-xl border border-line/55 bg-surface-muted/25 px-3 py-3 dark:border-line/40 dark:bg-surface-muted/15">
+                <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
+                  {t('drawerMedia')}
+                </h3>
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  {sharedMedia.items.map((it) => {
+                    const pub = toPublicUrl(it.url) ?? it.url;
+                    const isVideo = it.kind === 'video' || it.mimeType.startsWith('video/');
+                    return (
+                      <div
+                        key={it.id}
+                        className="relative aspect-square overflow-hidden rounded-lg bg-black/25 ring-1 ring-line/40 dark:ring-line/35"
+                      >
+                        {isVideo ? (
+                          <>
+                            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                            <video
+                              src={pub}
+                              className="h-full w-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+                              <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                className="text-white/95 drop-shadow"
+                                aria-hidden
+                              >
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </span>
+                          </>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={pub}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : (
+              <PlaceholderSection title={t('drawerMedia')} hint={t('drawerMediaHint')} />
+            )}
             <PlaceholderSection title={t('drawerFiles')} hint={t('drawerFilesHint')} />
             <PlaceholderSection title={t('drawerLinks')} hint={t('drawerLinksHint')} />
           </div>

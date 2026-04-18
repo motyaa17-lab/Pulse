@@ -34,6 +34,17 @@ export class ChatsController {
     return this.chats.listForUser(user.sub, q);
   }
 
+  /** Must be registered before `:id` so `shared-media` is not parsed as a chat id. */
+  @Get(':id/shared-media')
+  sharedMedia(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
+    const n = limit ? Number.parseInt(limit, 10) : 48;
+    return this.chats.listSharedMedia(user.sub, id, Number.isFinite(n) ? n : 48);
+  }
+
   @Get(':id')
   getOne(@CurrentUser() user: JwtUser, @Param('id') id: string) {
     return this.chats.getChatDetail(id, user.sub);
@@ -60,11 +71,7 @@ export class ChatsController {
   }
 
   @Patch(':id')
-  patch(
-    @CurrentUser() user: JwtUser,
-    @Param('id') id: string,
-    @Body() dto: UpdateChatDto,
-  ) {
+  patch(@CurrentUser() user: JwtUser, @Param('id') id: string, @Body() dto: UpdateChatDto) {
     return this.chats.updateChat(user.sub, id, dto);
   }
 
@@ -104,11 +111,7 @@ export class ChatsController {
   }
 
   @Post(':id/members')
-  addMember(
-    @CurrentUser() user: JwtUser,
-    @Param('id') id: string,
-    @Body() dto: AddMemberDto,
-  ) {
+  addMember(@CurrentUser() user: JwtUser, @Param('id') id: string, @Body() dto: AddMemberDto) {
     return this.chats.addMember(user.sub, id, dto);
   }
 
