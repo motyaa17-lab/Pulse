@@ -57,6 +57,22 @@ export interface MessageDto {
   deliveryStatus?: string;
 }
 
+export interface StoryFeedItem {
+  id: string;
+  userId: string;
+  mimeType: string;
+  url: string;
+  fileName: string;
+  createdAt: string;
+  expiresAt: string;
+  user: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
+}
+
 export interface MeUserDto {
   id: string;
   email?: string;

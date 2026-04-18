@@ -150,7 +150,7 @@ export const en = {
   listPreviewHidden: 'Hidden',
   swipeReplyHint: 'Reply',
   voiceNote: 'Voice message',
-  voiceRecordingHint: 'Attach an audio file to send a voice note.',
+  voiceRecordingHint: 'Hold the mic, or attach an audio file.',
   showLastSeenToOthers: 'Let others see my last seen time',
   wordEnglish: 'English',
   wordRussian: 'Русский',
@@ -234,6 +234,24 @@ export const en = {
   drawerFilesHint: 'Documents and other files will appear here.',
   drawerLinks: 'Links',
   drawerLinksHint: 'Links from messages will be listed here.',
+  // Stories ("circles")
+  storiesRowTitle: 'Stories',
+  storiesAdd: 'New story',
+  storiesAddAria: 'Add photo or video story',
+  storiesYou: 'You',
+  storiesEmptyHint: 'Stories from people you message will appear here. Tap + to post yours.',
+  storiesViewerAria: 'Story viewer',
+  storyDelete: 'Delete',
+  storyExpiresHint: 'Visible to your contacts for about 24 hours',
+  // Voice recording (composer)
+  voiceMicAria: 'Record voice message',
+  voiceHoldToRecord: 'Hold to record',
+  voiceReleaseToSend: 'Release to send',
+  voiceSlideToCancel: 'Slide up to cancel',
+  voiceRecording: 'Recording…',
+  voiceTooShort: 'Hold a bit longer to record.',
+  voiceMicDenied: 'Microphone access is blocked. Allow it in browser settings.',
+  voiceRecordError: 'Could not start recording.',
 } as const;
 
 export type I18nKey = keyof typeof en;

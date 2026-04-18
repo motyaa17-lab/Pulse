@@ -50,6 +50,37 @@ function SendIcon({ className }: { className?: string }) {
   );
 }
 
+function MicIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19 10v1a7 7 0 01-14 0v-1M12 19v3M8 22h8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function pickVoiceMimeType(): string {
+  const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+  for (const c of cands) {
+    try {
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(c)) return c;
+    } catch {
+      /* ignore */
+    }
+  }
+  return '';
+}
+
 export function Composer({
   chatId,
   replyTo,
@@ -80,6 +111,21 @@ export function Composer({
   const removePending = usePendingAttachmentsStore((s) => s.remove);
   const clearPending = usePendingAttachmentsStore((s) => s.clear);
   const soundEnabled = useUiStore((s) => s.soundEnabled);
+
+  const voiceMicBtnRef = useRef<HTMLButtonElement>(null);
+  const voiceArmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceTickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<BlobPart[]>([]);
+  const voiceStartedAtRef = useRef(0);
+  const voicePointerDownRef = useRef(false);
+  const voiceStartCoordsRef = useRef({ x: 0, y: 0 });
+  const voiceCancelledRef = useRef(false);
+  const [voiceUi, setVoiceUi] = useState<'idle' | 'arming' | 'recording'>('idle');
+  const [voiceSlideCancel, setVoiceSlideCancel] = useState(false);
+  const [voiceSec, setVoiceSec] = useState(0);
+  const [voiceErr, setVoiceErr] = useState<string | null>(null);
 
   const { data: meUser } = useQuery({
     queryKey: ['me'],
@@ -112,6 +158,14 @@ export function Composer({
     setDraft(chatId, text);
   }, [chatId, editing, setDraft, text]);
 
+  useEffect(() => {
+    return () => {
+      if (voiceArmTimer.current) clearTimeout(voiceArmTimer.current);
+      if (voiceTickTimer.current) clearInterval(voiceTickTimer.current);
+      voiceStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
   type SendVars = { text: string; replyTo: MessageDto | null; attachments: any[] };
 
   const send = useMutation<MessageDto | null, Error, SendVars, SendMutationCtx | undefined>({
@@ -133,11 +187,21 @@ export function Composer({
 
       const prev = qc.getQueryData<MessagesQueryData>(['messages', chatId]);
       const tempId = `optimistic:${Date.now()}`;
+      const atts = vars.attachments;
+      const mediaOnly = atts.length > 0 && !vars.text?.trim();
+      let optimisticType = 'TEXT';
+      if (mediaOnly) {
+        const k0 = atts[0]?.kind;
+        if (k0 === 'voice') optimisticType = 'VOICE';
+        else if (k0 === 'image') optimisticType = 'IMAGE';
+        else if (k0 === 'video') optimisticType = 'VIDEO';
+        else optimisticType = 'FILE';
+      }
       const optimistic: MessageDto = {
         id: tempId,
         chatId,
         senderId: myId,
-        type: vars.attachments.length && !vars.text?.trim() ? 'FILE' : 'TEXT',
+        type: optimisticType,
         text: vars.text?.trim() ? vars.text : null,
         clientTempId: null,
         replyToMessageId: vars.replyTo?.id ?? null,
@@ -273,6 +337,7 @@ export function Composer({
       mimeType: p.mimeType,
       sizeBytes: p.sizeBytes,
       url: p.url,
+      ...(p.durationSec != null ? { durationSec: p.durationSec } : {}),
     }));
     if (!bodyText && attachmentInputs.length === 0) return;
 
@@ -334,6 +399,165 @@ export function Composer({
   useLayoutEffect(() => {
     resizeTextarea();
   }, [text, resizeTextarea]);
+
+  const beginVoiceRecording = useCallback(
+    async (pointerId: number) => {
+      if (editing || !token) return;
+      if (!voicePointerDownRef.current) {
+        setVoiceUi('idle');
+        return;
+      }
+      voiceCancelledRef.current = false;
+      voiceChunksRef.current = [];
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!voicePointerDownRef.current) {
+          stream.getTracks().forEach((tr) => tr.stop());
+          setVoiceUi('idle');
+          return;
+        }
+        voiceStreamRef.current = stream;
+        const mime = pickVoiceMimeType();
+        const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        rec.ondataavailable = (ev) => {
+          if (ev.data.size > 0) voiceChunksRef.current.push(ev.data);
+        };
+        rec.onstop = () => {
+          if (voiceTickTimer.current) {
+            clearInterval(voiceTickTimer.current);
+            voiceTickTimer.current = null;
+          }
+          voiceStreamRef.current?.getTracks().forEach((tr) => tr.stop());
+          voiceStreamRef.current = null;
+          voiceRecorderRef.current = null;
+          setVoiceUi('idle');
+          setVoiceSlideCancel(false);
+          setVoiceSec(0);
+          try {
+            voiceMicBtnRef.current?.releasePointerCapture(pointerId);
+          } catch {
+            /* ignore */
+          }
+          if (voiceCancelledRef.current) return;
+          const blob = new Blob(voiceChunksRef.current, { type: rec.mimeType || 'audio/webm' });
+          const ms = Date.now() - voiceStartedAtRef.current;
+          if (ms < 550 || blob.size < 200) {
+            setVoiceErr(t('voiceTooShort'));
+            window.setTimeout(() => setVoiceErr(null), 2400);
+            return;
+          }
+          const dur = Math.max(1, Math.round(ms / 1000));
+          const ext = blob.type.includes('webm')
+            ? 'webm'
+            : blob.type.includes('mp4') || blob.type.includes('m4a')
+              ? 'm4a'
+              : 'ogg';
+          const file = new File([blob], `voice-${Date.now()}.${ext}`, {
+            type: blob.type || 'audio/webm',
+          });
+          void (async () => {
+            try {
+              const meta = await uploadMedia(file, 'voice', token, sessionId);
+              addPending(chatId, {
+                localId: `pending:${Date.now()}`,
+                storageKey: meta.storageKey,
+                url: meta.url,
+                fileName: meta.fileName,
+                mimeType: meta.mimeType,
+                sizeBytes: meta.sizeBytes,
+                kind: 'voice',
+                createdAt: Date.now(),
+                durationSec: dur,
+              });
+            } catch {
+              setVoiceErr(t('voiceRecordError'));
+              window.setTimeout(() => setVoiceErr(null), 2800);
+            }
+          })();
+        };
+        voiceRecorderRef.current = rec;
+        voiceStartedAtRef.current = Date.now();
+        rec.start(140);
+        setVoiceUi('recording');
+        setVoiceSec(0);
+        voiceTickTimer.current = setInterval(() => {
+          setVoiceSec(Math.max(0, Math.floor((Date.now() - voiceStartedAtRef.current) / 1000)));
+        }, 250);
+        try {
+          voiceMicBtnRef.current?.setPointerCapture(pointerId);
+        } catch {
+          /* ignore */
+        }
+      } catch {
+        setVoiceUi('idle');
+        setVoiceErr(t('voiceMicDenied'));
+        window.setTimeout(() => setVoiceErr(null), 3200);
+      }
+    },
+    [addPending, chatId, editing, sessionId, t, token],
+  );
+
+  const abortVoiceArm = useCallback(() => {
+    if (voiceArmTimer.current) {
+      clearTimeout(voiceArmTimer.current);
+      voiceArmTimer.current = null;
+    }
+    setVoiceUi('idle');
+  }, []);
+
+  const onVoiceMicPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (editing || e.button !== 0) return;
+      e.preventDefault();
+      voicePointerDownRef.current = true;
+      voiceStartCoordsRef.current = { x: e.clientX, y: e.clientY };
+      voiceCancelledRef.current = false;
+      setVoiceSlideCancel(false);
+      setVoiceErr(null);
+      setVoiceUi('arming');
+      if (voiceArmTimer.current) clearTimeout(voiceArmTimer.current);
+      const pid = e.pointerId;
+      voiceArmTimer.current = setTimeout(() => {
+        voiceArmTimer.current = null;
+        if (!voicePointerDownRef.current) {
+          setVoiceUi('idle');
+          return;
+        }
+        void beginVoiceRecording(pid);
+      }, 95);
+    },
+    [beginVoiceRecording, editing],
+  );
+
+  const onVoiceMicPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (voiceRecorderRef.current?.state !== 'recording') return;
+    const dy = e.clientY - voiceStartCoordsRef.current.y;
+    const cancelZone = dy < -52;
+    voiceCancelledRef.current = cancelZone;
+    setVoiceSlideCancel(cancelZone);
+  }, []);
+
+  const onVoiceMicPointerUp = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      voicePointerDownRef.current = false;
+      try {
+        if (voiceMicBtnRef.current?.hasPointerCapture(e.pointerId)) {
+          voiceMicBtnRef.current.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        /* ignore */
+      }
+      if (voiceArmTimer.current) {
+        abortVoiceArm();
+        return;
+      }
+      const rec = voiceRecorderRef.current;
+      if (rec && rec.state === 'recording') {
+        rec.stop();
+      }
+    },
+    [abortVoiceArm],
+  );
 
   return (
     <div
@@ -434,7 +658,9 @@ export function Composer({
                 </p>
                 <p className="text-[11px] text-ink-muted">
                   {p.kind === 'voice'
-                    ? t('voiceRecordingHint')
+                    ? p.durationSec != null
+                      ? `${p.durationSec}s · ${t('voiceHoldToRecord')}`
+                      : t('voiceRecordingHint')
                     : `${Math.max(1, Math.round(p.sizeBytes / 1024))} KB`}
                 </p>
               </div>
@@ -456,6 +682,51 @@ export function Composer({
             </div>
           ))}
         </div>
+      )}
+      {(voiceUi === 'recording' || voiceUi === 'arming') && (
+        <div
+          className={cn(
+            'mb-2 flex items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 text-[13px] font-medium shadow-lg',
+            voiceSlideCancel
+              ? 'border-red-500/45 bg-red-950/35 text-red-100'
+              : 'border-[#3390ec]/35 bg-[#17212b]/95 text-white',
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] opacity-80">
+              {voiceUi === 'arming' ? t('commonLoading') : t('voiceRecording')}
+            </span>
+            <span className="truncate">
+              {voiceUi === 'recording'
+                ? voiceSlideCancel
+                  ? t('voiceSlideToCancel')
+                  : `${t('voiceReleaseToSend')} · ${voiceSec}s`
+                : t('voiceHoldToRecord')}
+            </span>
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-end justify-center gap-0.5 rounded-xl bg-black/20 px-1 py-1">
+            {[5, 9, 6, 11, 7, 10, 6, 9, 5].map((h, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'w-0.5 shrink-0 rounded-full bg-white/85',
+                  voiceUi === 'recording' && !voiceSlideCancel && 'animate-pulse',
+                )}
+                style={{ height: `${h}px`, animationDelay: `${i * 60}ms` }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {voiceErr && (
+        <p
+          className="mb-1.5 px-1 text-center text-[11px] text-red-600 dark:text-red-400"
+          role="alert"
+        >
+          {voiceErr}
+        </p>
       )}
       <div className="flex items-end gap-1 rounded-[1.65rem] border border-line/80 bg-surface-muted/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-white/[0.08] dark:bg-[#111921] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         <label
@@ -495,6 +766,26 @@ export function Composer({
             }}
           />
         </label>
+        {!editing && (
+          <button
+            ref={voiceMicBtnRef}
+            type="button"
+            disabled={!token}
+            onPointerDown={onVoiceMicPointerDown}
+            onPointerMove={onVoiceMicPointerMove}
+            onPointerUp={onVoiceMicPointerUp}
+            onPointerCancel={onVoiceMicPointerUp}
+            className={cn(
+              'touch-none mb-px flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-[1rem] text-ink-muted transition',
+              'hover:bg-surface-elevated/90 hover:text-accent active:scale-[0.97] dark:hover:bg-surface-elevated/55',
+              voiceUi === 'recording' && 'bg-accent/15 text-accent',
+            )}
+            title={t('voiceHoldToRecord')}
+            aria-label={t('voiceMicAria')}
+          >
+            <MicIcon className="h-[1.15rem] w-[1.15rem] opacity-90" />
+          </button>
+        )}
         <textarea
           ref={taRef}
           rows={1}

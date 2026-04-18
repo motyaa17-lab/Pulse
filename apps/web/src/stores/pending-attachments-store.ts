@@ -12,6 +12,8 @@ export type PendingAttachment = {
   sizeBytes: number;
   kind: 'image' | 'video' | 'file' | 'voice';
   createdAt: number;
+  /** Voice / video length when known (seconds). */
+  durationSec?: number;
 };
 
 type PendingAttachmentsState = {
@@ -43,4 +45,3 @@ export const usePendingAttachmentsStore = create<PendingAttachmentsState>((set) 
       return { byChat: rest };
     }),
 }));
-

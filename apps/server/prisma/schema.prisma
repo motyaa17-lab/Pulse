@@ -61,6 +61,24 @@ model User {
   hiddenMessages    MessageHiddenForUser[]
 
   pinnedChatsMessages Chat[] @relation("ChatPinnedByUser")
+  stories             Story[]
+}
+
+/// Ephemeral "circle" media (24h), visible to self + direct-chat peers.
+model Story {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageKey  String
+  mimeType    String
+  fileName    String
+  sizeBytes   Int
+  url         String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
 }
 
 model Session {

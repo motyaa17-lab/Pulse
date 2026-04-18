@@ -13,6 +13,7 @@ import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
 import { connectSocket } from '@/lib/socket';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
+import { StoriesStrip } from '@/components/pulse/stories-strip';
 
 function formatListTime(iso: string, t: (k: I18nKey) => string, locale: string): string {
   const d = new Date(iso);
@@ -365,6 +366,8 @@ export function ChatSidebar() {
             </div>
           </div>
         </header>
+
+        <StoriesStrip />
 
         <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-24">
           {!isLoading && archivedRaw.length > 0 && (

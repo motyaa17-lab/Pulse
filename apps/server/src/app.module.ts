@@ -9,6 +9,7 @@ import { MessagesModule } from './messages/messages.module';
 import { MediaModule } from './media/media.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { SearchModule } from './search/search.module';
+import { StoriesModule } from './stories/stories.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { WsModule } from './ws/ws.module';
@@ -29,6 +30,7 @@ import { HealthController } from './health.controller';
     MediaModule,
     SessionsModule,
     SearchModule,
+    StoriesModule,
     WsModule,
   ],
   controllers: [HealthController],
