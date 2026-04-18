@@ -437,7 +437,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         ref={parentRef}
-        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 md:px-5 md:py-2.5"
+        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-2 md:px-5 md:py-2.5"
         onDragEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -1026,7 +1026,7 @@ function MessageBubble({
       <div className={cn('flex w-full', isOutgoing ? 'justify-end' : 'justify-start')}>
         <div
           className={cn(
-            'group relative max-w-[min(100%,34rem)] pt-8 -mt-8',
+            'group relative max-w-[min(85vw,34rem)] pt-8 -mt-8',
             isOutgoing ? 'ml-auto' : 'mr-auto',
           )}
           onMouseEnter={() => onMessageRowEnter(m.id)}

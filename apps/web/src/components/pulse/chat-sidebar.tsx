@@ -490,7 +490,7 @@ export function ChatSidebar() {
       </div>
 
       {/* Floating bottom navigation */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-4 md:hidden">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
         <div className="mx-auto w-full max-w-[420px] px-4">
           <nav className="pointer-events-auto rounded-[22px] border border-white/[0.08] bg-[#111921]/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-[24px]">
             <div className="grid grid-cols-4 items-center gap-1">
@@ -604,6 +604,7 @@ function ChatRow({
         <Link
           href={`/chats/${chat.id}`}
           className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3"
+          onClick={() => useUiStore.getState().setSidebarOpen(false)}
         >
           <div className="relative h-12 w-12 shrink-0">
             {src ? (

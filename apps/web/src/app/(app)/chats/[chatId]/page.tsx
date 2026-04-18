@@ -126,7 +126,7 @@ export default function ChatPage() {
           <button
             type="button"
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition md:hidden',
+              'flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full transition md:hidden',
               'border border-white/12 bg-white/8 text-white/85 hover:bg-white/12 hover:text-white active:scale-[0.99]',
             )}
             onClick={() => router.push('/chats')}
@@ -216,8 +216,8 @@ export default function ChatPage() {
           <button
             type="button"
             className={cn(
-              'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/80 transition hover:bg-white/12 active:scale-[0.99]',
-              'md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 dark:md:border-line/50',
+              'inline-flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/80 transition hover:bg-white/12 active:scale-[0.99]',
+              'md:h-9 md:w-9 md:min-h-0 md:min-w-0 md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 dark:md:border-line/50',
             )}
             onClick={() => setInChatSearchOpen(true)}
             aria-label={t('chatSearchTitle')}
@@ -234,9 +234,8 @@ export default function ChatPage() {
           <button
             type="button"
             className={cn(
-              'inline-flex h-9 shrink-0 items-center rounded-full px-3 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition',
-              'border border-white/12 bg-white/8 text-white/75 hover:bg-white/12 hover:text-white active:scale-[0.99]',
-              'md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 md:hover:text-ink dark:md:border-line/50 dark:md:hover:bg-surface-elevated/55',
+              'inline-flex min-h-[44px] shrink-0 touch-manipulation items-center rounded-full border border-white/12 bg-white/8 px-3.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/12 hover:text-white active:scale-[0.99]',
+              'md:h-9 md:min-h-0 md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 md:hover:text-ink dark:md:border-line/50 dark:md:hover:bg-surface-elevated/55',
             )}
             onClick={() => setDetailsOpen(true)}
           >

@@ -63,6 +63,7 @@ export const en = {
   mainMenuSessions: 'My sessions',
   chatActionsAria: 'Chat actions',
   mobileOpenChatsAria: 'Open chats',
+  mobileCloseChatsListAria: 'Close chat list',
   mutedTooltip: 'Muted',
   // Thread
   commonLoading: 'Loading…',

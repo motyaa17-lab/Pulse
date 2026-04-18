@@ -61,6 +61,7 @@ export const ru = {
   mainMenuSessions: 'Мои сессии',
   chatActionsAria: 'Действия с чатом',
   mobileOpenChatsAria: 'Открыть чаты',
+  mobileCloseChatsListAria: 'Закрыть список чатов',
   mutedTooltip: 'Без звука',
   commonLoading: 'Загрузка…',
   dropFilesToUpload: 'Перетащите файлы, чтобы прикрепить',

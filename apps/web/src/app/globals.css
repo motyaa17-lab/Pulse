@@ -118,3 +118,8 @@ body {
   --bubble-in: 32 48 36;
   --bubble-out-ink: 240 253 244;
 }
+
+/* Mobile chats shell: reduce rubber-band scroll and keep height stable on iOS */
+.mobile-chats-shell {
+  overscroll-behavior-y: none;
+}

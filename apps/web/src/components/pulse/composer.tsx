@@ -338,8 +338,8 @@ export function Composer({
   return (
     <div
       className={cn(
-        'shrink-0 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md',
-        'border-t border-white/10 bg-white/8 md:border-line/75 md:bg-surface-elevated/98 dark:md:border-line/45 dark:md:bg-surface-elevated/98',
+        'shrink-0 touch-manipulation px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md',
+        'border-t border-white/[0.08] bg-[#0e1621]/96 md:border-line/75 md:bg-surface-elevated/98 dark:md:border-line/45 dark:md:bg-surface-elevated/98',
       )}
     >
       {editing && (

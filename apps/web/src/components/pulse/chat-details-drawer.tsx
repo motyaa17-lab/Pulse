@@ -124,21 +124,21 @@ export function ChatDetailsDrawer({
       />
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-[101] flex h-dvh max-h-dvh w-[min(100%,22rem)] flex-col border-l border-line/80 bg-surface-elevated shadow-[0_0_40px_rgba(0,0,0,0.12)]',
-          'dark:border-line/50 dark:bg-surface-elevated/98 dark:shadow-[0_0_48px_rgba(0,0,0,0.45)]',
+          'fixed inset-y-0 right-0 z-[101] flex h-[100dvh] max-h-[100dvh] w-full max-w-[22rem] flex-col border-l border-line/80 bg-surface-elevated shadow-[0_0_40px_rgba(0,0,0,0.12)]',
+          'max-md:max-w-none dark:border-line/50 dark:bg-surface-elevated/98 dark:shadow-[0_0_48px_rgba(0,0,0,0.45)]',
         )}
         role="dialog"
         aria-modal="true"
         aria-labelledby="chat-details-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-line/70 px-4 py-3 dark:border-line/45">
+        <div className="flex shrink-0 items-center justify-between border-b border-line/70 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] dark:border-line/45">
           <h2 id="chat-details-title" className="font-display text-lg font-semibold text-ink">
             {t('drawerChatInfo')}
           </h2>
           <button
             type="button"
-            className="rounded-full p-2 text-ink-muted transition hover:bg-surface-muted hover:text-ink"
+            className="flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-muted hover:text-ink md:min-h-0 md:min-w-0 md:p-2"
             onClick={onClose}
             aria-label={t('close')}
           >
@@ -153,7 +153,7 @@ export function ChatDetailsDrawer({
           </button>
         </div>
 
-        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-4 py-5">
+        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-[max(1.25rem,calc(1rem+env(safe-area-inset-bottom)))]">
           {isDirect ? (
             <div className="flex flex-col items-center text-center">
               <Link
