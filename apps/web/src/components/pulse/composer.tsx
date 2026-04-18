@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError, toPublicUrl } from '@/lib/api';
+import { VideoNoteCaptureModal } from '@/components/pulse/video-note-capture-modal';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDraftStore } from '@/stores/draft-store';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
@@ -69,6 +70,20 @@ function MicIcon({ className }: { className?: string }) {
   );
 }
 
+function VideoCamIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M15 10l4-2v8l-4-2v-4z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <rect x="3" y="6" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
 function pickVoiceMimeType(): string {
   const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
   for (const c of cands) {
@@ -126,6 +141,7 @@ export function Composer({
   const [voiceSlideCancel, setVoiceSlideCancel] = useState(false);
   const [voiceSec, setVoiceSec] = useState(0);
   const [voiceErr, setVoiceErr] = useState<string | null>(null);
+  const [videoCaptureOpen, setVideoCaptureOpen] = useState(false);
 
   const { data: meUser } = useQuery({
     queryKey: ['me'],
@@ -768,6 +784,21 @@ export function Composer({
         </label>
         {!editing && (
           <button
+            type="button"
+            disabled={!token}
+            onClick={() => setVideoCaptureOpen(true)}
+            className={cn(
+              'mb-px flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem] text-ink-muted transition',
+              'hover:bg-surface-elevated/90 hover:text-accent active:scale-[0.97] dark:hover:bg-surface-elevated/55',
+            )}
+            title={t('videoNoteOpen')}
+            aria-label={t('videoNoteOpenAria')}
+          >
+            <VideoCamIcon className="h-[1.15rem] w-[1.15rem] opacity-90" />
+          </button>
+        )}
+        {!editing && (
+          <button
             ref={voiceMicBtnRef}
             type="button"
             disabled={!token}
@@ -877,6 +908,30 @@ export function Composer({
         </kbd>{' '}
         {t('composerHintNewLine')}
       </p>
+      <VideoNoteCaptureModal
+        open={videoCaptureOpen}
+        onClose={() => setVideoCaptureOpen(false)}
+        onRecorded={async (file, durationSec) => {
+          if (!token) return;
+          try {
+            const meta = await uploadMedia(file, 'video', token, sessionId);
+            addPending(chatId, {
+              localId: `pending:${Date.now()}`,
+              storageKey: meta.storageKey,
+              url: meta.url,
+              fileName: meta.fileName,
+              mimeType: meta.mimeType,
+              sizeBytes: meta.sizeBytes,
+              kind: 'video',
+              createdAt: Date.now(),
+              durationSec,
+            });
+          } catch {
+            setVoiceErr(t('videoNoteRecordError'));
+            window.setTimeout(() => setVoiceErr(null), 2800);
+          }
+        }}
+      />
     </div>
   );
 }

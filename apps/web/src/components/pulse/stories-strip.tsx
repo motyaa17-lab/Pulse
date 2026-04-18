@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, toPublicUrl } from '@/lib/api';
 import type { MeUserDto, StoryFeedItem } from '@/lib/types';
@@ -8,12 +8,85 @@ import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/auth-store';
 import { uploadMedia } from '@/lib/upload-media';
 import { useT } from '@/lib/i18n';
+import { SafeAvatar } from '@/components/pulse/safe-avatar';
 
 function PlusIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
     </svg>
+  );
+}
+
+function StoryRingPreview({
+  story,
+  isSelf,
+  onSelect,
+}: {
+  story: StoryFeedItem;
+  isSelf: boolean;
+  onSelect: () => void;
+}) {
+  const t = useT();
+  const [mediaBroken, setMediaBroken] = useState(false);
+  const mediaUrl = toPublicUrl(story.url);
+  const isVideo = story.mimeType.startsWith('video/');
+  const userLabel =
+    story.user.displayName?.trim() || story.user.username || t('publicUserFallback');
+
+  useEffect(() => {
+    setMediaBroken(false);
+  }, [story.id, story.url]);
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="flex shrink-0 flex-col items-center gap-1 touch-manipulation"
+    >
+      <span
+        className={cn(
+          'rounded-full bg-gradient-to-tr p-[2.5px]',
+          isSelf
+            ? 'from-emerald-400/90 via-[#3390ec] to-fuchsia-500/90'
+            : 'from-[#3390ec]/90 via-cyan-400/80 to-emerald-400/70',
+        )}
+      >
+        <span className="block rounded-full bg-[#17212b] p-[2px]">
+          {mediaUrl && !mediaBroken ? (
+            isVideo ? (
+              <video
+                src={mediaUrl}
+                className="h-14 w-14 rounded-full object-cover"
+                muted
+                playsInline
+                autoPlay
+                loop
+                onError={() => setMediaBroken(true)}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mediaUrl}
+                alt=""
+                className="h-14 w-14 rounded-full object-cover"
+                onError={() => setMediaBroken(true)}
+              />
+            )
+          ) : (
+            <SafeAvatar
+              url={story.user.avatarUrl}
+              label={userLabel}
+              className="h-14 w-14 rounded-full bg-[#111921]"
+              fallbackClassName="bg-[#111921] text-lg text-white/80"
+            />
+          )}
+        </span>
+      </span>
+      <span className="max-w-[4.5rem] truncate text-center text-[11px] font-medium text-white/70">
+        {isSelf ? t('storiesYou') : userLabel}
+      </span>
+    </button>
   );
 }
 
@@ -81,7 +154,7 @@ export function StoriesStrip() {
       try {
         await createStory.mutateAsync(f);
       } catch {
-        /* toast optional */
+        /* ignore */
       }
     },
     [createStory, token],
@@ -131,41 +204,14 @@ export function StoriesStrip() {
             </div>
           )}
 
-          {sorted.map((s) => {
-            const av = toPublicUrl(s.user.avatarUrl);
-            const isSelf = meId && s.userId === meId;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setViewer(s)}
-                className="flex shrink-0 flex-col items-center gap-1 touch-manipulation"
-              >
-                <span
-                  className={cn(
-                    'rounded-full bg-gradient-to-tr p-[2.5px]',
-                    isSelf
-                      ? 'from-emerald-400/90 via-[#3390ec] to-fuchsia-500/90'
-                      : 'from-[#3390ec]/90 via-cyan-400/80 to-emerald-400/70',
-                  )}
-                >
-                  <span className="block rounded-full bg-[#17212b] p-[2px]">
-                    {av ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={av} alt="" className="h-14 w-14 rounded-full object-cover" />
-                    ) : (
-                      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#111921] text-lg font-semibold text-white/80">
-                        {ringLabel(s).slice(0, 1).toUpperCase()}
-                      </span>
-                    )}
-                  </span>
-                </span>
-                <span className="max-w-[4.5rem] truncate text-center text-[11px] font-medium text-white/70">
-                  {isSelf ? t('storiesYou') : ringLabel(s)}
-                </span>
-              </button>
-            );
-          })}
+          {sorted.map((s) => (
+            <StoryRingPreview
+              key={s.id}
+              story={s}
+              isSelf={Boolean(meId && s.userId === meId)}
+              onSelect={() => setViewer(s)}
+            />
+          ))}
         </div>
       </div>
 

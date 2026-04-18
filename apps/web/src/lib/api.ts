@@ -27,6 +27,7 @@ export const API_URL = getApiUrl();
 
 export function toPublicUrl(url: string | null | undefined): string | null {
   if (!url) return null;
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
   const base = effectiveApiBase();
 
   if (url.startsWith('/')) {

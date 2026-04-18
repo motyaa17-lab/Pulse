@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, toPublicUrl } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { MessageThread } from '@/components/pulse/message-thread';
 import {
   ChatDetailsDrawer,
@@ -103,7 +104,7 @@ export default function ChatPage() {
   const title =
     chat?.title ?? chat?.peer?.displayName ?? chat?.peer?.username ?? t('conversationFallback');
 
-  const avatarSrc = toPublicUrl(chat?.avatarUrl ?? chat?.peer?.avatarUrl ?? null);
+  const avatarRaw = chat?.avatarUrl ?? chat?.peer?.avatarUrl ?? null;
   const peerId = chat?.type === 'DIRECT' ? chat?.peer?.id : null;
   const status =
     chat?.type === 'DIRECT' && chat?.peer
@@ -148,51 +149,35 @@ export default function ChatPage() {
               className="relative h-9 w-9 shrink-0 md:h-10 md:w-10"
               aria-label={t('openProfileAria')}
             >
-              {avatarSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarSrc}
-                  alt=""
-                  className={cn(
-                    'h-9 w-9 rounded-full object-cover transition md:h-10 md:w-10',
-                    'ring-1 ring-white/15 md:ring-line/55 md:hover:ring-accent/35 dark:md:ring-line/35',
-                  )}
-                />
-              ) : (
-                <div
-                  className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold ring-1 ring-line/45 transition hover:ring-accent/35 md:h-10 md:w-10 md:text-sm',
-                    'border border-white/12 bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white ring-white/15',
-                    'md:border-transparent md:bg-gradient-to-br md:from-accent/30 md:to-accent/10 md:text-accent md:ring-line/45 dark:md:from-accent/25 dark:md:to-accent/5',
-                  )}
-                >
-                  {initial}
-                </div>
-              )}
+              <SafeAvatar
+                url={avatarRaw}
+                label={initial}
+                className={cn(
+                  'h-9 w-9 rounded-full ring-1 ring-white/15 transition md:h-10 md:w-10',
+                  'md:ring-line/55 md:hover:ring-accent/35 dark:md:ring-line/35',
+                )}
+                fallbackClassName={cn(
+                  'text-xs font-semibold ring-1 ring-line/45 transition hover:ring-accent/35 md:text-sm',
+                  'border border-white/12 bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white ring-white/15',
+                  'md:border-transparent md:bg-gradient-to-br md:from-accent/30 md:to-accent/10 md:text-accent md:ring-line/45 dark:md:from-accent/25 dark:md:to-accent/5',
+                )}
+              />
             </Link>
           ) : (
             <div className="relative h-9 w-9 shrink-0 md:h-10 md:w-10">
-              {avatarSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarSrc}
-                  alt=""
-                  className={cn(
-                    'h-9 w-9 rounded-full object-cover md:h-10 md:w-10',
-                    'ring-1 ring-white/15 md:ring-line/55 dark:md:ring-line/35',
-                  )}
-                />
-              ) : (
-                <div
-                  className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold ring-1 ring-line/45 md:h-10 md:w-10 md:text-sm',
-                    'border border-white/12 bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white ring-white/15',
-                    'md:border-transparent md:bg-gradient-to-br md:from-accent/30 md:to-accent/10 md:text-accent dark:md:from-accent/25 dark:md:to-accent/5',
-                  )}
-                >
-                  {initial}
-                </div>
-              )}
+              <SafeAvatar
+                url={avatarRaw}
+                label={initial}
+                className={cn(
+                  'h-9 w-9 rounded-full ring-1 ring-white/15 md:h-10 md:w-10',
+                  'md:ring-line/55 dark:md:ring-line/35',
+                )}
+                fallbackClassName={cn(
+                  'text-xs font-semibold ring-1 ring-line/45 md:text-sm',
+                  'border border-white/12 bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white ring-white/15',
+                  'md:border-transparent md:bg-gradient-to-br md:from-accent/30 md:to-accent/10 md:text-accent dark:md:from-accent/25 dark:md:to-accent/5',
+                )}
+              />
             </div>
           )}
           <div className="min-w-0 flex-1 py-0.5">

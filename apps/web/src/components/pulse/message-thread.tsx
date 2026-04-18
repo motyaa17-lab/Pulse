@@ -43,6 +43,35 @@ function SingleCheckIcon({ className }: { className?: string }) {
   );
 }
 
+function ThreadInlineImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const [bad, setBad] = useState(false);
+  const resolved = toPublicUrl(src) ?? src;
+  if (bad) {
+    return (
+      <div
+        className={cn(
+          className,
+          'flex items-center justify-center bg-surface-muted/60 text-[11px] font-medium text-ink-muted',
+        )}
+      >
+        {alt}
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={resolved} alt={alt} className={className} onError={() => setBad(true)} />
+  );
+}
+
 function DoubleCheckIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
@@ -1576,10 +1605,9 @@ function MessageBubble({
                 <div className="mt-2 space-y-2">
                   {m.attachments.map((a) =>
                     a.kind === 'image' ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <ThreadInlineImage
                         key={a.id}
-                        src={toPublicUrl(a.url) ?? a.url}
+                        src={a.url}
                         alt={a.fileName}
                         className="max-h-56 w-full rounded-xl object-cover"
                       />
@@ -1587,21 +1615,21 @@ function MessageBubble({
                       <div
                         key={a.id}
                         className={cn(
-                          'rounded-xl px-2 py-2',
+                          'inline-flex max-w-[min(260px,88vw)] items-center gap-2 rounded-[1.2rem] px-2.5 py-1.5',
                           isOutgoing
-                            ? 'bg-black/12 text-bubble-out-ink'
-                            : 'bg-black/[0.06] text-ink dark:bg-white/[0.08]',
+                            ? 'bg-bubble-out-ink/[0.12] ring-1 ring-bubble-out-ink/[0.18] dark:bg-black/20'
+                            : 'bg-black/[0.04] ring-1 ring-black/[0.08] dark:bg-white/[0.07] dark:ring-white/10',
                         )}
                       >
-                        <div className="mb-2 flex h-7 items-end justify-center gap-0.5 opacity-90">
-                          {[5, 9, 6, 11, 7, 10, 6, 12, 5, 8, 6].map((h, i) => (
+                        <div className="flex h-7 shrink-0 items-end gap-px px-0.5 opacity-90">
+                          {[3, 7, 4, 9, 5, 8, 4, 7, 3, 6, 4].map((h, i) => (
                             <span
                               key={i}
                               className={cn(
-                                'w-0.5 rounded-full',
+                                'w-[2px] shrink-0 rounded-full',
                                 isOutgoing
-                                  ? 'bg-bubble-out-ink/50'
-                                  : 'bg-accent/60 dark:bg-accent/50',
+                                  ? 'bg-bubble-out-ink/40'
+                                  : 'bg-accent/55 dark:bg-accent/45',
                               )}
                               style={{ height: `${h}px` }}
                             />
@@ -1610,11 +1638,38 @@ function MessageBubble({
                         <audio
                           src={toPublicUrl(a.url) ?? a.url}
                           controls
-                          className="h-8 w-full max-w-[min(100%,18rem)]"
+                          controlsList="nodownload"
+                          className={cn(
+                            'h-7 min-w-0 flex-1 max-w-[11.5rem] opacity-95',
+                            '[&::-webkit-media-controls-panel]:rounded-lg',
+                          )}
                           preload="metadata"
                         />
-                        <p className="mt-1 text-[0.65rem] opacity-75">{t('voiceNote')}</p>
+                        {a.durationSec != null ? (
+                          <span
+                            className={cn(
+                              'shrink-0 text-[11px] font-semibold tabular-nums opacity-70',
+                              isOutgoing ? 'text-bubble-out-ink' : 'text-ink-muted',
+                            )}
+                          >
+                            {(() => {
+                              const ds = a.durationSec ?? 0;
+                              const mm = Math.floor(ds / 60);
+                              const ss = ds % 60;
+                              return `${mm}:${String(ss).padStart(2, '0')}`;
+                            })()}
+                          </span>
+                        ) : null}
                       </div>
+                    ) : a.kind === 'video' ? (
+                      <video
+                        key={a.id}
+                        src={toPublicUrl(a.url) ?? a.url}
+                        className="max-h-72 w-full max-w-[min(100%,20rem)] rounded-2xl object-cover shadow-sm ring-1 ring-black/10 dark:ring-white/10"
+                        controls
+                        playsInline
+                        preload="metadata"
+                      />
                     ) : (
                       <a
                         key={a.id}

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, toPublicUrl } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import type { ChatListItem } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useUiStore } from '@/stores/ui-store';
@@ -600,7 +601,7 @@ function ChatRow({
 }) {
   const t = useT();
   const timeLabel = formatListTime(chat.lastMessageAt, t, locale);
-  const src = toPublicUrl(avatarSrc(chat));
+  const rawAvatar = avatarSrc(chat);
   const label = chatLabel(chat, t);
   const isTyping = useUiStore((s) => s.typingByChat?.[chat.id] ?? false);
   const hideListPreviews = useUiStore((s) => s.hideChatListPreviews);
@@ -637,23 +638,12 @@ function ChatRow({
           onClick={() => useUiStore.getState().setSidebarOpen(false)}
         >
           <div className="relative h-12 w-12 shrink-0">
-            {src ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={src}
-                alt=""
-                className="h-12 w-12 rounded-full object-cover ring-1 ring-white/12"
-              />
-            ) : (
-              <div
-                className={cn(
-                  'flex h-12 w-12 items-center justify-center rounded-full text-[0.95rem] font-semibold ring-1 ring-white/12',
-                  'bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-white',
-                )}
-              >
-                {chatInitial(chat, t)}
-              </div>
-            )}
+            <SafeAvatar
+              url={rawAvatar}
+              label={chatInitial(chat, t)}
+              className="h-12 w-12 rounded-full ring-1 ring-white/12"
+              fallbackClassName="bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-[0.95rem] text-white"
+            />
             {chat.isMuted ? (
               <span
                 className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-white/65 ring-2 ring-[#17212b]"

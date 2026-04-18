@@ -234,12 +234,13 @@ export const en = {
   drawerFilesHint: 'Documents and other files will appear here.',
   drawerLinks: 'Links',
   drawerLinksHint: 'Links from messages will be listed here.',
-  // Stories ("circles")
+  // Stories / timeline
   storiesRowTitle: 'Stories',
-  storiesAdd: 'New story',
-  storiesAddAria: 'Add photo or video story',
+  storiesAdd: 'New',
+  storiesAddAria: 'Add photo or video to your story',
   storiesYou: 'You',
-  storiesEmptyHint: 'Stories from people you message will appear here. Tap + to post yours.',
+  storiesEmptyHint:
+    'Stories from people you chat with appear here. Tap + to add yours (photo or video).',
   storiesViewerAria: 'Story viewer',
   storyDelete: 'Delete',
   storyExpiresHint: 'Visible to your contacts for about 24 hours',
@@ -252,6 +253,18 @@ export const en = {
   voiceTooShort: 'Hold a bit longer to record.',
   voiceMicDenied: 'Microphone access is blocked. Allow it in browser settings.',
   voiceRecordError: 'Could not start recording.',
+  // Video message (camera)
+  videoNoteOpen: 'Record video message',
+  videoNoteOpenAria: 'Open camera to record a video message',
+  videoNoteCaptureAria: 'Video message recording',
+  videoNoteFlipCamera: 'Flip camera',
+  videoNoteStart: 'Start recording',
+  videoNoteStop: 'Stop and send',
+  videoNoteCameraDenied: 'Camera or microphone access denied. Allow it in browser settings.',
+  videoNoteTooShort: 'Record a bit longer.',
+  videoNoteRecordError: 'Could not record video.',
+  videoNoteHint:
+    'Background is blurred while this screen is open. Tap the red button to start and again to stop (up to 60 seconds).',
 } as const;
 
 export type I18nKey = keyof typeof en;

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
-import { toPublicUrl } from '@/lib/api';
+import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
 import { useLanguageStore } from '@/stores/language-store';
@@ -109,7 +109,6 @@ export function ChatDetailsDrawer({
     chat?.peer?.displayName ?? chat?.title ?? chat?.peer?.username ?? t('conversationFallback');
   const username = chat?.peer?.username;
   const avatarSrc = isDirect ? (chat?.peer?.avatarUrl ?? chat?.avatarUrl) : chat?.avatarUrl;
-  const avatarPublicSrc = toPublicUrl(avatarSrc);
   const peerId = chat?.peer?.id;
   const status = isDirect && chat?.peer ? directChatPresenceSubtitle(chat.peer, t, language) : null;
   const initial = displayName.slice(0, 1).toUpperCase() || '?';
@@ -169,23 +168,12 @@ export function ChatDetailsDrawer({
                 aria-label={t('openProfileAria')}
               >
                 <div className="relative h-[4.5rem] w-[4.5rem] shrink-0">
-                  {avatarPublicSrc ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarPublicSrc}
-                      alt=""
-                      className="h-full w-full rounded-full object-cover ring-2 ring-line/40 transition group-hover:ring-accent/35 dark:ring-line/35"
-                    />
-                  ) : (
-                    <div
-                      className={cn(
-                        'flex h-full w-full items-center justify-center rounded-full text-2xl font-semibold ring-2 ring-line/35 transition group-hover:ring-accent/35',
-                        'bg-gradient-to-br from-accent/35 to-accent/10 text-accent dark:from-accent/28 dark:to-accent/5',
-                      )}
-                    >
-                      {initial}
-                    </div>
-                  )}
+                  <SafeAvatar
+                    url={avatarSrc}
+                    label={initial}
+                    className="h-full w-full rounded-full ring-2 ring-line/40 transition group-hover:ring-accent/35 dark:ring-line/35"
+                    fallbackClassName="bg-gradient-to-br from-accent/35 to-accent/10 text-2xl text-accent ring-2 ring-line/35 transition group-hover:ring-accent/35 dark:from-accent/28 dark:to-accent/5"
+                  />
                 </div>
                 <p className="mt-4 font-display text-lg font-semibold leading-tight text-ink">
                   {displayName}
@@ -204,23 +192,13 @@ export function ChatDetailsDrawer({
             <div>
               <div className="flex justify-center">
                 <div className="relative h-16 w-16 shrink-0">
-                  {avatarPublicSrc ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarPublicSrc}
-                      alt=""
-                      className="h-full w-full rounded-2xl object-cover ring-2 ring-line/40 dark:ring-line/35"
-                    />
-                  ) : (
-                    <div
-                      className={cn(
-                        'flex h-full w-full items-center justify-center rounded-2xl text-xl font-semibold ring-2 ring-line/35',
-                        'bg-gradient-to-br from-accent/35 to-accent/10 text-accent dark:from-accent/28 dark:to-accent/5',
-                      )}
-                    >
-                      {(chat?.title ?? '?').slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
+                  <SafeAvatar
+                    url={avatarSrc}
+                    label={(chat?.title ?? '?').slice(0, 1)}
+                    className="h-full w-full rounded-2xl ring-2 ring-line/40 dark:ring-line/35"
+                    imgClassName="rounded-2xl"
+                    fallbackClassName="rounded-2xl bg-gradient-to-br from-accent/35 to-accent/10 text-xl text-accent ring-2 ring-line/35 dark:from-accent/28 dark:to-accent/5"
+                  />
                 </div>
               </div>
               <p className="mt-4 text-center font-display text-lg font-semibold text-ink">
