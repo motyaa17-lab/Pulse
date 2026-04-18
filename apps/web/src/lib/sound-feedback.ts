@@ -1,5 +1,19 @@
 'use client';
 
+import { useUiStore } from '@/stores/ui-store';
+
+/** Subtle vibration on supported phones (paired with sound toggle). */
+export function pulseHapticLight() {
+  try {
+    if (!useUiStore.getState().soundEnabled) return;
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(12);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Short UI blip — no external assets (works after user gesture for strict browsers). */
 export function playMessageSendSound() {
   try {

@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useDraftStore } from '@/stores/draft-store';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 import { bumpMetaFromMessage } from '@/lib/chat-preview-meta';
-import { playMessageSendSound } from '@/lib/sound-feedback';
+import { playMessageSendSound, pulseHapticLight } from '@/lib/sound-feedback';
 import { useUiStore } from '@/stores/ui-store';
 import type { MessageDto, MeUserDto } from '@/lib/types';
 import { cn } from '@/lib/cn';
@@ -182,6 +182,16 @@ export function Composer({
     };
   }, []);
 
+  useEffect(() => {
+    if (voiceUi !== 'recording' && voiceUi !== 'arming') return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [voiceUi]);
+
   type SendVars = { text: string; replyTo: MessageDto | null; attachments: any[] };
 
   const send = useMutation<MessageDto | null, Error, SendVars, SendMutationCtx | undefined>({
@@ -286,7 +296,10 @@ export function Composer({
           lastMessageType: meta.lastMessageType,
           lastAttachmentKind: meta.lastAttachmentKind,
         });
-        if (soundEnabled) playMessageSendSound();
+        if (soundEnabled) {
+          playMessageSendSound();
+          pulseHapticLight();
+        }
       }
     },
     onSettled: () => {
@@ -394,10 +407,11 @@ export function Composer({
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        triggerSend();
-      }
+      if (e.key !== 'Enter') return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (e.shiftKey && !mod) return;
+      e.preventDefault();
+      triggerSend();
     },
     [triggerSend],
   );
@@ -902,11 +916,15 @@ export function Composer({
         <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
           Enter
         </kbd>{' '}
+        /{' '}
+        <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
+          Ctrl+Enter
+        </kbd>{' '}
         {t('composerHintSend')} ·{' '}
         <kbd className="rounded border border-line/70 px-1 py-px font-sans text-[10px] dark:border-line/50">
           Shift+Enter
         </kbd>{' '}
-        {t('composerHintNewLine')}
+        {t('composerHintNewLine')} · {t('composerHintSlashSearch')}
       </p>
       <VideoNoteCaptureModal
         open={videoCaptureOpen}

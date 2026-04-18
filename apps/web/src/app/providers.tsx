@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { BootstrapSplash } from '@/components/pulse/bootstrap-splash';
+import { ConnectionBanner } from '@/components/pulse/connection-banner';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUiStore } from '@/stores/ui-store';
 
@@ -97,6 +98,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
+      <ConnectionBanner />
       {children}
       <BootstrapSplash />
     </QueryClientProvider>

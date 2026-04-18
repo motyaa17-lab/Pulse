@@ -303,6 +303,35 @@ export function ChatSidebar() {
     };
   }, [qc]);
 
+  useEffect(() => {
+    const bare = pathname?.split('?')[0] ?? '';
+    const parts = bare.split('/').filter(Boolean);
+    const inOpenChat = parts[0] === 'chats' && parts.length >= 2;
+    if (inOpenChat) return;
+
+    const prev = document.title;
+    const base = t('chats');
+    const n = (data ?? []).reduce((sum, c) => sum + (c.unreadCount > 0 ? c.unreadCount : 0), 0);
+    document.title = n > 0 ? `(${n}) ${base} · Pulse` : `${base} · Pulse`;
+
+    if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
+      void (
+        n > 0
+          ? (navigator as Navigator & { setAppBadge: (n: number) => Promise<void> }).setAppBadge(n)
+          : (navigator as Navigator & { clearAppBadge: () => Promise<void> }).clearAppBadge()
+      ).catch(() => undefined);
+    }
+
+    return () => {
+      document.title = prev;
+      if (typeof navigator !== 'undefined' && 'clearAppBadge' in navigator) {
+        void (navigator as Navigator & { clearAppBadge: () => Promise<void> })
+          .clearAppBadge()
+          .catch(() => undefined);
+      }
+    };
+  }, [data, pathname, t]);
+
   const pinnedRaw = data?.filter((c: ChatListItem) => c.isPinned && !c.isArchived) ?? [];
   const restRaw = data?.filter((c: ChatListItem) => !c.isPinned && !c.isArchived) ?? [];
   const archivedRaw = data?.filter((c: ChatListItem) => c.isArchived) ?? [];

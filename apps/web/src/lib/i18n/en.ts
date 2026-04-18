@@ -33,6 +33,8 @@ export const en = {
   messages: 'Messages',
   noMatches: 'No matches',
   typing: 'Typing…',
+  wsOfflineBanner: 'Real-time connection lost.',
+  wsReconnect: 'Reconnect',
   scrollToBottomAria: 'Scroll to latest messages',
   directMessage: 'Direct message',
   group: 'Group',
@@ -84,6 +86,7 @@ export const en = {
   msgPin: 'Pin message',
   msgUnpin: 'Unpin message',
   msgCopyText: 'Copy text',
+  msgCopyLink: 'Copy message link',
   msgEdit: 'Edit',
   edited: 'edited',
   messageDeleted: 'Message deleted',
@@ -124,6 +127,7 @@ export const en = {
   composerAttachment: 'Attachment',
   composerHintSend: 'to send',
   composerHintNewLine: 'new line',
+  composerHintSlashSearch: '/ opens global search',
   attachFile: 'Attach file',
   videoKind: 'VID',
   fileKind: 'FILE',
@@ -133,7 +137,7 @@ export const en = {
   messageTextAria: 'Message text',
   react: 'React',
   // Search modal
-  searchHint: '⌘K / Ctrl+K · at least 2 characters',
+  searchHint: '⌘K / Ctrl+K · / anywhere · 2+ characters',
   searchUntitled: 'Untitled',
   // Settings
   settingsIntro: 'Theme, language, privacy, sessions, and account.',

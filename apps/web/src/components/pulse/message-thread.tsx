@@ -1235,6 +1235,27 @@ function MessageBubble({
         onSelect: onReply,
       },
       {
+        id: 'copy-link',
+        label: t('msgCopyLink'),
+        disabled: isDeleted,
+        onSelect: async () => {
+          setMenuOpen(false);
+          const url = `${window.location.origin}/chats/${chatId}?highlight=${encodeURIComponent(m.id)}`;
+          try {
+            await navigator.clipboard.writeText(url);
+          } catch {
+            const ta = document.createElement('textarea');
+            ta.value = url;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+          }
+        },
+      },
+      {
         id: 'forward',
         label: t('msgForward'),
         disabled: isDeleted || !m.text?.trim(),

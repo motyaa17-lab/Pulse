@@ -132,3 +132,15 @@ body {
     user-select: none;
   }
 }
+
+/* Respect OS “reduce motion” for snappier, less dizzying UI. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

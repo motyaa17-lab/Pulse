@@ -2,6 +2,7 @@
 
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/auth-store';
+import { useUiStore } from '@/stores/ui-store';
 
 function effectiveWsUrl(): string {
   const configured = (
@@ -24,6 +25,21 @@ export function getSocket(): Socket | null {
   return socket;
 }
 
+function wireSocketLifecycle(s: Socket) {
+  const sync = () => {
+    try {
+      useUiStore.getState().setWsConnected(s.connected);
+    } catch {
+      /* ignore */
+    }
+  };
+  s.off('connect', sync);
+  s.off('disconnect', sync);
+  s.on('connect', sync);
+  s.on('disconnect', sync);
+  sync();
+}
+
 export function connectSocket(): Socket {
   if (socket?.connected) return socket;
   const token = useAuthStore.getState().accessToken;
@@ -32,6 +48,7 @@ export function connectSocket(): Socket {
     auth: { token },
     autoConnect: Boolean(token),
   });
+  wireSocketLifecycle(socket);
   if (presenceTimer) {
     clearInterval(presenceTimer);
     presenceTimer = null;
@@ -48,6 +65,11 @@ export function connectSocket(): Socket {
 }
 
 export function disconnectSocket() {
+  try {
+    useUiStore.getState().setWsConnected(null);
+  } catch {
+    /* ignore */
+  }
   socket?.disconnect();
   socket = null;
   if (presenceTimer) {

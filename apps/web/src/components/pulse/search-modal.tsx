@@ -52,6 +52,20 @@ export function SearchModal() {
         e.preventDefault();
         setOpen(true);
       }
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const el = e.target as HTMLElement | null;
+        if (
+          el &&
+          (el.tagName === 'INPUT' ||
+            el.tagName === 'TEXTAREA' ||
+            el.tagName === 'SELECT' ||
+            el.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        setOpen(true);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

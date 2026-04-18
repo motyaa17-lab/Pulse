@@ -15,6 +15,8 @@ type UiState = {
   detailsOpen: boolean;
   searchOpen: boolean;
   typingByChat: Record<string, boolean>;
+  /** null = no active socket session; true/false from socket connect/disconnect. */
+  wsConnected: boolean | null;
   setTheme: (t: 'light' | 'dark' | 'system') => void;
   setVisualPreset: (v: VisualPreset) => void;
   setSoundEnabled: (v: boolean) => void;
@@ -24,6 +26,7 @@ type UiState = {
   setDetailsOpen: (v: boolean) => void;
   setSearchOpen: (v: boolean) => void;
   setTypingForChat: (chatId: string, typing: boolean) => void;
+  setWsConnected: (v: boolean | null) => void;
 };
 
 export const useUiStore = create<UiState>()(
@@ -37,6 +40,7 @@ export const useUiStore = create<UiState>()(
       detailsOpen: false,
       searchOpen: false,
       typingByChat: {},
+      wsConnected: null,
       setTheme: (theme) => set({ theme }),
       setVisualPreset: (visualPreset) => set({ visualPreset }),
       setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
@@ -51,6 +55,7 @@ export const useUiStore = create<UiState>()(
             ? { ...s.typingByChat, [chatId]: true }
             : Object.fromEntries(Object.entries(s.typingByChat).filter(([k]) => k !== chatId)),
         })),
+      setWsConnected: (wsConnected) => set({ wsConnected }),
     }),
     {
       name: 'pulse-ui',

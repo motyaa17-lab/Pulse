@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
@@ -103,6 +103,16 @@ export default function ChatPage() {
 
   const title =
     chat?.title ?? chat?.peer?.displayName ?? chat?.peer?.username ?? t('conversationFallback');
+
+  const tabTitleBaseline = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (tabTitleBaseline.current === null) tabTitleBaseline.current = document.title;
+    document.title = `${title} · Pulse`;
+    return () => {
+      document.title = tabTitleBaseline.current ?? 'Pulse — calm, fast messaging';
+    };
+  }, [title]);
 
   const avatarRaw = chat?.avatarUrl ?? chat?.peer?.avatarUrl ?? null;
   const peerId = chat?.type === 'DIRECT' ? chat?.peer?.id : null;
