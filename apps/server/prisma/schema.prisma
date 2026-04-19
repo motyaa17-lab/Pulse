@@ -2,8 +2,6 @@
 // that embeds `copyEngine: false` and Prisma then expects `prisma://` / `prisma+postgres://` (Accelerate / Data Proxy style).
 generator client {
   provider = "prisma-client-js"
-  // App-local output avoids Windows EPERM when renaming the engine under hoisted root node_modules/.prisma.
-  output   = "../src/generated/prisma"
 }
 
 datasource db {

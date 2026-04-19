@@ -1,6 +1,5 @@
 node_modules
 dist
-apps/server/src/generated/prisma
 .next
 .turbo
 .env
