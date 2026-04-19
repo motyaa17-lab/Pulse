@@ -14,6 +14,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  /** iOS Safari: lock page zoom (focus on small inputs, “stuck” zoom after navigation). App-like; users can still use OS accessibility zoom. */
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
   interactiveWidget: 'overlays-content',
   themeColor: [{ media: '(prefers-color-scheme: dark)', color: '#0e1621' }, { color: '#f8fafc' }],

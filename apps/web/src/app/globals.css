@@ -33,6 +33,12 @@
   --bubble-out-ink: 228 244 255;
 }
 
+html {
+  /* Reduce iOS font inflation / odd reflow when focusing fields or changing routes */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body {
   height: 100%;
@@ -124,11 +130,16 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* iOS Safari: sub-16px inputs zoom on focus; keep 16px literal (not max with rem) so we never scale up. */
+/*
+ * iOS Safari: any text control below ~16px triggers page zoom on focus; zoom can “stick” after route changes.
+ * `!important` wins over Tailwind `text-sm` / arbitrary sizes on inputs site-wide (mobile WebKit only).
+ */
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 767px) {
-    .mobile-chat-composer textarea {
-      font-size: 16px;
+    input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='range']):not([type='color']):not([type='file']),
+    textarea,
+    select {
+      font-size: 16px !important;
     }
   }
 }
