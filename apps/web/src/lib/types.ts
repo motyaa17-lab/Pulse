@@ -88,6 +88,13 @@ export interface MeUserDto {
   lastSeenAt?: string | null;
   /** When false, other users do not see your last seen time. */
   shareLastSeen?: boolean;
+  /** Present only for your own `/users/me` response. */
+  notificationPrefs?: {
+    soundEnabled: boolean;
+    desktopEnabled: boolean;
+    showPreview: boolean;
+    mentionOnlyInChannels: boolean;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUiStore, type VisualPreset } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -44,6 +44,25 @@ export default function SettingsPage() {
       qc.setQueryData(['me'], data);
     },
   });
+
+  const patchNotif = useMutation({
+    mutationFn: (body: {
+      notificationSoundEnabled?: boolean;
+      notificationDesktopEnabled?: boolean;
+      notificationShowPreview?: boolean;
+      notificationMentionOnlyInChannels?: boolean;
+    }) => apiFetch<MeUserDto>('/users/me', { method: 'PATCH', body }),
+    onSuccess: (data) => {
+      qc.setQueryData(['me'], data);
+      if (data.notificationPrefs) setSoundEnabled(data.notificationPrefs.soundEnabled);
+    },
+  });
+
+  useEffect(() => {
+    const p = me?.notificationPrefs;
+    if (!p) return;
+    setSoundEnabled(p.soundEnabled);
+  }, [me?.notificationPrefs?.soundEnabled, setSoundEnabled]);
 
   const logout = async () => {
     try {
@@ -140,16 +159,103 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="mt-4 rounded-2xl border border-line bg-surface-elevated p-4">
+          <section className="mt-4 space-y-2 rounded-2xl border border-line bg-surface-elevated p-4">
             <label className="flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 rounded border-line text-accent"
                 checked={soundEnabled}
-                onChange={(e) => setSoundEnabled(e.target.checked)}
+                disabled={!me || patchNotif.isPending}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setSoundEnabled(v);
+                  patchNotif.mutate({ notificationSoundEnabled: v });
+                }}
               />
-              <span className="text-sm text-ink">{t('soundEffectsLabel')}</span>
+              <span>
+                <span className="block text-sm text-ink">{t('soundEffectsLabel')}</span>
+                <span className="mt-0.5 block text-xs text-ink-muted">{t('soundEffectsHint')}</span>
+              </span>
             </label>
+          </section>
+
+          <section className="mt-4 space-y-4 rounded-2xl border border-line bg-surface-elevated p-4">
+            <div>
+              <h2 className="text-sm font-semibold text-ink">{t('settingsNotificationsTitle')}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+                {t('settingsNotificationsHint')}
+              </p>
+            </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
+                checked={me?.notificationPrefs?.desktopEnabled ?? false}
+                disabled={!me || patchNotif.isPending}
+                onChange={(e) =>
+                  patchNotif.mutate({ notificationDesktopEnabled: e.target.checked })
+                }
+              />
+              <span>
+                <span className="block text-sm font-medium text-ink">
+                  {t('notifyDesktopLabel')}
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
+                  {t('notifyDesktopHint')}
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
+                checked={me?.notificationPrefs?.showPreview ?? true}
+                disabled={!me || patchNotif.isPending}
+                onChange={(e) => patchNotif.mutate({ notificationShowPreview: e.target.checked })}
+              />
+              <span>
+                <span className="block text-sm font-medium text-ink">
+                  {t('notifyShowPreviewLabel')}
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
+                  {t('notifyShowPreviewHint')}
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
+                checked={me?.notificationPrefs?.mentionOnlyInChannels ?? false}
+                disabled={!me || patchNotif.isPending}
+                onChange={(e) =>
+                  patchNotif.mutate({ notificationMentionOnlyInChannels: e.target.checked })
+                }
+              />
+              <span>
+                <span className="block text-sm font-medium text-ink">
+                  {t('notifyMentionChannelsLabel')}
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
+                  {t('notifyMentionChannelsHint')}
+                </span>
+              </span>
+            </label>
+            <button
+              type="button"
+              disabled={!me}
+              onClick={() =>
+                void (async () => {
+                  if (typeof Notification === 'undefined') return;
+                  const r = await Notification.requestPermission();
+                  if (r === 'denied') window.alert(t('notifyPermissionDenied'));
+                  if (r === 'granted') window.alert(t('notifyPermissionGranted'));
+                })()
+              }
+              className="w-full rounded-xl border border-line px-3 py-2 text-sm text-accent hover:bg-surface-muted/40 disabled:opacity-50"
+            >
+              {t('notifyPermissionButton')}
+            </button>
           </section>
 
           <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">

@@ -12,6 +12,8 @@ export function bumpChatListPreview(
     lastAttachmentKind?: string | null;
     /** Clear type/kind (e.g. after delete-for-everyone). */
     clearListMeta?: boolean;
+    /** Increment unread when the user is not viewing this chat (socket-driven). */
+    bumpUnread?: boolean;
   },
 ) {
   qc.setQueriesData<ChatListItem[]>({ queryKey: ['chats'] }, (old: ChatListItem[] | undefined) => {
@@ -33,6 +35,7 @@ export function bumpChatListPreview(
       ...next[idx],
       lastMessagePreview: preview.slice(0, 160),
       lastMessageAt: lastMessageAtIso,
+      unreadCount: meta?.bumpUnread ? (next[idx].unreadCount ?? 0) + 1 : next[idx].unreadCount,
       ...metaPatch,
     };
     next.sort((a, b) => {

@@ -14,6 +14,8 @@ import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
 import { connectSocket } from '@/lib/socket';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
+import { decodeJwtSub } from '@/lib/jwt';
+import { useAuthStore } from '@/stores/auth-store';
 import { StoriesStrip } from '@/components/pulse/stories-strip';
 
 function formatListTime(iso: string, t: (k: I18nKey) => string, locale: string): string {
@@ -184,6 +186,7 @@ export function ChatSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const t = useT();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const setSearchOpen = useUiStore((s) => s.setSearchOpen);
@@ -290,28 +293,42 @@ export function ChatSidebar() {
         preview?: string;
         lastMessageType?: string;
         lastAttachmentKind?: string | null;
+        lastMessageSenderId?: string | null;
       };
       if (!p?.chatId || !p.lastMessageAt) return;
+      const bare = pathname?.split('?')[0] ?? '';
+      const parts = bare.split('/').filter(Boolean);
+      const activeChatId = parts[0] === 'chats' && parts[1] ? parts[1] : null;
+      const myId = decodeJwtSub(accessToken);
+      const bumpUnread = Boolean(
+        p.lastMessageSenderId &&
+        myId &&
+        p.lastMessageSenderId !== myId &&
+        p.chatId !== activeChatId,
+      );
       bumpChatListPreview(qc, p.chatId, p.preview ?? '', p.lastMessageAt, {
         lastMessageType: p.lastMessageType,
         lastAttachmentKind: p.lastAttachmentKind ?? undefined,
+        bumpUnread,
       });
     };
     s.on('chat:updated', onChatUpdated);
     return () => {
       s.off('chat:updated', onChatUpdated);
     };
-  }, [qc]);
+  }, [accessToken, pathname, qc]);
 
   useEffect(() => {
     const bare = pathname?.split('?')[0] ?? '';
     const parts = bare.split('/').filter(Boolean);
-    const inOpenChat = parts[0] === 'chats' && parts.length >= 2;
-    if (inOpenChat) return;
+    const activeChatId = parts[0] === 'chats' && parts[1] ? parts[1] : null;
 
     const prev = document.title;
     const base = t('chats');
-    const n = (data ?? []).reduce((sum, c) => sum + (c.unreadCount > 0 ? c.unreadCount : 0), 0);
+    const n = (data ?? []).reduce((sum, c) => {
+      if (activeChatId && c.id === activeChatId) return sum;
+      return sum + (c.unreadCount > 0 ? c.unreadCount : 0);
+    }, 0);
     document.title = n > 0 ? `(${n}) ${base} · Pulse` : `${base} · Pulse`;
 
     if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {

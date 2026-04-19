@@ -33,4 +33,26 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   shareLastSeen?: boolean;
+
+  @ApiPropertyOptional({ description: 'Play UI sounds for sends/receives (synced across devices)' })
+  @IsOptional()
+  @IsBoolean()
+  notificationSoundEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Browser desktop notifications for new messages' })
+  @IsOptional()
+  @IsBoolean()
+  notificationDesktopEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Show message text inside desktop notifications' })
+  @IsOptional()
+  @IsBoolean()
+  notificationShowPreview?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'In channels, only notify when message likely contains a mention (client hint)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  notificationMentionOnlyInChannels?: boolean;
 }

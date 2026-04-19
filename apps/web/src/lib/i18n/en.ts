@@ -77,7 +77,7 @@ export const en = {
   forwardTo: 'Forward to…',
   close: 'Close',
   noChatsFound: 'No chats found.',
-  forwardTextOnlyAlert: 'This message can’t be forwarded yet (text only for now).',
+  forwardNothingToSend: 'There is nothing to forward in this message.',
   forwardFailedAlert: 'Failed to forward the message.',
   pinFailedAlert: 'Couldn’t pin the message. Check the server / database migration.',
   // Message menu / bubbles
@@ -126,6 +126,21 @@ export const en = {
   presetSunset: 'Sunset',
   presetForest: 'Forest',
   soundEffectsLabel: 'UI sounds when sending a message',
+  soundEffectsHint: 'Saved to your Pulse account and this browser.',
+  settingsNotificationsTitle: 'Notifications',
+  settingsNotificationsHint:
+    'Desktop alerts use the browser Notification API (works when Pulse is open in a tab).',
+  notifyNewMessageGeneric: 'New message',
+  notifyDesktopLabel: 'Desktop notifications',
+  notifyDesktopHint: 'When this tab is hidden or you are in another chat.',
+  notifyShowPreviewLabel: 'Show message text in notifications',
+  notifyShowPreviewHint: 'If off, a generic preview is used.',
+  notifyMentionChannelsLabel: 'Channels: only @ mentions',
+  notifyMentionChannelsHint:
+    'Skip desktop alerts in channels unless the preview line contains “@”.',
+  notifyPermissionButton: 'Ask browser for notification permission',
+  notifyPermissionDenied: 'The browser blocked notifications. Change it in site settings.',
+  notifyPermissionGranted: 'Notifications enabled for this browser.',
   chatFallback: 'Chat',
   // Composer
   composerEditing: 'Editing',

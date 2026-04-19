@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PresenceService } from '../redis/presence.service';
@@ -25,12 +26,20 @@ export class UsersService {
         role: true,
         createdAt: true,
         updatedAt: true,
+        notificationPrefs: {
+          select: {
+            soundEnabled: true,
+            desktopEnabled: true,
+            showPreview: true,
+            mentionOnlyInChannels: true,
+          },
+        },
       },
     });
     if (!user) throw new NotFoundException();
     const online = await this.presence.isUserOnline(id);
     if (viewerId !== id) {
-      const { email: _e, shareLastSeen, role: _role, ...publicUser } = user;
+      const { email: _e, shareLastSeen, role: _role, notificationPrefs: _np, ...publicUser } = user;
       const showSeen = shareLastSeen;
       return {
         ...publicUser,
@@ -49,28 +58,81 @@ export class UsersService {
       });
       if (taken) throw new ConflictException('Username taken');
     }
-    return this.prisma.user.update({
+
+    const notifTouched =
+      dto.notificationSoundEnabled !== undefined ||
+      dto.notificationDesktopEnabled !== undefined ||
+      dto.notificationShowPreview !== undefined ||
+      dto.notificationMentionOnlyInChannels !== undefined;
+
+    if (notifTouched) {
+      await this.prisma.notificationPreference.upsert({
+        where: { userId },
+        create: {
+          userId,
+          soundEnabled: dto.notificationSoundEnabled ?? true,
+          desktopEnabled: dto.notificationDesktopEnabled ?? false,
+          showPreview: dto.notificationShowPreview ?? true,
+          mentionOnlyInChannels: dto.notificationMentionOnlyInChannels ?? false,
+        },
+        update: {
+          ...(dto.notificationSoundEnabled !== undefined && {
+            soundEnabled: dto.notificationSoundEnabled,
+          }),
+          ...(dto.notificationDesktopEnabled !== undefined && {
+            desktopEnabled: dto.notificationDesktopEnabled,
+          }),
+          ...(dto.notificationShowPreview !== undefined && {
+            showPreview: dto.notificationShowPreview,
+          }),
+          ...(dto.notificationMentionOnlyInChannels !== undefined && {
+            mentionOnlyInChannels: dto.notificationMentionOnlyInChannels,
+          }),
+        },
+      });
+    }
+
+    const meSelect = {
+      id: true,
+      email: true,
+      username: true,
+      displayName: true,
+      bio: true,
+      avatarUrl: true,
+      lastSeenAt: true,
+      shareLastSeen: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+      notificationPrefs: {
+        select: {
+          soundEnabled: true,
+          desktopEnabled: true,
+          showPreview: true,
+          mentionOnlyInChannels: true,
+        },
+      },
+    } as const;
+
+    const userPatch: Prisma.UserUpdateInput = {
+      ...(dto.displayName !== undefined ? { displayName: dto.displayName } : {}),
+      ...(dto.bio !== undefined ? { bio: dto.bio } : {}),
+      ...(dto.username !== undefined ? { username: dto.username.toLowerCase() } : {}),
+      ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
+      ...(dto.shareLastSeen !== undefined ? { shareLastSeen: dto.shareLastSeen } : {}),
+    };
+
+    if (Object.keys(userPatch).length > 0) {
+      return this.prisma.user.update({
+        where: { id: userId },
+        data: userPatch,
+        select: meSelect,
+      });
+    }
+
+    return this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      data: {
-        displayName: dto.displayName,
-        bio: dto.bio,
-        username: dto.username?.toLowerCase(),
-        avatarUrl: dto.avatarUrl === undefined ? undefined : dto.avatarUrl,
-        shareLastSeen: dto.shareLastSeen === undefined ? undefined : dto.shareLastSeen,
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        displayName: true,
-        bio: true,
-        avatarUrl: true,
-        lastSeenAt: true,
-        shareLastSeen: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: meSelect,
     });
   }
 

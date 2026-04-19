@@ -37,13 +37,63 @@ export class MessagesService {
   async create(userId: string, chatId: string, dto: CreateMessageDto) {
     const { chat } = await this.assertCanPost(chatId, userId);
 
-    const hasText = Boolean(dto.text?.trim());
-    const hasAtt = Boolean(dto.attachments?.length);
+    let effectiveText = dto.text?.trim() || null;
+    /** For forwards, attachments are always cloned server-side from the source message (ignore client body). */
+    let attachmentCreates:
+      | {
+          storageKey: string;
+          kind: string;
+          fileName: string;
+          mimeType: string;
+          sizeBytes: number;
+          url: string;
+          durationSec: number | null;
+          waveformJson: string | null;
+        }[]
+      | undefined = dto.attachments?.length
+      ? dto.attachments.map((a) => ({
+          storageKey: a.storageKey,
+          kind: a.kind,
+          fileName: a.fileName,
+          mimeType: a.mimeType,
+          sizeBytes: a.sizeBytes,
+          url: a.url,
+          durationSec: a.durationSec ?? null,
+          waveformJson: a.waveformJson ?? null,
+        }))
+      : undefined;
+
+    let forwardedFromUserId: string | null = null;
+    if (dto.forwardedFromMessageId) {
+      const src = await this.prisma.message.findUnique({
+        where: { id: dto.forwardedFromMessageId },
+        include: { attachments: true, sender: true },
+      });
+      if (!src || src.deletedAt) throw new BadRequestException('Invalid forward source');
+      await this.chats.assertMember(src.chatId, userId);
+      forwardedFromUserId = src.senderId;
+      attachmentCreates = src.attachments.length
+        ? src.attachments.map((a) => ({
+            storageKey: a.storageKey,
+            kind: a.kind,
+            fileName: a.fileName,
+            mimeType: a.mimeType,
+            sizeBytes: a.sizeBytes,
+            url: a.url,
+            durationSec: a.durationSec ?? null,
+            waveformJson: a.waveformJson ?? null,
+          }))
+        : undefined;
+      if (!effectiveText && src.text?.trim()) effectiveText = src.text.trim();
+    }
+
+    const hasText = Boolean(effectiveText);
+    const hasAtt = Boolean(attachmentCreates?.length);
     if (!hasText && !hasAtt) throw new BadRequestException('Empty message');
 
     let type: MessageType = MessageType.TEXT;
     if (hasAtt) {
-      const k = dto.attachments![0].kind;
+      const k = attachmentCreates![0].kind;
       if (k === 'voice') type = MessageType.VOICE;
       else if (k === 'image') type = MessageType.IMAGE;
       else if (k === 'video') type = MessageType.VIDEO;
@@ -57,29 +107,19 @@ export class MessagesService {
       if (!parent) throw new BadRequestException('Invalid reply target');
     }
 
-    let forwardedFromUserId: string | null = null;
-    if (dto.forwardedFromMessageId) {
-      const src = await this.prisma.message.findUnique({
-        where: { id: dto.forwardedFromMessageId },
-        include: { sender: true },
-      });
-      if (!src) throw new BadRequestException('Invalid forward source');
-      forwardedFromUserId = src.senderId;
-    }
-
     const msg = await this.prisma.message.create({
       data: {
         chatId,
         senderId: userId,
         type,
-        text: dto.text?.trim() || null,
+        text: effectiveText,
         clientTempId: dto.clientTempId ?? null,
         replyToMessageId: dto.replyToMessageId ?? null,
         forwardedFromMessageId: dto.forwardedFromMessageId ?? null,
         forwardedFromUserId,
-        attachments: dto.attachments?.length
+        attachments: attachmentCreates?.length
           ? {
-              create: dto.attachments.map((a) => ({
+              create: attachmentCreates.map((a) => ({
                 storageKey: a.storageKey,
                 kind: a.kind,
                 fileName: a.fileName,
@@ -120,6 +160,7 @@ export class MessagesService {
         preview: broadcastPayload.text?.slice(0, 160) ?? '',
         lastMessageType: broadcastPayload.type,
         lastAttachmentKind: broadcastPayload.attachments?.[0]?.kind ?? null,
+        lastMessageSenderId: msg.senderId,
       },
     );
 

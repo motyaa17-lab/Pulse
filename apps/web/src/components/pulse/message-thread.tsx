@@ -667,16 +667,15 @@ export function MessageThread({ chatId }: { chatId: string }) {
     const src = forwarding;
     if (!src) return;
     if (src.deletedAt) return;
-    // MVP: forward only text messages (attachments forwarding can come later).
-    if (!src.text?.trim()) {
-      window.alert(t('forwardTextOnlyAlert'));
+    const hasBody = Boolean(src.text?.trim()) || Boolean(src.attachments?.length);
+    if (!hasBody) {
+      window.alert(t('forwardNothingToSend'));
       return;
     }
     try {
       const created = await apiFetch<MessageDto>(`/chats/${targetChatId}/messages`, {
         method: 'POST',
         body: {
-          text: src.text,
           forwardedFromMessageId: src.id,
         },
       });
@@ -1258,7 +1257,7 @@ function MessageBubble({
       {
         id: 'forward',
         label: t('msgForward'),
-        disabled: isDeleted || !m.text?.trim(),
+        disabled: isDeleted || (!m.text?.trim() && !(m.attachments && m.attachments.length > 0)),
         onSelect: () => {
           setMenuOpen(false);
           onForward();
