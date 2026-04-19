@@ -145,6 +145,12 @@ export function ChatDetailsDrawer({
     };
   }, [open]);
 
+  const existingMemberIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const m of chat?.members ?? []) s.add(m.userId);
+    return s;
+  }, [chat?.members]);
+
   if (!open || typeof document === 'undefined') return null;
 
   const isDirect = chat?.type === 'DIRECT';
@@ -163,12 +169,6 @@ export function ChatDetailsDrawer({
       chat.role === 'ADMIN' ||
       (chat.type === 'GROUP' && chat.role === 'MEMBER' && !chat.group?.onlyAdminsCanAddMembers)),
   );
-
-  const existingMemberIds = useMemo(() => {
-    const s = new Set<string>();
-    for (const m of chat?.members ?? []) s.add(m.userId);
-    return s;
-  }, [chat?.members]);
 
   const groupDesc = chat?.type === 'GROUP' ? chat.group?.description : null;
   const channelMeta = chat?.type === 'CHANNEL' ? chat.channel : null;
