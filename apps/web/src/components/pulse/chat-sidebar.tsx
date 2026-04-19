@@ -2,13 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import type { ChatListItem } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useUiStore } from '@/stores/ui-store';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { getOrCreateDirectChat } from '@/lib/direct-chat';
+import { CreateGroupModal } from '@/components/pulse/create-group-modal';
+import { CreateChannelModal } from '@/components/pulse/create-channel-modal';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
@@ -56,6 +60,131 @@ function chatInitial(chat: ChatListItem, t: (k: I18nKey) => string): string {
 
 function avatarSrc(chat: ChatListItem): string | null {
   return chat.avatarUrl ?? chat.peer?.avatarUrl ?? null;
+}
+
+type SearchUser = {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+};
+type SearchChat = { id: string; type: string; title: string | null };
+type SearchMessage = {
+  id: string;
+  chatId: string;
+  text: string | null;
+  snippet?: string;
+  createdAt: string;
+};
+type SearchResult = {
+  users: SearchUser[];
+  chats: SearchChat[];
+  messages: SearchMessage[];
+};
+
+function SearchHighlight({ text, needle }: { text: string; needle: string }) {
+  const i = text.toLowerCase().indexOf(needle.toLowerCase());
+  if (i < 0) return <span className="text-white/90">{text}</span>;
+  const before = text.slice(0, i);
+  const match = text.slice(i, i + needle.length);
+  const after = text.slice(i + needle.length);
+  return (
+    <span className="text-white/90">
+      {before}
+      <mark className="rounded bg-sky-500/35 px-0.5 text-white">{match}</mark>
+      {after}
+    </span>
+  );
+}
+
+function SidebarCreateMenu({
+  placement,
+  onClose,
+  onNewGroup,
+  onNewChannel,
+  onExploreChannels,
+  onJoinGroup,
+  onJoinChannel,
+  t,
+}: {
+  placement: 'header' | 'dock';
+  onClose: () => void;
+  onNewGroup: () => void;
+  onNewChannel: () => void;
+  onExploreChannels: () => void;
+  onJoinGroup: () => void;
+  onJoinChannel: () => void;
+  t: (k: I18nKey) => string;
+}) {
+  const itemClass =
+    'block w-full px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10';
+  return (
+    <div
+      role="menu"
+      className={cn(
+        'z-[60] min-w-[13.5rem] overflow-hidden rounded-2xl border border-white/12 bg-[#0B1020]/96 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]',
+        placement === 'header'
+          ? 'absolute right-0 top-full mt-2'
+          : 'absolute bottom-full left-1/2 mb-2 -translate-x-1/2',
+      )}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className={itemClass}
+        onClick={() => {
+          onClose();
+          onNewGroup();
+        }}
+      >
+        {t('searchNewGroup')}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className={itemClass}
+        onClick={() => {
+          onClose();
+          onNewChannel();
+        }}
+      >
+        {t('searchNewChannel')}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className={cn(itemClass, 'text-[#ffb347]')}
+        onClick={() => {
+          onClose();
+          onExploreChannels();
+        }}
+      >
+        {t('searchExploreChannels')}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className={itemClass}
+        onClick={() => {
+          onClose();
+          onJoinGroup();
+        }}
+      >
+        {t('searchJoinByGroupLink')}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className={itemClass}
+        onClick={() => {
+          onClose();
+          onJoinChannel();
+        }}
+      >
+        {t('searchJoinByChannelLink')}
+      </button>
+    </div>
+  );
 }
 
 function MagnifierIcon({ className }: { className?: string }) {
@@ -213,16 +342,90 @@ export function ChatSidebar() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const t = useT();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
-  const setSearchOpen = useUiStore((s) => s.setSearchOpen);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 220);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [createMenuPlacement, setCreateMenuPlacement] = useState<'closed' | 'header' | 'dock'>(
+    'closed',
+  );
+  const createHeaderWrapRef = useRef<HTMLDivElement>(null);
+  const createDockWrapRef = useRef<HTMLDivElement>(null);
+  const searchBlockRef = useRef<HTMLDivElement>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [channelModalOpen, setChannelModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { data, isLoading } = useQuery<ChatListItem[]>({
-    queryKey: ['chats', search],
-    queryFn: () =>
-      apiFetch<ChatListItem[]>(`/chats${search ? `?q=${encodeURIComponent(search)}` : ''}`),
+    queryKey: ['chats'],
+    queryFn: () => apiFetch<ChatListItem[]>('/chats'),
   });
+
+  const { data: globalSearch, isFetching: globalSearchFetching } = useQuery<SearchResult>({
+    queryKey: ['search', debouncedSearch],
+    enabled: debouncedSearch.trim().length >= 2,
+    queryFn: () =>
+      apiFetch<SearchResult>(`/search?q=${encodeURIComponent(debouncedSearch.trim())}`),
+  });
+
+  const listFiltered = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter((c) => {
+      const label = (c.title ?? c.peer?.displayName ?? c.peer?.username ?? '').toLowerCase();
+      const uname = (c.peer?.username ?? '').toLowerCase();
+      const needle = q.startsWith('@') ? q.slice(1) : q;
+      const preview = (c.lastMessagePreview ?? '').toLowerCase();
+      return label.includes(needle) || preview.includes(needle) || uname.includes(needle);
+    });
+  }, [data, search]);
+
+  useEffect(() => {
+    const onFocusEvt = () => {
+      setSearchFocused(true);
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    };
+    window.addEventListener('pulse:focus-sidebar-search', onFocusEvt);
+    return () => window.removeEventListener('pulse:focus-sidebar-search', onFocusEvt);
+  }, []);
+
+  useEffect(() => {
+    if (createMenuPlacement === 'closed') return;
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (createHeaderWrapRef.current?.contains(t)) return;
+      if (createDockWrapRef.current?.contains(t)) return;
+      setCreateMenuPlacement('closed');
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [createMenuPlacement]);
+
+  useEffect(() => {
+    if (!searchFocused) return;
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (searchBlockRef.current?.contains(t)) return;
+      setSearchFocused(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [searchFocused]);
+
+  useEffect(() => {
+    if (!searchFocused) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSearchFocused(false);
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchFocused]);
 
   const hideChat = useMutation({
     mutationFn: (chatId: string) =>
@@ -373,14 +576,15 @@ export function ChatSidebar() {
     };
   }, [data, pathname, t]);
 
-  const pinnedRaw = data?.filter((c: ChatListItem) => c.isPinned && !c.isArchived) ?? [];
-  const restRaw = data?.filter((c: ChatListItem) => !c.isPinned && !c.isArchived) ?? [];
+  const pinnedRaw = listFiltered.filter((c: ChatListItem) => c.isPinned && !c.isArchived);
+  const restRaw = listFiltered.filter((c: ChatListItem) => !c.isPinned && !c.isArchived);
   const archivedRaw = data?.filter((c: ChatListItem) => c.isArchived) ?? [];
   const unreadFilter = (list: ChatListItem[]) =>
     !showUnreadOnly ? list : list.filter((c) => c.unreadCount > 0);
   const pinned = unreadFilter(pinnedRaw);
   const rest = unreadFilter(restRaw);
   const archived = unreadFilter(archivedRaw);
+  const searchNeedle = debouncedSearch.trim();
 
   const reorderPinned = useMutation({
     mutationFn: (chatIds: string[]) =>
@@ -399,42 +603,186 @@ export function ChatSidebar() {
                 {t('chats')}
               </h1>
             </div>
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="rounded-full border border-white/10 bg-white/[0.07] px-3 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-white/75 backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]"
-            >
-              {t('search')}
-            </button>
-          </div>
-
-          <div className="mt-3 md:mt-4">
-            <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#111921] px-3.5 py-2.5 shadow-inner md:px-4 md:py-3">
-              <MagnifierIcon className="text-white/55" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('chatListSearchPlaceholder')}
-                className="w-full bg-transparent text-[14px] text-white placeholder:text-white/40 outline-none"
-                aria-label={t('filterConversations')}
-              />
-            </div>
-            <div className="mt-2 flex justify-end">
+            <div className="relative shrink-0" ref={createHeaderWrapRef}>
               <button
                 type="button"
-                onClick={() => setShowUnreadOnly((v) => !v)}
-                className={cn(
-                  'rounded-full border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition touch-manipulation',
-                  showUnreadOnly
-                    ? 'border-[#3390ec] bg-[#3390ec]/25 text-white'
-                    : 'border-white/12 bg-white/[0.06] text-white/65 hover:bg-white/10 hover:text-white/90',
-                )}
-                aria-pressed={showUnreadOnly}
-                aria-label={t('filterUnreadOnlyAria')}
+                onClick={() =>
+                  setCreateMenuPlacement((p) => (p === 'header' ? 'closed' : 'header'))
+                }
+                className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.07] text-xl font-light text-white/90 backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99] md:h-12 md:w-12"
+                aria-expanded={createMenuPlacement === 'header'}
+                aria-haspopup="menu"
+                aria-label={t('sidebarCreateMenuAria')}
               >
-                {t('filterUnreadOnly')}
+                +
               </button>
+              {createMenuPlacement === 'header' && (
+                <SidebarCreateMenu
+                  placement="header"
+                  t={t}
+                  onClose={() => setCreateMenuPlacement('closed')}
+                  onNewGroup={() => setGroupModalOpen(true)}
+                  onNewChannel={() => setChannelModalOpen(true)}
+                  onExploreChannels={() => {
+                    setCreateMenuPlacement('closed');
+                    router.push('/chats/explore');
+                  }}
+                  onJoinGroup={() => {
+                    setCreateMenuPlacement('closed');
+                    router.push('/join');
+                  }}
+                  onJoinChannel={() => {
+                    setCreateMenuPlacement('closed');
+                    router.push('/join/channel');
+                  }}
+                />
+              )}
             </div>
+          </div>
+
+          <div ref={searchBlockRef} className="relative mt-3 md:mt-4">
+            <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#111921] px-3.5 py-2.5 shadow-inner md:px-4 md:py-3">
+              <MagnifierIcon className="shrink-0 text-white/55" />
+              <input
+                ref={searchInputRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                placeholder={t('searchPlaceholder')}
+                className="w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/40 outline-none"
+                aria-label={t('search')}
+                aria-autocomplete="list"
+                aria-expanded={searchFocused}
+              />
+            </div>
+            {searchFocused && (
+              <div className="absolute left-0 right-0 top-full z-[55] mt-1 max-h-[min(52vh,22rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#111921]/98 py-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+                <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-white/45">
+                  {t('searchHint')}
+                </p>
+                {searchNeedle.length < 2 && (
+                  <p className="px-3 pb-2 text-[13px] text-white/55">{t('searchMinCharsHint')}</p>
+                )}
+                {searchNeedle.length >= 2 && globalSearchFetching && (
+                  <p className="px-3 text-[13px] text-white/55">{t('searching')}</p>
+                )}
+                {searchNeedle.length >= 2 && !globalSearchFetching && globalSearch && (
+                  <div className="space-y-3 px-2 pb-1">
+                    <div>
+                      <p className="px-1 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+                        {t('people')}
+                      </p>
+                      <div className="space-y-0.5">
+                        {globalSearch.users.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/[0.08]"
+                            onClick={async () => {
+                              setSearchFocused(false);
+                              try {
+                                const chat = await getOrCreateDirectChat(u.id);
+                                void qc.invalidateQueries({ queryKey: ['chats'] });
+                                router.push(`/chats/${chat.id}`);
+                              } catch {
+                                router.push('/chats');
+                              }
+                            }}
+                          >
+                            <SafeAvatar
+                              url={u.avatarUrl}
+                              label={(u.displayName ?? u.username).slice(0, 1).toUpperCase()}
+                              className="h-9 w-9 shrink-0 rounded-full ring-1 ring-white/12"
+                              fallbackClassName="text-xs font-semibold text-sky-200"
+                            />
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium text-white">
+                                {u.displayName ?? u.username}
+                              </span>
+                              <span className="block truncate text-xs text-white/50">
+                                @{u.username}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="px-1 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+                        {t('chats')}
+                      </p>
+                      <div className="space-y-0.5">
+                        {globalSearch.chats.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="block w-full rounded-xl px-2 py-2 text-left transition hover:bg-white/[0.08]"
+                            onClick={() => {
+                              setSearchFocused(false);
+                              router.push(`/chats/${c.id}`);
+                            }}
+                          >
+                            <span className="font-medium text-white">
+                              {c.title ?? t('searchUntitled')}
+                            </span>
+                            <span className="ml-2 text-xs uppercase text-white/45">{c.type}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="px-1 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+                        {t('messages')}
+                      </p>
+                      <div className="space-y-0.5">
+                        {globalSearch.messages.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="block w-full rounded-xl px-2 py-2 text-left transition hover:bg-white/[0.08]"
+                            onClick={() => {
+                              setSearchFocused(false);
+                              router.push(`/chats/${m.chatId}?highlight=${m.id}`);
+                            }}
+                          >
+                            <div className="text-[13px] text-white/90">
+                              <SearchHighlight
+                                text={(m.snippet ?? m.text ?? '').trim() || ' '}
+                                needle={searchNeedle}
+                              />
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-white/45">
+                              {new Date(m.createdAt).toLocaleString(locale)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {globalSearch.users.length === 0 &&
+                      globalSearch.chats.length === 0 &&
+                      globalSearch.messages.length === 0 && (
+                        <p className="px-2 py-1 text-[13px] text-white/50">{t('noMatches')}</p>
+                      )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="mt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowUnreadOnly((v) => !v)}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition touch-manipulation',
+                showUnreadOnly
+                  ? 'border-[#3390ec] bg-[#3390ec]/25 text-white'
+                  : 'border-white/12 bg-white/[0.06] text-white/65 hover:bg-white/10 hover:text-white/90',
+              )}
+              aria-pressed={showUnreadOnly}
+              aria-label={t('filterUnreadOnlyAria')}
+            >
+              {t('filterUnreadOnly')}
+            </button>
           </div>
         </header>
 
@@ -607,35 +955,79 @@ export function ChatSidebar() {
               </Link>
               <button
                 type="button"
-                onClick={() => setSearchOpen(true)}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('pulse:focus-sidebar-search'));
+                }}
                 className="contents"
                 aria-label={t('search')}
               >
                 <NavIcon>
-                  <MagnifierIcon />
+                  <MagnifierIcon className="h-[22px] w-[22px]" />
                 </NavIcon>
               </button>
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="contents"
-                aria-label={t('newChatAria')}
-              >
-                <NavIcon>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M12 5v14M5 12h14"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </NavIcon>
-              </button>
+              <div className="relative flex justify-center" ref={createDockWrapRef}>
+                <button
+                  type="button"
+                  onClick={() => setCreateMenuPlacement((p) => (p === 'dock' ? 'closed' : 'dock'))}
+                  className="contents"
+                  aria-expanded={createMenuPlacement === 'dock'}
+                  aria-haspopup="menu"
+                  aria-label={t('sidebarCreateMenuAria')}
+                >
+                  <NavIcon>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path
+                        d="M12 5v14M5 12h14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </NavIcon>
+                </button>
+                {createMenuPlacement === 'dock' && (
+                  <SidebarCreateMenu
+                    placement="dock"
+                    t={t}
+                    onClose={() => setCreateMenuPlacement('closed')}
+                    onNewGroup={() => setGroupModalOpen(true)}
+                    onNewChannel={() => setChannelModalOpen(true)}
+                    onExploreChannels={() => {
+                      setCreateMenuPlacement('closed');
+                      router.push('/chats/explore');
+                    }}
+                    onJoinGroup={() => {
+                      setCreateMenuPlacement('closed');
+                      router.push('/join');
+                    }}
+                    onJoinChannel={() => {
+                      setCreateMenuPlacement('closed');
+                      router.push('/join/channel');
+                    }}
+                  />
+                )}
+              </div>
             </div>
           </nav>
         </div>
       </div>
+
+      <CreateGroupModal
+        open={groupModalOpen}
+        onClose={() => setGroupModalOpen(false)}
+        onCreated={(id) => {
+          setGroupModalOpen(false);
+          router.push(`/chats/${id}`);
+        }}
+      />
+      <CreateChannelModal
+        open={channelModalOpen}
+        onClose={() => setChannelModalOpen(false)}
+        onCreated={(id) => {
+          setChannelModalOpen(false);
+          router.push(`/chats/${id}`);
+        }}
+      />
     </aside>
   );
 }

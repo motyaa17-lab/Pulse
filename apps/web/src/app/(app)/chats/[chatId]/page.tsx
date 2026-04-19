@@ -99,6 +99,29 @@ export default function ChatPage() {
   const { data: chat } = useQuery({
     queryKey: ['chat', chatId],
     queryFn: () => apiFetch<ChatDetailForDrawer>(`/chats/${chatId}`),
+    placeholderData: () => {
+      const rows = qc.getQueryData<ChatListItem[]>(['chats']);
+      const row = rows?.find((c) => c.id === chatId);
+      if (!row) return undefined;
+      const p = row.peer;
+      return {
+        id: row.id,
+        type: row.type,
+        title: row.title,
+        avatarUrl: row.avatarUrl,
+        peer: p
+          ? {
+              id: p.id,
+              username: p.username,
+              displayName: p.displayName,
+              avatarUrl: p.avatarUrl,
+              isOnline: p.isOnline,
+              lastSeenAt: null,
+              lastSeenVisible: true,
+            }
+          : null,
+      } as ChatDetailForDrawer;
+    },
   });
 
   const title =

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { ChatType, MemberRole, MessageType, Prisma } from '@prisma/client';
@@ -175,33 +176,63 @@ export class ChatsService {
     throw lastErr;
   }
 
+  private isMissingDbColumnError(e: unknown): boolean {
+    return (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      (e.code === 'P2022' || e.code === 'P2010' || e.message?.includes('does not exist'))
+    );
+  }
+
   async createGroup(userId: string, dto: CreateGroupDto) {
     const ids = [...new Set([userId, ...dto.memberUserIds])];
     const users = await this.prisma.user.findMany({ where: { id: { in: ids } } });
     if (users.length !== ids.length) throw new BadRequestException('Some users not found');
 
-    const inviteSlug = await this.allocateGroupInviteSlug();
-    const chat = await this.prisma.chat.create({
-      data: {
-        type: ChatType.GROUP,
-        title: dto.title,
-        createdById: userId,
-        groupMeta: {
-          create: {
-            description: dto.description ?? null,
-            inviteSlug,
-            inviteEnabled: dto.inviteEnabled !== false,
-            onlyAdminsCanAddMembers: dto.onlyAdminsCanAddMembers ?? false,
+    const membersCreate = ids.map((uid) => ({
+      userId: uid,
+      role: uid === userId ? MemberRole.OWNER : MemberRole.MEMBER,
+    }));
+
+    let chat;
+    try {
+      const inviteSlug = await this.allocateGroupInviteSlug();
+      chat = await this.prisma.chat.create({
+        data: {
+          type: ChatType.GROUP,
+          title: dto.title,
+          createdById: userId,
+          groupMeta: {
+            create: {
+              description: dto.description ?? null,
+              inviteSlug,
+              inviteEnabled: dto.inviteEnabled !== false,
+              onlyAdminsCanAddMembers: dto.onlyAdminsCanAddMembers ?? false,
+            },
           },
+          members: { create: membersCreate },
         },
-        members: {
-          create: ids.map((uid) => ({
-            userId: uid,
-            role: uid === userId ? MemberRole.OWNER : MemberRole.MEMBER,
-          })),
-        },
-      },
-    });
+      });
+    } catch (e) {
+      if (!this.isMissingDbColumnError(e)) throw e;
+      try {
+        chat = await this.prisma.chat.create({
+          data: {
+            type: ChatType.GROUP,
+            title: dto.title,
+            createdById: userId,
+            groupMeta: { create: { description: dto.description ?? null } },
+            members: { create: membersCreate },
+          },
+        });
+      } catch (e2) {
+        if (this.isMissingDbColumnError(e2)) {
+          throw new ServiceUnavailableException(
+            'Database is missing group invite columns. Run: npm run db:migrate -w @pulse/server',
+          );
+        }
+        throw e2;
+      }
+    }
 
     await this.prisma.message.create({
       data: {
@@ -226,25 +257,56 @@ export class ChatsService {
     }
     const inviteSlug = isPrivate ? await this.allocateChannelInviteSlug() : null;
 
-    const chat = await this.prisma.chat.create({
-      data: {
-        type: ChatType.CHANNEL,
-        title: dto.title,
-        isPrivate,
-        createdById: userId,
-        channelMeta: {
-          create: {
-            description: dto.description ?? null,
-            handle: handleNorm,
-            inviteSlug,
-            inviteEnabled: isPrivate,
+    let chat;
+    try {
+      chat = await this.prisma.chat.create({
+        data: {
+          type: ChatType.CHANNEL,
+          title: dto.title,
+          isPrivate,
+          createdById: userId,
+          channelMeta: {
+            create: {
+              description: dto.description ?? null,
+              handle: handleNorm,
+              inviteSlug,
+              inviteEnabled: isPrivate,
+            },
+          },
+          members: {
+            create: { userId, role: MemberRole.OWNER },
           },
         },
-        members: {
-          create: { userId, role: MemberRole.OWNER },
-        },
-      },
-    });
+      });
+    } catch (e) {
+      if (!this.isMissingDbColumnError(e)) throw e;
+      try {
+        chat = await this.prisma.chat.create({
+          data: {
+            type: ChatType.CHANNEL,
+            title: dto.title,
+            isPrivate,
+            createdById: userId,
+            channelMeta: {
+              create: {
+                description: dto.description ?? null,
+                handle: handleNorm,
+              },
+            },
+            members: {
+              create: { userId, role: MemberRole.OWNER },
+            },
+          },
+        });
+      } catch (e2) {
+        if (this.isMissingDbColumnError(e2)) {
+          throw new ServiceUnavailableException(
+            'Database is missing channel invite columns. Run: npm run db:migrate -w @pulse/server',
+          );
+        }
+        throw e2;
+      }
+    }
 
     await this.prisma.message.create({
       data: {

@@ -59,6 +59,8 @@ export const en = {
   archivedTapToShow: 'Tap to show',
   archivedTapToHide: 'Tap to hide',
   newChatAria: 'New chat',
+  /** Opens new group / channel / join flows from the chat list header. */
+  sidebarCreateMenuAria: 'New chat, group, or channel',
   profileAria: 'Profile',
   settingsAria: 'Settings',
   mainMenuAria: 'Open menu',
@@ -166,6 +168,7 @@ export const en = {
   react: 'React',
   // Search modal
   searchHint: '⌘K / Ctrl+K · / anywhere · 2+ characters',
+  searchMinCharsHint: 'Type at least 2 characters to search everywhere.',
   searchUntitled: 'Untitled',
   // Settings
   settingsIntro: 'Theme, language, privacy, sessions, and account.',
