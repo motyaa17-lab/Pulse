@@ -126,6 +126,23 @@ export default function LoginPage() {
           {t('authCreateAccount')}
         </Link>
       </p>
+      <p className="mt-5 text-center text-[11px] leading-relaxed text-white/45">
+        Продолжая, вы соглашаетесь с{' '}
+        <Link
+          className="text-white/70 underline-offset-2 hover:text-white hover:underline"
+          href="/terms"
+        >
+          условиями
+        </Link>{' '}
+        и{' '}
+        <Link
+          className="text-white/70 underline-offset-2 hover:text-white hover:underline"
+          href="/privacy"
+        >
+          политикой конфиденциальности
+        </Link>
+        .
+      </p>
     </motion.div>
   );
 }

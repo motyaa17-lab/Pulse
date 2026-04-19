@@ -11,5 +11,7 @@ coverage
 uploads
 .DS_Store
 *.tsbuildinfo
+# Next static export / Capacitor (если включите output: 'export')
+apps/web/out
 prisma/*.db
 prisma/*.db-journal
