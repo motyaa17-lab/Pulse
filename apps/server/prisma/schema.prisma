@@ -16,6 +16,12 @@ enum ChatType {
   SAVED
 }
 
+enum UserAppRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
 enum MemberRole {
   OWNER
   ADMIN
@@ -33,18 +39,20 @@ enum MessageType {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String      @id @default(cuid())
+  email        String      @unique
   passwordHash String
-  username     String    @unique
+  username     String      @unique
   displayName  String?
   bio          String?
   avatarUrl    String?
   lastSeenAt   DateTime?
   /// When false, other users do not see this user's last seen time in API responses.
-  shareLastSeen Boolean  @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  shareLastSeen Boolean    @default(true)
+  /// Global app role (moderation, admin UI). Distinct from ChatMember.role.
+  role         UserAppRole @default(USER)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   sessions          Session[]
   chatMembers       ChatMember[]

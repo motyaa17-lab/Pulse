@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,17 +18,26 @@ const schema = z.object({
 
 type Form = z.infer<typeof schema>;
 
-export default function LoginPage() {
+function safeInternalPath(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
+  if (raw.includes('\0')) return null;
+  return raw;
+}
+
+function LoginForm() {
   const t = useT();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setTokens = useAuthStore((s) => s.setTokens);
   const token = useAuthStore((s) => s.accessToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const next = safeInternalPath(searchParams.get('next'));
 
   useEffect(() => {
     if (!hasHydrated) return;
-    if (token) router.replace('/chats');
-  }, [hasHydrated, token, router]);
+    if (token) router.replace(next ?? '/chats');
+  }, [hasHydrated, token, router, next]);
+
   const {
     register,
     handleSubmit,
@@ -48,7 +57,7 @@ export default function LoginPage() {
         skipAuth: true,
       });
       setTokens(res);
-      router.replace('/onboarding');
+      router.replace(next ?? '/onboarding');
     } catch {
       setError('root', { message: t('loginErrorCredentials') });
     }
@@ -122,7 +131,10 @@ export default function LoginPage() {
       </form>
       <p className="mt-6 text-center text-sm text-white/70">
         {t('authSignupPrompt')}{' '}
-        <Link className="font-medium text-white underline-offset-4 hover:underline" href="/signup">
+        <Link
+          className="font-medium text-white underline-offset-4 hover:underline"
+          href={next ? `/signup?next=${encodeURIComponent(next)}` : '/signup'}
+        >
           {t('authCreateAccount')}
         </Link>
       </p>
@@ -144,5 +156,19 @@ export default function LoginPage() {
         .
       </p>
     </motion.div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full rounded-[26px] border border-white/12 bg-white/10 p-8 text-center text-sm text-white/60">
+          …
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

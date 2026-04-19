@@ -6,7 +6,7 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { ChatType, MemberRole } from '@prisma/client';
+import { ChatType, MemberRole, UserAppRole } from '@prisma/client';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -113,7 +113,7 @@ export class AuthService {
     const hash = hashRefreshToken(refreshToken);
     const session = await this.prisma.session.findFirst({
       where: { refreshTokenHash: hash, revokedAt: null },
-      include: { user: { select: { id: true, email: true, username: true } } },
+      include: { user: { select: { id: true, email: true, username: true, role: true } } },
     });
     if (!session) throw new UnauthorizedException('Invalid refresh token');
 
@@ -145,8 +145,14 @@ export class AuthService {
     username: string,
     meta: { userAgent?: string; ip?: string },
   ) {
+    const row = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    const role: UserAppRole = row?.role ?? UserAppRole.USER;
+
     const accessToken = await this.jwt.signAsync(
-      { sub: userId, email, username },
+      { sub: userId, email, username, role },
       {
         secret: this.accessSecret,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

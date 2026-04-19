@@ -22,6 +22,7 @@ export class UsersService {
         avatarUrl: true,
         lastSeenAt: true,
         shareLastSeen: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -29,7 +30,7 @@ export class UsersService {
     if (!user) throw new NotFoundException();
     const online = await this.presence.isUserOnline(id);
     if (viewerId !== id) {
-      const { email: _e, shareLastSeen, ...publicUser } = user;
+      const { email: _e, shareLastSeen, role: _role, ...publicUser } = user;
       const showSeen = shareLastSeen;
       return {
         ...publicUser,
@@ -66,6 +67,7 @@ export class UsersService {
         avatarUrl: true,
         lastSeenAt: true,
         shareLastSeen: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },

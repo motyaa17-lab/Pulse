@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,10 +26,26 @@ const schema = z
 
 type Form = z.infer<typeof schema>;
 
-export default function SignupPage() {
+function safeInternalPath(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
+  if (raw.includes('\0')) return null;
+  return raw;
+}
+
+function SignupForm() {
   const t = useT();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setTokens = useAuthStore((s) => s.setTokens);
+  const token = useAuthStore((s) => s.accessToken);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const next = safeInternalPath(searchParams.get('next'));
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    if (token) router.replace(next ?? '/chats');
+  }, [hasHydrated, token, router, next]);
+
   const {
     register,
     handleSubmit,
@@ -53,10 +70,8 @@ export default function SignupPage() {
         skipAuth: true,
       });
       setTokens(res);
-      router.replace('/onboarding');
+      router.replace(next ?? '/onboarding');
     } catch (e) {
-      // Surface the real failure in dev (status/message), instead of a generic banner.
-      // This also makes it obvious when the API server isn't reachable.
       // eslint-disable-next-line no-console
       console.error('Signup failed', e);
 
@@ -68,6 +83,8 @@ export default function SignupPage() {
       setError('root', { message });
     }
   };
+
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : '/login';
 
   return (
     <motion.div
@@ -163,7 +180,10 @@ export default function SignupPage() {
       </form>
       <p className="mt-6 text-center text-sm text-white/70">
         {t('authHaveAccount')}{' '}
-        <Link className="font-medium text-white underline-offset-4 hover:underline" href="/login">
+        <Link
+          className="font-medium text-white underline-offset-4 hover:underline"
+          href={loginHref}
+        >
           {t('authSignInLink')}
         </Link>
       </p>
@@ -185,5 +205,19 @@ export default function SignupPage() {
         .
       </p>
     </motion.div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full rounded-[26px] border border-white/12 bg-white/10 p-8 text-center text-sm text-white/60">
+          …
+        </div>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }

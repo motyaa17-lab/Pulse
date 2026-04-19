@@ -73,6 +73,8 @@ export interface StoryFeedItem {
   };
 }
 
+export type UserAppRoleDto = 'USER' | 'ADMIN' | 'MODERATOR';
+
 export interface MeUserDto {
   id: string;
   email?: string;
@@ -80,6 +82,8 @@ export interface MeUserDto {
   displayName: string | null;
   bio: string | null;
   avatarUrl: string | null;
+  /** Present only on your own `/users/me` payload. */
+  role?: UserAppRoleDto;
   isOnline?: boolean;
   lastSeenAt?: string | null;
   /** When false, other users do not see your last seen time. */

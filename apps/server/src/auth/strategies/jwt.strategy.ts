@@ -2,9 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import type { UserAppRole } from '@prisma/client';
 import type { JwtUser } from '../../common/decorators/current-user.decorator';
 
-type JwtPayload = { sub: string; email: string; username: string };
+type JwtPayload = { sub: string; email: string; username: string; role?: UserAppRole };
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -18,6 +19,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   validate(payload: JwtPayload): JwtUser {
     if (!payload?.sub) throw new UnauthorizedException();
-    return { sub: payload.sub, email: payload.email, username: payload.username };
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      username: payload.username,
+      role: payload.role,
+    };
   }
 }
