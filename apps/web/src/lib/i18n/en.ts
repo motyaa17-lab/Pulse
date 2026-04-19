@@ -61,6 +61,17 @@ export const en = {
   newChatAria: 'New chat',
   /** Opens new group / channel / join flows from the chat list header. */
   sidebarCreateMenuAria: 'New chat, group, or channel',
+  tabBarNavAria: 'Main navigation',
+  tabBarContacts: 'Contacts',
+  tabBarCalls: 'Calls',
+  tabBarChats: 'Chats',
+  tabBarSettings: 'Settings',
+  contactsPlaceholderTitle: 'Contacts',
+  contactsPlaceholderHint:
+    'Your contacts will appear here. For now, find people from the Chats tab search.',
+  callsPlaceholderTitle: 'Calls',
+  callsPlaceholderHint: 'Voice and video calls are coming soon.',
+  settingsAccountSection: 'Account',
   profileAria: 'Profile',
   settingsAria: 'Settings',
   mainMenuAria: 'Open menu',

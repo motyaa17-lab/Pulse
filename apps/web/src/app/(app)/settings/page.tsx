@@ -87,6 +87,24 @@ export default function SettingsPage() {
       <h1 className="mt-4 font-display text-3xl font-semibold text-ink">{t('settings')}</h1>
       <p className="mt-2 text-sm text-ink-muted">{t('settingsIntro')}</p>
 
+      <section className="mt-6 space-y-2 rounded-2xl border border-line bg-surface-elevated p-2">
+        <p className="px-2 pt-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
+          {t('settingsAccountSection')}
+        </p>
+        <Link
+          href="/profile"
+          className="block rounded-xl px-3 py-2.5 text-sm font-medium text-ink transition hover:bg-surface-muted/60"
+        >
+          {t('myProfile')}
+        </Link>
+        <Link
+          href="/sessions"
+          className="block rounded-xl px-3 py-2.5 text-sm font-medium text-ink transition hover:bg-surface-muted/60"
+        >
+          {t('mainMenuSessions')}
+        </Link>
+      </section>
+
       <div className="mt-6 flex gap-2 border-b border-line pb-2">
         {(['general', 'privacy'] as const).map((id) => (
           <button

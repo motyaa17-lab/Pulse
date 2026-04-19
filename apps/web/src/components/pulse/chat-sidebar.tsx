@@ -98,7 +98,6 @@ function SearchHighlight({ text, needle }: { text: string; needle: string }) {
 }
 
 function SidebarCreateMenu({
-  placement,
   onClose,
   onNewGroup,
   onNewChannel,
@@ -107,7 +106,6 @@ function SidebarCreateMenu({
   onJoinChannel,
   t,
 }: {
-  placement: 'header' | 'dock';
   onClose: () => void;
   onNewGroup: () => void;
   onNewChannel: () => void;
@@ -121,12 +119,7 @@ function SidebarCreateMenu({
   return (
     <div
       role="menu"
-      className={cn(
-        'z-[60] min-w-[13.5rem] overflow-hidden rounded-2xl border border-white/12 bg-[#0B1020]/96 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]',
-        placement === 'header'
-          ? 'absolute right-0 top-full mt-2'
-          : 'absolute bottom-full left-1/2 mb-2 -translate-x-1/2',
-      )}
+      className="absolute right-0 top-full z-[60] mt-2 min-w-[13.5rem] overflow-hidden rounded-2xl border border-white/12 bg-[#0B1020]/96 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]"
     >
       <button
         type="button"
@@ -196,21 +189,6 @@ function MagnifierIcon({ className }: { className?: string }) {
   );
 }
 
-function NavIcon({ active, children }: { active?: boolean; children: React.ReactNode }) {
-  return (
-    <span
-      className={cn(
-        'grid h-11 w-11 place-items-center rounded-2xl transition',
-        active
-          ? 'bg-white/14 text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]'
-          : 'text-white/70 hover:bg-white/8 hover:text-white',
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
 function HamburgerIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -224,12 +202,9 @@ function HamburgerIcon({ className }: { className?: string }) {
   );
 }
 
-function AppMenu({ pathname, variant }: { pathname: string | null; variant: 'header' | 'dock' }) {
+function AppMenu({ pathname }: { pathname: string | null }) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const menuAbove = variant === 'dock';
-  const dockActive =
-    pathname === '/settings' || pathname === '/profile' || pathname === '/sessions';
 
   useEffect(() => {
     setOpen(false);
@@ -246,16 +221,7 @@ function AppMenu({ pathname, variant }: { pathname: string | null; variant: 'hea
   }, [open]);
 
   const btnClass =
-    variant === 'header'
-      ? cn(
-          'shrink-0 rounded-2xl border border-white/12 bg-white/8 p-2.5 text-white/85 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]',
-        )
-      : cn(
-          'grid h-11 w-11 place-items-center rounded-2xl bg-transparent transition',
-          dockActive
-            ? 'bg-white/14 text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]'
-            : 'text-white/70 hover:bg-white/8 hover:text-white',
-        );
+    'shrink-0 rounded-2xl border border-white/12 bg-white/8 p-2.5 text-white/85 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99]';
 
   return (
     <div className="relative">
@@ -275,10 +241,7 @@ function AppMenu({ pathname, variant }: { pathname: string | null; variant: 'hea
       {open && (
         <div
           role="menu"
-          className={cn(
-            'absolute z-50 min-w-[12.5rem] rounded-2xl border border-white/12 bg-[#0B1020]/92 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]',
-            menuAbove ? 'bottom-full left-0 mb-2' : 'left-0 top-full mt-2',
-          )}
+          className="absolute left-0 top-full z-50 mt-2 min-w-[12.5rem] rounded-2xl border border-white/12 bg-[#0B1020]/92 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]"
           onClick={(e) => e.stopPropagation()}
         >
           <Link
@@ -305,30 +268,6 @@ function AppMenu({ pathname, variant }: { pathname: string | null; variant: 'hea
           >
             {t('mainMenuSessions')}
           </Link>
-          <Link
-            href="/chats/explore"
-            role="menuitem"
-            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
-            onClick={() => setOpen(false)}
-          >
-            {t('mainMenuExploreChannels')}
-          </Link>
-          <Link
-            href="/join"
-            role="menuitem"
-            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
-            onClick={() => setOpen(false)}
-          >
-            {t('mainMenuJoinByLink')}
-          </Link>
-          <Link
-            href="/join/channel"
-            role="menuitem"
-            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
-            onClick={() => setOpen(false)}
-          >
-            {t('mainMenuJoinChannelLink')}
-          </Link>
         </div>
       )}
     </div>
@@ -345,11 +284,11 @@ export function ChatSidebar() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 220);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [createMenuPlacement, setCreateMenuPlacement] = useState<'closed' | 'header' | 'dock'>(
-    'closed',
-  );
+  const [createMenuPlacement, setCreateMenuPlacement] = useState<'closed' | 'header'>('closed');
   const createHeaderWrapRef = useRef<HTMLDivElement>(null);
-  const createDockWrapRef = useRef<HTMLDivElement>(null);
+  const pendingSidebarSearchFocus = useUiStore((s) => s.pendingSidebarSearchFocus);
+  const setPendingSidebarSearchFocus = useUiStore((s) => s.setPendingSidebarSearchFocus);
+  const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
   const searchBlockRef = useRef<HTMLDivElement>(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
@@ -397,7 +336,6 @@ export function ChatSidebar() {
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
       if (createHeaderWrapRef.current?.contains(t)) return;
-      if (createDockWrapRef.current?.contains(t)) return;
       setCreateMenuPlacement('closed');
     };
     document.addEventListener('mousedown', onDoc);
@@ -426,6 +364,17 @@ export function ChatSidebar() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [searchFocused]);
+
+  useEffect(() => {
+    if (!pendingSidebarSearchFocus) return;
+    const bare = pathname?.split('?')[0] ?? '';
+    if (bare !== '/chats' && bare !== '/chats/') return;
+    setPendingSidebarSearchFocus(false);
+    setSidebarOpen(true);
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('pulse:focus-sidebar-search'));
+    });
+  }, [pendingSidebarSearchFocus, pathname, setPendingSidebarSearchFocus, setSidebarOpen]);
 
   const hideChat = useMutation({
     mutationFn: (chatId: string) =>
@@ -598,7 +547,9 @@ export function ChatSidebar() {
         <header className="shrink-0 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4 md:pt-10">
           <div className="flex items-end justify-between gap-2.5 md:gap-3">
             <div className="flex min-w-0 flex-1 items-end gap-2.5 md:gap-3">
-              <AppMenu pathname={pathname} variant="header" />
+              <div className="hidden md:block">
+                <AppMenu pathname={pathname} />
+              </div>
               <h1 className="min-w-0 flex-1 truncate font-display text-2xl font-semibold tracking-tight text-white md:text-4xl">
                 {t('chats')}
               </h1>
@@ -618,7 +569,6 @@ export function ChatSidebar() {
               </button>
               {createMenuPlacement === 'header' && (
                 <SidebarCreateMenu
-                  placement="header"
                   t={t}
                   onClose={() => setCreateMenuPlacement('closed')}
                   onNewGroup={() => setGroupModalOpen(true)}
@@ -788,7 +738,7 @@ export function ChatSidebar() {
 
         <StoriesStrip />
 
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-24">
+        <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-4 md:pb-24">
           {!isLoading && archivedRaw.length > 0 && (
             <button
               type="button"
@@ -930,85 +880,6 @@ export function ChatSidebar() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Floating bottom navigation */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
-        <div className="mx-auto w-full max-w-[420px] px-4">
-          <nav className="pointer-events-auto rounded-[22px] border border-white/[0.08] bg-[#111921]/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-[24px]">
-            <div className="grid grid-cols-4 items-center gap-1">
-              <div className="flex justify-center">
-                <AppMenu pathname={pathname} variant="dock" />
-              </div>
-              <Link href="/chats" className="contents" aria-label={t('chats')}>
-                <NavIcon active={pathname?.startsWith('/chats')}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </NavIcon>
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('pulse:focus-sidebar-search'));
-                }}
-                className="contents"
-                aria-label={t('search')}
-              >
-                <NavIcon>
-                  <MagnifierIcon className="h-[22px] w-[22px]" />
-                </NavIcon>
-              </button>
-              <div className="relative flex justify-center" ref={createDockWrapRef}>
-                <button
-                  type="button"
-                  onClick={() => setCreateMenuPlacement((p) => (p === 'dock' ? 'closed' : 'dock'))}
-                  className="contents"
-                  aria-expanded={createMenuPlacement === 'dock'}
-                  aria-haspopup="menu"
-                  aria-label={t('sidebarCreateMenuAria')}
-                >
-                  <NavIcon>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <path
-                        d="M12 5v14M5 12h14"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </NavIcon>
-                </button>
-                {createMenuPlacement === 'dock' && (
-                  <SidebarCreateMenu
-                    placement="dock"
-                    t={t}
-                    onClose={() => setCreateMenuPlacement('closed')}
-                    onNewGroup={() => setGroupModalOpen(true)}
-                    onNewChannel={() => setChannelModalOpen(true)}
-                    onExploreChannels={() => {
-                      setCreateMenuPlacement('closed');
-                      router.push('/chats/explore');
-                    }}
-                    onJoinGroup={() => {
-                      setCreateMenuPlacement('closed');
-                      router.push('/join');
-                    }}
-                    onJoinChannel={() => {
-                      setCreateMenuPlacement('closed');
-                      router.push('/join/channel');
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          </nav>
         </div>
       </div>
 
@@ -1157,7 +1028,7 @@ function ChatRow({
             </div>
           </div>
         </Link>
-        <div className="relative flex shrink-0 items-center pr-1">
+        <div className="relative hidden shrink-0 items-center pr-1 md:flex">
           <motion.button
             type="button"
             className={cn(

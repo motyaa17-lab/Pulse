@@ -12,6 +12,8 @@ type UiState = {
   /** When true, chat list hides last message text (previews) for shoulder-surfing resistance. */
   hideChatListPreviews: boolean;
   sidebarOpen: boolean;
+  /** When navigating to /chats from elsewhere, open list + focus search once. */
+  pendingSidebarSearchFocus: boolean;
   detailsOpen: boolean;
   searchOpen: boolean;
   typingByChat: Record<string, boolean>;
@@ -23,6 +25,7 @@ type UiState = {
   setHideChatListPreviews: (v: boolean) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (v: boolean) => void;
+  setPendingSidebarSearchFocus: (v: boolean) => void;
   setDetailsOpen: (v: boolean) => void;
   setSearchOpen: (v: boolean) => void;
   setTypingForChat: (chatId: string, typing: boolean) => void;
@@ -37,6 +40,7 @@ export const useUiStore = create<UiState>()(
       soundEnabled: true,
       hideChatListPreviews: false,
       sidebarOpen: true,
+      pendingSidebarSearchFocus: false,
       detailsOpen: false,
       searchOpen: false,
       typingByChat: {},
@@ -47,6 +51,8 @@ export const useUiStore = create<UiState>()(
       setHideChatListPreviews: (hideChatListPreviews) => set({ hideChatListPreviews }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+      setPendingSidebarSearchFocus: (pendingSidebarSearchFocus) =>
+        set({ pendingSidebarSearchFocus }),
       setDetailsOpen: (detailsOpen) => set({ detailsOpen }),
       setSearchOpen: (searchOpen) => set({ searchOpen }),
       setTypingForChat: (chatId, typing) =>
