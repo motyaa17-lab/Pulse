@@ -19,7 +19,6 @@ import type { ChatListItem, MeUserDto } from '@/lib/types';
 import { useT } from '@/lib/i18n';
 import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
 import { useLanguageStore } from '@/stores/language-store';
-import { useMobileChatVisualFrame } from '@/hooks/use-mobile-chat-visual-frame';
 
 function typeLabel(t: (k: any) => string, type: string | undefined): string {
   switch (type) {
@@ -48,54 +47,6 @@ export default function ChatPage() {
   const t = useT();
   const language = useLanguageStore((s) => s.language);
   const [inChatSearchOpen, setInChatSearchOpen] = useState(false);
-  const [isMobileChat, setIsMobileChat] = useState(false);
-  const scrollLockYRef = useRef(0);
-
-  useEffect(() => {
-    const mm = window.matchMedia('(max-width: 767px)');
-    const apply = () => setIsMobileChat(mm.matches);
-    apply();
-    mm.addEventListener('change', apply);
-    return () => mm.removeEventListener('change', apply);
-  }, []);
-
-  const vvFrame = useMobileChatVisualFrame(isMobileChat);
-
-  useEffect(() => {
-    if (!isMobileChat) return;
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-    scrollLockYRef.current = y;
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtml = { overflow: html.style.overflow, height: html.style.height };
-    const prevBody = {
-      position: body.style.position,
-      top: body.style.top,
-      left: body.style.left,
-      right: body.style.right,
-      width: body.style.width,
-      overflow: body.style.overflow,
-    };
-    html.style.overflow = 'hidden';
-    html.style.height = '100%';
-    body.style.position = 'fixed';
-    body.style.top = `-${y}px`;
-    body.style.left = '0';
-    body.style.right = '0';
-    body.style.width = '100%';
-    body.style.overflow = 'hidden';
-    return () => {
-      html.style.overflow = prevHtml.overflow;
-      html.style.height = prevHtml.height;
-      body.style.position = prevBody.position;
-      body.style.top = prevBody.top;
-      body.style.left = prevBody.left;
-      body.style.right = prevBody.right;
-      body.style.width = prevBody.width;
-      body.style.overflow = prevBody.overflow;
-      window.scrollTo(0, scrollLockYRef.current);
-    };
-  }, [isMobileChat]);
 
   useEffect(() => {
     setDetailsOpen(false);
@@ -176,19 +127,11 @@ export default function ChatPage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0e1621] text-white md:h-full md:min-h-0 md:flex-1 md:bg-transparent md:text-inherit',
-        isMobileChat && 'fixed left-0 right-0 z-[25] max-h-none overscroll-none',
+        'flex min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0e1621] text-white',
+        /* Full-screen app shell on phone: no JS viewport height; keyboard overlays via meta + fixed composer. */
+        'max-md:fixed max-md:inset-0 max-md:z-[25] max-md:overscroll-none',
+        'md:relative md:inset-auto md:h-full md:min-h-0 md:flex-1 md:bg-transparent md:text-inherit',
       )}
-      style={
-        isMobileChat
-          ? {
-              top: vvFrame.top,
-              height: vvFrame.height,
-              width: '100%',
-              maxWidth: '100vw',
-            }
-          : undefined
-      }
     >
       <header
         className={cn(

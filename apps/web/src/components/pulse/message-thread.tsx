@@ -752,7 +752,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         ref={parentRef}
-        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-2 [-webkit-overflow-scrolling:touch] md:px-5 md:py-2.5"
+        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-2 [-webkit-overflow-scrolling:touch] max-md:pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:px-5 md:py-2.5"
         onDragEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -915,7 +915,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 6 }}
             transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
-            className="pointer-events-auto absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#17212b]/95 text-white shadow-lg backdrop-blur-md transition hover:bg-[#1c2a38] active:scale-[0.97] md:bottom-[4.5rem] md:right-5"
+            className="pointer-events-auto absolute bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#17212b]/95 text-white shadow-lg backdrop-blur-md transition hover:bg-[#1c2a38] active:scale-[0.97] md:bottom-[4.5rem] md:right-5"
             onClick={() => {
               const el = parentRef.current;
               if (!el) return;

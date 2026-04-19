@@ -167,7 +167,7 @@ export default function MyProfilePage() {
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface-muted/40 px-3 text-sm text-ink outline-none focus:border-accent/40"
+              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface-muted/40 px-3 text-[16px] text-ink outline-none focus:border-accent/40 md:text-sm"
               placeholder={t('placeholderDisplayName')}
             />
           </div>
@@ -179,7 +179,7 @@ export default function MyProfilePage() {
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface-muted/40 px-3 text-sm text-ink outline-none focus:border-accent/40"
+              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface-muted/40 px-3 text-[16px] text-ink outline-none focus:border-accent/40 md:text-sm"
               placeholder={t('placeholderUsername')}
             />
             <p className="mt-1 text-xs text-ink-muted">{t('usernameRules')}</p>
@@ -193,7 +193,7 @@ export default function MyProfilePage() {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
-              className="mt-1 w-full resize-none rounded-xl border border-line bg-surface-muted/40 px-3 py-2 text-sm text-ink outline-none focus:border-accent/40"
+              className="mt-1 w-full resize-none rounded-xl border border-line bg-surface-muted/40 px-3 py-2 text-[16px] text-ink outline-none focus:border-accent/40 md:text-sm"
               placeholder={t('placeholderBio')}
             />
           </div>
