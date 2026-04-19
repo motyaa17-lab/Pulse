@@ -592,11 +592,10 @@ export function Composer({
   return (
     <div
       className={cn(
-        'mobile-chat-composer touch-manipulation px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5',
-        /* Phone: dock like native chat — stable shell height (100svh) + viewport interactive-widget. */
-        'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-[38] max-md:shrink-0 max-md:w-full',
+        'mobile-chat-composer shrink-0 touch-manipulation px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5',
+        /* In-flow on phone: fixed+focus inside iOS causes viewport jump; flex column keeps bar flush to thread. */
         'max-md:border-t max-md:border-white/[0.06] max-md:bg-[#0e1621]/88 max-md:shadow-[0_-10px_36px_rgba(0,0,0,0.42)] max-md:backdrop-blur-xl max-md:backdrop-saturate-150',
-        'md:shrink-0 md:border-t md:border-line/75 md:bg-surface-elevated/98 md:backdrop-blur-md dark:md:border-line/45 dark:md:bg-surface-elevated/98',
+        'md:border-t md:border-line/75 md:bg-surface-elevated/98 md:backdrop-blur-md dark:md:border-line/45 dark:md:bg-surface-elevated/98',
       )}
     >
       {editing && (
