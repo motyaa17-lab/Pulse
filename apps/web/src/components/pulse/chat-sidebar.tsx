@@ -543,7 +543,7 @@ export function ChatSidebar() {
   return (
     <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#17212b] text-white">
       {/* Full width on mobile, centered preview on desktop */}
-      <div className="flex h-full w-full flex-col md:mx-auto md:max-w-[420px]">
+      <div className="flex h-full min-h-0 w-full flex-col md:mx-auto md:max-w-[420px]">
         <header className="shrink-0 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4 md:pt-10">
           <div className="flex items-end justify-between gap-2.5 md:gap-3">
             <div className="flex min-w-0 flex-1 items-end gap-2.5 md:gap-3">
@@ -738,7 +738,7 @@ export function ChatSidebar() {
 
         <StoriesStrip />
 
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-4 md:pb-24">
+        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24">
           {!isLoading && archivedRaw.length > 0 && (
             <button
               type="button"
@@ -953,7 +953,6 @@ function ChatRow({
 
   return (
     <motion.div
-      layout
       transition={{ type: 'spring', stiffness: 520, damping: 42, mass: 0.7 }}
       className="group/row relative"
     >

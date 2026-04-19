@@ -6,7 +6,7 @@ import { useT } from '@/lib/i18n';
 export default function ContactsPlaceholderPage() {
   const t = useT();
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-lg flex-col bg-[#0e1621] px-6 py-10 text-white md:min-h-0 md:bg-transparent md:text-ink">
+    <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-y-auto bg-[#0e1621] px-6 py-10 text-white md:max-h-none md:flex-none md:bg-transparent md:text-ink">
       <Link
         href="/chats"
         className="text-sm text-sky-300 hover:text-sky-200 md:text-accent md:hover:underline"

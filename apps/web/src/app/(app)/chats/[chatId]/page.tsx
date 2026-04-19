@@ -150,10 +150,9 @@ export default function ChatPage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#0e1621] text-white',
-        /* Full-screen app shell on phone: no JS viewport height; keyboard overlays via meta + fixed composer. */
-        'max-md:fixed max-md:inset-0 max-md:z-[25] max-md:overscroll-none',
-        'md:relative md:inset-auto md:h-full md:min-h-0 md:flex-1 md:bg-transparent md:text-inherit',
+        'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#0e1621] text-white',
+        'max-md:z-[25]',
+        'md:relative md:h-full md:min-h-0 md:flex-1 md:bg-transparent md:text-inherit',
       )}
     >
       <header

@@ -80,7 +80,7 @@ export default function SettingsPage() {
   const shareLastSeen = me?.shareLastSeen !== false;
 
   return (
-    <div className="mx-auto max-w-lg px-6 py-10">
+    <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-6 py-10">
       <Link href="/chats" className="text-sm text-accent">
         ← {t('backToChats')}
       </Link>

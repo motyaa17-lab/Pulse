@@ -8,7 +8,8 @@ import { MobileTabBar } from '@/components/pulse/mobile-tab-bar';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGate>
-      <div className="min-h-[100dvh] pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:min-h-0 md:pb-0">
+      {/* Mobile: bounded flex column so chat list / thread get min-h-0 + scroll; desktop: no extra wrapper. */}
+      <div className="max-md:flex max-md:h-[100dvh] max-md:min-h-0 max-md:flex-col max-md:overflow-hidden md:contents">
         {children}
       </div>
       <MobileTabBar />
