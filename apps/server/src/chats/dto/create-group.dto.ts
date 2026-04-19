@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, MaxLength, MinLength, ArrayMinSize } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ArrayMinSize,
+} from 'class-validator';
 
 export class CreateGroupDto {
   @ApiProperty()
@@ -13,6 +21,18 @@ export class CreateGroupDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+
+  @ApiPropertyOptional({
+    description: 'When true, only admins/owner can add members (Telegram-style)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  onlyAdminsCanAddMembers?: boolean;
+
+  @ApiPropertyOptional({ description: 'Whether the invite link accepts new members' })
+  @IsOptional()
+  @IsBoolean()
+  inviteEnabled?: boolean;
 
   @ApiProperty({ type: [String] })
   @IsArray()

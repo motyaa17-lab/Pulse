@@ -8,6 +8,8 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { AddMemberDto } from './dto/members.dto';
+import { JoinGroupDto } from './dto/join-group.dto';
+import { PatchGroupSettingsDto } from './dto/patch-group-settings.dto';
 import { IsOptional, IsString } from 'class-validator';
 import { IsArray } from 'class-validator';
 
@@ -34,6 +36,16 @@ export class ChatsController {
     return this.chats.listForUser(user.sub, q);
   }
 
+  @Get('discover/channels')
+  discoverChannels(@CurrentUser() user: JwtUser, @Query('q') q?: string) {
+    return this.chats.listDiscoverableChannels(user.sub, q);
+  }
+
+  @Post('join/group')
+  joinGroup(@CurrentUser() user: JwtUser, @Body() dto: JoinGroupDto) {
+    return this.chats.joinGroupByInvite(user.sub, dto.slug);
+  }
+
   /** Must be registered before `:id` so `shared-media` is not parsed as a chat id. */
   @Get(':id/shared-media')
   sharedMedia(
@@ -48,6 +60,20 @@ export class ChatsController {
   @Get(':id')
   getOne(@CurrentUser() user: JwtUser, @Param('id') id: string) {
     return this.chats.getChatDetail(id, user.sub);
+  }
+
+  @Patch(':id/group-settings')
+  patchGroupSettings(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Body() dto: PatchGroupSettingsDto,
+  ) {
+    return this.chats.updateGroupSettings(user.sub, id, dto);
+  }
+
+  @Post(':id/group/invite/rotate')
+  rotateGroupInvite(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return this.chats.rotateGroupInvite(user.sub, id);
   }
 
   @Post('direct')

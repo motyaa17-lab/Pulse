@@ -24,6 +24,7 @@ import {
   QUICK_REACTION_EMOJIS,
   type MessageMenuAction,
 } from './message-actions-menu';
+import type { ChatDetailForDrawer } from '@/components/pulse/chat-details-drawer';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
@@ -424,6 +425,12 @@ export function MessageThread({ chatId }: { chatId: string }) {
   });
   const myId = myIdFromToken ?? meUser?.id ?? null;
 
+  const { data: chatMeta } = useQuery({
+    queryKey: ['chat', chatId],
+    queryFn: () => apiFetch<ChatDetailForDrawer>(`/chats/${chatId}`),
+  });
+  const canPost = !chatMeta?.role || chatMeta.type !== 'CHANNEL' || chatMeta.role !== 'SUBSCRIBER';
+
   const { data: chatsForForward } = useQuery<ChatListItem[]>({
     queryKey: ['chats', ''],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
@@ -755,17 +762,20 @@ export function MessageThread({ chatId }: { chatId: string }) {
         onDragEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (!canPost) return;
           dragDepth.current += 1;
           setDragActive(true);
         }}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (!canPost) return;
           if (!dragActive) setDragActive(true);
         }}
         onDragLeave={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (!canPost) return;
           dragDepth.current = Math.max(0, dragDepth.current - 1);
           if (dragDepth.current === 0) setDragActive(false);
         }}
@@ -774,6 +784,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
           e.stopPropagation();
           dragDepth.current = 0;
           setDragActive(false);
+          if (!canPost) return;
           const files = Array.from(e.dataTransfer.files ?? []);
           if (!files.length) return;
           if (!accessToken) return;
@@ -868,6 +879,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   prev={prev}
                   next={next}
                   myId={myId ?? undefined}
+                  channelSubscriberRestricted={!canPost}
                   highlighted={highlighted === m.id}
                   onReply={() => setReplyTo(m)}
                   onForward={() => setForwarding(m)}
@@ -950,6 +962,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
         onCancelReply={() => setReplyTo(null)}
         editing={editing}
         onCancelEdit={() => setEditing(null)}
+        canPost={canPost}
       />
       {forwarding && (
         <div
@@ -1022,6 +1035,7 @@ function MessageBubble({
   prev,
   next,
   myId,
+  channelSubscriberRestricted = false,
   highlighted,
   onReply,
   onForward,
@@ -1040,6 +1054,8 @@ function MessageBubble({
   prev?: MessageDto;
   next?: MessageDto;
   myId?: string;
+  /** Channel subscribers cannot edit, delete for everyone, or pin. */
+  channelSubscriberRestricted?: boolean;
   highlighted: boolean;
   onReply: () => void;
   onForward: () => void;
@@ -1219,8 +1235,8 @@ function MessageBubble({
   }
 
   const isOutgoing = Boolean(myId && m.senderId === myId);
-  const canEdit = isOutgoing && !isDeleted && m.type === 'TEXT';
-  const canDeleteEveryone = isOutgoing && !isDeleted;
+  const canEdit = isOutgoing && !isDeleted && m.type === 'TEXT' && !channelSubscriberRestricted;
+  const canDeleteEveryone = isOutgoing && !isDeleted && !channelSubscriberRestricted;
   const canCopy = Boolean(m.text && !isDeleted);
   const showDate = !prev || !sameCalendarDay(prev.createdAt, m.createdAt);
   const firstInGroup = !prev || prev.type === 'SYSTEM' || !inSameGroup(prev, m);
@@ -1292,7 +1308,7 @@ function MessageBubble({
           ((qc.getQueryData(['chat', chatId]) as any)?.pinnedMessage?.id ?? null) === m.id
             ? t('msgUnpin')
             : t('msgPin'),
-        disabled: isDeleted,
+        disabled: isDeleted || channelSubscriberRestricted,
         onSelect: () => pinOrUnpin(m.id),
       },
       {
@@ -1342,6 +1358,7 @@ function MessageBubble({
       canCopy,
       canDeleteEveryone,
       canEdit,
+      channelSubscriberRestricted,
       chatId,
       deleteForMe,
       isDeleted,

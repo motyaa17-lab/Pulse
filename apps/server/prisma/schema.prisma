@@ -163,6 +163,11 @@ model GroupMetadata {
   chatId      String  @unique
   chat        Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
   description String?
+  /// Opaque token for invite links (`/join/g/:slug`). Unique when set.
+  inviteSlug               String? @unique
+  inviteEnabled            Boolean @default(true)
+  /// When true, only OWNER/ADMIN may add members; otherwise any member can invite.
+  onlyAdminsCanAddMembers Boolean @default(false)
 }
 
 model ChannelMetadata {

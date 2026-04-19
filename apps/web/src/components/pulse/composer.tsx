@@ -102,12 +102,15 @@ export function Composer({
   onCancelReply,
   editing,
   onCancelEdit,
+  canPost = true,
 }: {
   chatId: string;
   replyTo: MessageDto | null;
   onCancelReply: () => void;
   editing: MessageDto | null;
   onCancelEdit: () => void;
+  /** Channel subscribers cannot post (server enforces too). */
+  canPost?: boolean;
 }) {
   const t = useT();
   const [text, setText] = useState('');
@@ -358,6 +361,7 @@ export function Composer({
   });
 
   const triggerSend = useCallback(() => {
+    if (!canPost) return;
     const bodyText = text.trim();
     const attachmentInputs = pending.map((p) => ({
       storageKey: p.storageKey,
@@ -403,6 +407,7 @@ export function Composer({
     replyTo,
     send,
     text,
+    canPost,
   ]);
 
   const onKeyDown = useCallback(
@@ -416,7 +421,7 @@ export function Composer({
     [triggerSend],
   );
 
-  const canSend = Boolean(text.trim() || pending.length);
+  const canSend = Boolean(canPost && (text.trim() || pending.length));
 
   const resizeTextarea = useCallback(() => {
     const el = taRef.current;
@@ -432,7 +437,7 @@ export function Composer({
 
   const beginVoiceRecording = useCallback(
     async (pointerId: number) => {
-      if (editing || !token) return;
+      if (!canPost || editing || !token) return;
       if (!voicePointerDownRef.current) {
         setVoiceUi('idle');
         return;
@@ -524,7 +529,7 @@ export function Composer({
         window.setTimeout(() => setVoiceErr(null), 3200);
       }
     },
-    [addPending, chatId, editing, sessionId, t, token],
+    [addPending, canPost, chatId, editing, sessionId, t, token],
   );
 
   const abortVoiceArm = useCallback(() => {
@@ -537,7 +542,7 @@ export function Composer({
 
   const onVoiceMicPointerDown = useCallback(
     (e: React.PointerEvent<HTMLButtonElement>) => {
-      if (editing || e.button !== 0) return;
+      if (!canPost || editing || e.button !== 0) return;
       e.preventDefault();
       voicePointerDownRef.current = true;
       voiceStartCoordsRef.current = { x: e.clientX, y: e.clientY };
@@ -556,7 +561,7 @@ export function Composer({
         void beginVoiceRecording(pid);
       }, 95);
     },
-    [beginVoiceRecording, editing],
+    [beginVoiceRecording, canPost, editing],
   );
 
   const onVoiceMicPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
@@ -760,11 +765,17 @@ export function Composer({
           {voiceErr}
         </p>
       )}
+      {!canPost && (
+        <p className="mb-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-center text-[12px] font-medium text-amber-900 dark:text-amber-100/90">
+          {t('channelReadOnlyComposer')}
+        </p>
+      )}
       <div className="flex items-end gap-1 rounded-[1.65rem] border border-line/80 bg-surface-muted/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-white/[0.08] dark:bg-[#111921] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         <label
           className={cn(
             'mb-px flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[1rem] text-ink-muted transition',
             'hover:bg-surface-elevated/90 hover:text-accent active:scale-[0.97] dark:hover:bg-surface-elevated/55',
+            !canPost && 'pointer-events-none opacity-40',
           )}
           title={t('attachFile')}
         >
@@ -776,6 +787,10 @@ export function Composer({
             onChange={async (e) => {
               const f = e.target.files?.[0];
               if (!f) return;
+              if (!canPost) {
+                e.target.value = '';
+                return;
+              }
               const kind = f.type.startsWith('image/')
                 ? 'image'
                 : f.type.startsWith('video/')
@@ -802,7 +817,7 @@ export function Composer({
         {!editing && (
           <button
             type="button"
-            disabled={!token}
+            disabled={!canPost || !token}
             onClick={() => setVideoCaptureOpen(true)}
             className={cn(
               'mb-px flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem] text-ink-muted transition',
@@ -818,7 +833,7 @@ export function Composer({
           <button
             ref={voiceMicBtnRef}
             type="button"
-            disabled={!token}
+            disabled={!canPost || !token}
             onPointerDown={onVoiceMicPointerDown}
             onPointerMove={onVoiceMicPointerMove}
             onPointerUp={onVoiceMicPointerUp}
@@ -842,8 +857,10 @@ export function Composer({
           autoCorrect="on"
           spellCheck
           autoComplete="off"
+          readOnly={!canPost}
           value={text}
           onChange={(e) => {
+            if (!canPost) return;
             const next = e.target.value;
             setText(next);
             if (editing) return;

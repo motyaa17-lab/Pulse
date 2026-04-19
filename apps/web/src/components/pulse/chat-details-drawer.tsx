@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
@@ -10,6 +10,7 @@ import { useT, type I18nKey } from '@/lib/i18n';
 import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
 import { useLanguageStore } from '@/stores/language-store';
 import { apiFetch, toPublicUrl } from '@/lib/api';
+import { AddMemberModal } from '@/components/pulse/add-member-modal';
 
 type SharedMediaItem = {
   id: string;
@@ -30,6 +31,13 @@ export type ChatDetailForDrawer = {
   avatarUrl: string | null;
   isPrivate?: boolean;
   role?: string;
+  group?: {
+    description: string | null;
+    onlyAdminsCanAddMembers?: boolean;
+    inviteEnabled?: boolean;
+    inviteSlug?: string | null;
+  } | null;
+  channel?: { handle: string | null; description: string | null } | null;
   peer?: {
     id: string;
     displayName: string | null;
@@ -51,6 +59,7 @@ export type ChatDetailForDrawer = {
     userId: string;
     role: string;
     user: {
+      id?: string;
       username: string;
       displayName: string | null;
       avatarUrl: string | null;
@@ -93,6 +102,7 @@ export function ChatDetailsDrawer({
   onClose: () => void;
   chat: ChatDetailForDrawer | undefined;
 }) {
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
   const t = useT();
   const language = useLanguageStore((s) => s.language);
   const onCloseRef = useRef(onClose);
@@ -140,6 +150,23 @@ export function ChatDetailsDrawer({
   const peerId = chat?.peer?.id;
   const status = isDirect && chat?.peer ? directChatPresenceSubtitle(chat.peer, t, language) : null;
   const initial = displayName.slice(0, 1).toUpperCase() || '?';
+
+  const canManageMembers = Boolean(
+    chat &&
+    !isDirect &&
+    (chat.role === 'OWNER' ||
+      chat.role === 'ADMIN' ||
+      (chat.type === 'GROUP' && chat.role === 'MEMBER' && !chat.group?.onlyAdminsCanAddMembers)),
+  );
+
+  const existingMemberIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const m of chat?.members ?? []) s.add(m.userId);
+    return s;
+  }, [chat?.members]);
+
+  const groupDesc = chat?.type === 'GROUP' ? chat.group?.description : null;
+  const channelMeta = chat?.type === 'CHANNEL' ? chat.channel : null;
 
   return createPortal(
     <>
@@ -240,6 +267,37 @@ export function ChatDetailsDrawer({
                   {t('drawerYourRole')} <span className="font-medium text-ink">{chat.role}</span>
                 </p>
               )}
+              {chat?.type === 'CHANNEL' && (
+                <p className="mt-2 text-center text-[11px] text-ink-muted">
+                  {chat.isPrivate ? t('drawerChannelPrivate') : t('drawerChannelPublic')}
+                </p>
+              )}
+              {channelMeta?.handle ? (
+                <p className="mt-1 text-center text-sm text-accent">@{channelMeta.handle}</p>
+              ) : null}
+              {(groupDesc || channelMeta?.description)?.trim() ? (
+                <p className="mt-3 px-1 text-center text-sm leading-relaxed text-ink-muted">
+                  {(groupDesc || channelMeta?.description || '').trim()}
+                </p>
+              ) : null}
+              {canManageMembers && chat?.id && (
+                <button
+                  type="button"
+                  className="mx-auto mt-4 block rounded-xl border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/15"
+                  onClick={() => setAddMemberOpen(true)}
+                >
+                  {t('drawerAddMembers')}
+                </button>
+              )}
+              {chat?.type === 'GROUP' && chat.id && (
+                <Link
+                  href={`/chats/${chat.id}/group`}
+                  onClick={onClose}
+                  className="mx-auto mt-3 block text-center text-sm font-semibold text-accent underline-offset-2 hover:underline"
+                >
+                  {t('drawerGroupSettings')}
+                </Link>
+              )}
             </div>
           )}
 
@@ -249,17 +307,34 @@ export function ChatDetailsDrawer({
                 {t('drawerMembers')} ({chat.members.length})
               </p>
               <ul className="mt-2 space-y-2">
-                {chat.members.map((m) => (
-                  <li
-                    key={m.userId}
-                    className="flex items-center gap-2 rounded-lg border border-line/60 px-2 py-2 text-sm dark:border-line/45"
-                  >
-                    <span className="min-w-0 flex-1 truncate font-medium text-ink">
-                      {m.user.displayName ?? m.user.username}
-                    </span>
-                    <span className="shrink-0 text-2xs uppercase text-ink-muted">{m.role}</span>
-                  </li>
-                ))}
+                {chat.members.map((m) => {
+                  const uid = m.user.id ?? m.userId;
+                  const inner = (
+                    <>
+                      <span className="min-w-0 flex-1 truncate font-medium text-ink">
+                        {m.user.displayName ?? m.user.username}
+                      </span>
+                      <span className="shrink-0 text-2xs uppercase text-ink-muted">{m.role}</span>
+                    </>
+                  );
+                  return (
+                    <li key={m.userId}>
+                      {uid ? (
+                        <Link
+                          href={`/users/${uid}`}
+                          onClick={onClose}
+                          className="flex items-center gap-2 rounded-lg border border-line/60 px-2 py-2 text-sm transition hover:bg-surface-muted/50 dark:border-line/45"
+                        >
+                          {inner}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-2 rounded-lg border border-line/60 px-2 py-2 text-sm dark:border-line/45">
+                          {inner}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -340,6 +415,14 @@ export function ChatDetailsDrawer({
           </div>
         </div>
       </aside>
+      {chat?.id ? (
+        <AddMemberModal
+          open={addMemberOpen}
+          onClose={() => setAddMemberOpen(false)}
+          chatId={chat.id}
+          existingUserIds={existingMemberIds}
+        />
+      ) : null}
     </>,
     document.body,
   );

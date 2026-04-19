@@ -176,6 +176,22 @@ function AppMenu({ pathname, variant }: { pathname: string | null; variant: 'hea
           >
             {t('mainMenuSessions')}
           </Link>
+          <Link
+            href="/chats/explore"
+            role="menuitem"
+            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
+            onClick={() => setOpen(false)}
+          >
+            {t('mainMenuExploreChannels')}
+          </Link>
+          <Link
+            href="/join"
+            role="menuitem"
+            className="block px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10"
+            onClick={() => setOpen(false)}
+          >
+            {t('mainMenuJoinByLink')}
+          </Link>
         </div>
       )}
     </div>
