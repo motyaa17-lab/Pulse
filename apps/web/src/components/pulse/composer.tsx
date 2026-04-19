@@ -592,11 +592,11 @@ export function Composer({
   return (
     <div
       className={cn(
-        'mobile-chat-composer touch-manipulation px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md',
-        /* Phone: dock like native chat — keyboard overlays; no visualViewport / innerHeight sizing. */
+        'mobile-chat-composer touch-manipulation px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5',
+        /* Phone: dock like native chat — stable shell height (100svh) + viewport interactive-widget. */
         'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-[38] max-md:shrink-0 max-md:w-full',
-        'md:shrink-0',
-        'border-t border-white/[0.08] bg-[#0e1621]/96 md:border-line/75 md:bg-surface-elevated/98 dark:md:border-line/45 dark:md:bg-surface-elevated/98',
+        'max-md:border-t max-md:border-white/[0.06] max-md:bg-[#0e1621]/88 max-md:shadow-[0_-10px_36px_rgba(0,0,0,0.42)] max-md:backdrop-blur-xl max-md:backdrop-saturate-150',
+        'md:shrink-0 md:border-t md:border-line/75 md:bg-surface-elevated/98 md:backdrop-blur-md dark:md:border-line/45 dark:md:bg-surface-elevated/98',
       )}
     >
       {editing && (
@@ -772,6 +772,7 @@ export function Composer({
           <PaperclipIcon className="h-[1.15rem] w-[1.15rem] opacity-90" />
           <input
             type="file"
+            tabIndex={-1}
             className="sr-only"
             onChange={async (e) => {
               const f = e.target.files?.[0];
@@ -837,6 +838,11 @@ export function Composer({
         <textarea
           ref={taRef}
           rows={1}
+          enterKeyHint="send"
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
+          autoComplete="off"
           value={text}
           onChange={(e) => {
             const next = e.target.value;

@@ -58,7 +58,7 @@ export function ChatSearchOverlay({
       <div
         className={cn(
           'fixed z-[141] flex flex-col border border-line/80 bg-surface-elevated shadow-2xl dark:border-line/50 dark:bg-[#17212b]',
-          'max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:max-w-none max-md:rounded-none max-md:border-0',
+          'max-md:inset-0 max-md:h-[100svh] max-md:w-full max-md:max-w-none max-md:rounded-none max-md:border-0',
           'md:left-1/2 md:top-[max(4.5rem,env(safe-area-inset-top)+3rem)] md:h-auto md:max-h-[min(72vh,28rem)] md:w-[min(100%-1.5rem,26rem)] md:-translate-x-1/2 md:rounded-2xl md:border md:p-3',
         )}
         role="dialog"

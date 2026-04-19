@@ -151,7 +151,7 @@ export function ChatDetailsDrawer({
       />
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-[101] flex h-[100dvh] max-h-[100dvh] w-full max-w-[22rem] flex-col border-l border-line/80 bg-surface-elevated shadow-[0_0_40px_rgba(0,0,0,0.12)]',
+          'fixed inset-y-0 right-0 z-[101] flex h-[100svh] max-h-[100svh] w-full max-w-[22rem] flex-col border-l border-line/80 bg-surface-elevated shadow-[0_0_40px_rgba(0,0,0,0.12)]',
           'max-md:max-w-none dark:border-line/50 dark:bg-surface-elevated/98 dark:shadow-[0_0_48px_rgba(0,0,0,0.45)]',
         )}
         role="dialog"
