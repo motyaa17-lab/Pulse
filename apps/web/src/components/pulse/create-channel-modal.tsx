@@ -29,7 +29,7 @@ export function CreateChannelModal({
         body: {
           title: title.trim(),
           description: description.trim() || undefined,
-          handle: handle.trim() || undefined,
+          handle: isPrivate ? undefined : handle.trim() || undefined,
           isPrivate,
         },
       }),
@@ -46,7 +46,7 @@ export function CreateChannelModal({
 
   if (!open) return null;
 
-  const handleOk = !handle.trim() || /^[a-z0-9_]{3,32}$/i.test(handle.trim());
+  const handleOk = isPrivate || !handle.trim() || /^[a-z0-9_]{3,32}$/i.test(handle.trim());
   const canSubmit = title.trim().length >= 1 && handleOk && !create.isPending;
 
   return (
@@ -82,19 +82,21 @@ export function CreateChannelModal({
               className="mt-1 w-full rounded-xl border border-line bg-surface-muted/30 px-3 py-2 text-sm outline-none dark:border-line/45"
             />
           </label>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            {t('createChannelHandleLabel')}
-            <input
-              value={handle}
-              onChange={(e) => setHandle(e.target.value.replace(/[^a-z0-9_]/gi, ''))}
-              maxLength={32}
-              className="mt-1 w-full rounded-xl border border-line bg-surface-muted/30 px-3 py-2 text-sm outline-none dark:border-line/45"
-              placeholder="pulse_news"
-            />
-            <span className="mt-1 block text-[11px] text-ink-muted">
-              {t('createChannelHandleHint')}
-            </span>
-          </label>
+          {!isPrivate && (
+            <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              {t('createChannelHandleLabel')}
+              <input
+                value={handle}
+                onChange={(e) => setHandle(e.target.value.replace(/[^a-z0-9_]/gi, ''))}
+                maxLength={32}
+                className="mt-1 w-full rounded-xl border border-line bg-surface-muted/30 px-3 py-2 text-sm outline-none dark:border-line/45"
+                placeholder="pulse_news"
+              />
+              <span className="mt-1 block text-[11px] text-ink-muted">
+                {t('createChannelHandleHint')}
+              </span>
+            </label>
+          )}
           <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted">
             {t('createChannelDescLabel')}
             <textarea
@@ -114,7 +116,9 @@ export function CreateChannelModal({
             />
             {t('createChannelPrivateLabel')}
           </label>
-          <p className="text-[11px] text-ink-muted">{t('createChannelPrivateHint')}</p>
+          <p className="text-[11px] text-ink-muted">
+            {isPrivate ? t('createChannelPrivateInviteHint') : t('createChannelPrivateHint')}
+          </p>
         </div>
         <div className="border-t border-line p-3 dark:border-line/45">
           <button

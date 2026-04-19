@@ -176,6 +176,9 @@ model ChannelMetadata {
   chat        Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
   description String?
   handle      String? @unique
+  /// Private channel invite token (`/join/c/:slug`). Null for public channels.
+  inviteSlug    String? @unique
+  inviteEnabled Boolean @default(true)
 }
 
 model ChatMember {

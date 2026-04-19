@@ -62,6 +62,12 @@ export default function ExploreChannelsPage() {
         >
           {t('searchJoinByGroupLink')}
         </Link>
+        <Link
+          href="/join/channel"
+          className="text-sm text-white/70 hover:text-white md:text-ink-muted md:hover:text-accent"
+        >
+          {t('searchJoinByChannelLink')}
+        </Link>
       </div>
       <h1 className="mt-4 font-display text-2xl font-semibold tracking-tight md:text-ink">
         {t('exploreChannelsTitle')}

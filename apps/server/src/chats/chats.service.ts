@@ -14,6 +14,7 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { AddMemberDto } from './dto/members.dto';
 import { PatchGroupSettingsDto } from './dto/patch-group-settings.dto';
+import { PatchChannelSettingsDto } from './dto/patch-channel-settings.dto';
 
 @Injectable()
 export class ChatsService {
@@ -62,7 +63,7 @@ export class ChatsService {
     throw new BadRequestException('Unsupported chat type');
   }
 
-  private async allocateInviteSlug(): Promise<string> {
+  private async allocateGroupInviteSlug(): Promise<string> {
     for (let attempt = 0; attempt < 12; attempt++) {
       const slug =
         'g' +
@@ -78,6 +79,24 @@ export class ChatsService {
       if (!clash) return slug;
     }
     throw new BadRequestException('Could not allocate invite link');
+  }
+
+  private async allocateChannelInviteSlug(): Promise<string> {
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const slug =
+        'c' +
+        randomBytes(18)
+          .toString('base64url')
+          .replace(/[^a-zA-Z0-9_-]/g, '')
+          .slice(0, 28);
+      if (slug.length < 12) continue;
+      const clash = await this.prisma.channelMetadata.findUnique({
+        where: { inviteSlug: slug },
+        select: { id: true },
+      });
+      if (!clash) return slug;
+    }
+    throw new BadRequestException('Could not allocate channel invite link');
   }
 
   async getOrCreateDirect(userId: string, dto: CreateDirectDto) {
@@ -161,7 +180,7 @@ export class ChatsService {
     const users = await this.prisma.user.findMany({ where: { id: { in: ids } } });
     if (users.length !== ids.length) throw new BadRequestException('Some users not found');
 
-    const inviteSlug = await this.allocateInviteSlug();
+    const inviteSlug = await this.allocateGroupInviteSlug();
     const chat = await this.prisma.chat.create({
       data: {
         type: ChatType.GROUP,
@@ -197,16 +216,28 @@ export class ChatsService {
   }
 
   async createChannel(userId: string, dto: CreateChannelDto) {
+    const isPrivate = dto.isPrivate ?? false;
+    const handleNorm = isPrivate ? null : dto.handle?.trim().toLowerCase() || null;
+    if (handleNorm) {
+      const taken = await this.prisma.channelMetadata.findFirst({
+        where: { handle: handleNorm, chat: { type: ChatType.CHANNEL } },
+      });
+      if (taken) throw new BadRequestException('Handle already taken');
+    }
+    const inviteSlug = isPrivate ? await this.allocateChannelInviteSlug() : null;
+
     const chat = await this.prisma.chat.create({
       data: {
         type: ChatType.CHANNEL,
         title: dto.title,
-        isPrivate: dto.isPrivate ?? false,
+        isPrivate,
         createdById: userId,
         channelMeta: {
           create: {
             description: dto.description ?? null,
-            handle: dto.handle?.toLowerCase() ?? null,
+            handle: handleNorm,
+            inviteSlug,
+            inviteEnabled: isPrivate,
           },
         },
         members: {
@@ -496,7 +527,14 @@ export class ChatsService {
             inviteSlug: chat.groupMeta.inviteSlug,
           }
         : null,
-      channel: chat.channelMeta,
+      channel: chat.channelMeta
+        ? {
+            handle: chat.channelMeta.handle,
+            description: chat.channelMeta.description,
+            inviteSlug: chat.channelMeta.inviteSlug,
+            inviteEnabled: chat.channelMeta.inviteEnabled,
+          }
+        : null,
       members: chat.members.map((m) => ({
         id: m.id,
         userId: m.userId,
@@ -815,7 +853,7 @@ export class ChatsService {
       select: { id: true },
     });
     if (!chat) throw new BadRequestException('Not a group');
-    const newSlug = await this.allocateInviteSlug();
+    const newSlug = await this.allocateGroupInviteSlug();
     await this.prisma.groupMetadata.update({
       where: { chatId },
       data: { inviteSlug: newSlug },
@@ -836,5 +874,116 @@ export class ChatsService {
       data: { chatId: channelId, userId, role: MemberRole.SUBSCRIBER },
     });
     return this.getChatDetail(channelId, userId);
+  }
+
+  /** Private: invite token. Public: @handle (case-insensitive, no @ required). */
+  async joinChannelByInvite(userId: string, rawSlug: string) {
+    const trimmed = rawSlug.trim();
+    const byToken = await this.prisma.channelMetadata.findFirst({
+      where: { inviteSlug: trimmed },
+      include: { chat: { select: { id: true, type: true, isPrivate: true } } },
+    });
+    if (byToken?.chat?.type === ChatType.CHANNEL) {
+      if (!byToken.chat.isPrivate) {
+        throw new NotFoundException();
+      }
+      if (!byToken.inviteEnabled) {
+        throw new ForbiddenException('Invite link is disabled');
+      }
+      return this.addChannelSubscriberWithJoinNotice(userId, byToken.chatId);
+    }
+
+    const handle = trimmed.replace(/^@/, '').toLowerCase();
+    if (handle.length < 2) throw new NotFoundException();
+    const byHandle = await this.prisma.channelMetadata.findFirst({
+      where: {
+        handle,
+        chat: { type: ChatType.CHANNEL, isPrivate: false },
+      },
+      select: { chatId: true },
+    });
+    if (!byHandle) throw new NotFoundException();
+    return this.subscribePublicChannel(userId, byHandle.chatId);
+  }
+
+  private async addChannelSubscriberWithJoinNotice(userId: string, chatId: string) {
+    const existing = await this.prisma.chatMember.findFirst({
+      where: { chatId, userId, leftAt: null },
+    });
+    if (existing) return this.getChatDetail(chatId, userId);
+
+    await this.prisma.chatMember.create({
+      data: { chatId, userId, role: MemberRole.SUBSCRIBER },
+    });
+    const joiner = await this.prisma.user.findUnique({ where: { id: userId } });
+    await this.prisma.message.create({
+      data: {
+        chatId,
+        senderId: null,
+        type: MessageType.SYSTEM,
+        text: `${joiner?.displayName ?? joiner?.username ?? 'Someone'} joined via invite link`,
+      },
+    });
+    return this.getChatDetail(chatId, userId);
+  }
+
+  async updateChannelSettings(userId: string, chatId: string, dto: PatchChannelSettingsDto) {
+    await this.assertAdminOrOwner(chatId, userId);
+    const chat = await this.prisma.chat.findFirst({
+      where: { id: chatId, type: ChatType.CHANNEL },
+      include: { channelMeta: true },
+    });
+    if (!chat?.channelMeta) throw new BadRequestException('Not a channel');
+
+    const data: Prisma.ChannelMetadataUpdateInput = {};
+
+    if (dto.inviteEnabled !== undefined) {
+      if (!chat.isPrivate) {
+        throw new BadRequestException('Invite link toggle applies to private channels only');
+      }
+      data.inviteEnabled = dto.inviteEnabled;
+    }
+
+    if (dto.handle !== undefined) {
+      if (chat.isPrivate) {
+        throw new BadRequestException('Private channels do not use public handles');
+      }
+      const next = dto.handle?.trim().toLowerCase() || null;
+      if (next) {
+        if (!/^[a-z0-9_]{3,32}$/.test(next)) {
+          throw new BadRequestException('Invalid handle');
+        }
+        const clash = await this.prisma.channelMetadata.findFirst({
+          where: {
+            handle: next,
+            NOT: { chatId },
+            chat: { type: ChatType.CHANNEL },
+          },
+        });
+        if (clash) throw new BadRequestException('Handle already taken');
+        data.handle = next;
+      } else {
+        data.handle = null;
+      }
+    }
+
+    if (Object.keys(data).length > 0) {
+      await this.prisma.channelMetadata.update({ where: { chatId }, data });
+    }
+    return this.getChatDetail(chatId, userId);
+  }
+
+  async rotateChannelInvite(userId: string, chatId: string) {
+    await this.assertAdminOrOwner(chatId, userId);
+    const chat = await this.prisma.chat.findFirst({
+      where: { id: chatId, type: ChatType.CHANNEL, isPrivate: true },
+    });
+    if (!chat) throw new BadRequestException('Only private channels use invite links');
+    const newSlug = await this.allocateChannelInviteSlug();
+    await this.prisma.channelMetadata.update({
+      where: { chatId },
+      data: { inviteSlug: newSlug, inviteEnabled: true },
+    });
+    return this.getChatDetail(chatId, userId);
   }
 }

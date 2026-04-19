@@ -37,7 +37,12 @@ export type ChatDetailForDrawer = {
     inviteEnabled?: boolean;
     inviteSlug?: string | null;
   } | null;
-  channel?: { handle: string | null; description: string | null } | null;
+  channel?: {
+    handle: string | null;
+    description: string | null;
+    inviteSlug?: string | null;
+    inviteEnabled?: boolean;
+  } | null;
   peer?: {
     id: string;
     displayName: string | null;
@@ -296,6 +301,15 @@ export function ChatDetailsDrawer({
                   className="mx-auto mt-3 block text-center text-sm font-semibold text-accent underline-offset-2 hover:underline"
                 >
                   {t('drawerGroupSettings')}
+                </Link>
+              )}
+              {chat?.type === 'CHANNEL' && chat.id && (
+                <Link
+                  href={`/chats/${chat.id}/channel`}
+                  onClick={onClose}
+                  className="mx-auto mt-3 block text-center text-sm font-semibold text-accent underline-offset-2 hover:underline"
+                >
+                  {t('drawerChannelSettings')}
                 </Link>
               )}
             </div>

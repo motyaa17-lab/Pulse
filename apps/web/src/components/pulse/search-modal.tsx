@@ -227,6 +227,16 @@ export function SearchModal() {
                 >
                   {t('searchJoinByGroupLink')}
                 </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-line/80 px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-surface-muted/60 dark:border-line/50"
+                  onClick={() => {
+                    setOpen(false);
+                    router.push('/join/channel');
+                  }}
+                >
+                  {t('searchJoinByChannelLink')}
+                </button>
               </div>
             </motion.div>
           </motion.div>

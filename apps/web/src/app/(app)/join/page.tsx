@@ -44,7 +44,12 @@ export default function JoinLandingPage() {
           {t('joinLandingSubmit')}
         </button>
       </form>
-      <Link href="/chats" className="mt-8 inline-block text-sm font-medium text-accent">
+      <p className="mt-6 text-sm text-ink-muted">
+        <Link href="/join/channel" className="font-medium text-accent">
+          {t('joinLandingSwitchChannel')}
+        </Link>
+      </p>
+      <Link href="/chats" className="mt-4 inline-block text-sm font-medium text-accent">
         {t('joinGroupBackToList')}
       </Link>
     </div>
