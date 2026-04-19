@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useSearchParams } from 'next/navigation';
-import { apiFetch, toPublicUrl } from '@/lib/api';
+import { ApiError, apiFetch, toPublicUrl } from '@/lib/api';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 import { bumpMetaFromMessage } from '@/lib/chat-preview-meta';
 import { applyOptimisticReaction } from '@/lib/reaction-optimistic';
@@ -1265,6 +1265,29 @@ function MessageBubble({
         },
       },
       {
+        id: 'report',
+        label: t('msgReport'),
+        disabled: isDeleted,
+        onSelect: async () => {
+          setMenuOpen(false);
+          const note = window.prompt(t('msgReportPrompt'));
+          if (note === null) return;
+          try {
+            await apiFetch(`/chats/${chatId}/messages/${m.id}/report`, {
+              method: 'POST',
+              body: { note: note.trim() || undefined },
+            });
+            window.alert(t('msgReportThanks'));
+          } catch (e) {
+            window.alert(
+              e instanceof ApiError && e.status === 409
+                ? t('msgReportDuplicate')
+                : t('msgReportFailed'),
+            );
+          }
+        },
+      },
+      {
         id: 'pin',
         label:
           ((qc.getQueryData(['chat', chatId]) as any)?.pinnedMessage?.id ?? null) === m.id
@@ -1329,6 +1352,7 @@ function MessageBubble({
       onEdit,
       onForward,
       onReply,
+      pinOrUnpin,
       qc,
       setMenuOpen,
       softDelete,

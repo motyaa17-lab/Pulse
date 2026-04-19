@@ -83,6 +83,11 @@ export const en = {
   // Message menu / bubbles
   msgReply: 'Reply',
   msgForward: 'Forward',
+  msgReport: 'Report',
+  msgReportPrompt: 'Optional note for moderators (leave empty to send without text):',
+  msgReportThanks: 'Report sent. Thank you.',
+  msgReportFailed: 'Could not send the report. Try again later.',
+  msgReportDuplicate: 'You have already reported this message.',
   msgPin: 'Pin message',
   msgUnpin: 'Unpin message',
   msgCopyText: 'Copy text',

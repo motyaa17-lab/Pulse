@@ -2,6 +2,8 @@
 // that embeds `copyEngine: false` and Prisma then expects `prisma://` / `prisma+postgres://` (Accelerate / Data Proxy style).
 generator client {
   provider = "prisma-client-js"
+  // App-local output avoids Windows EPERM when renaming the engine under hoisted root node_modules/.prisma.
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -38,6 +40,16 @@ enum MessageType {
   SYSTEM
 }
 
+enum ReportSource {
+  USER
+  AUTOMATED
+}
+
+enum ReportStatus {
+  OPEN
+  CLOSED
+}
+
 model User {
   id           String      @id @default(cuid())
   email        String      @unique
@@ -70,6 +82,7 @@ model User {
 
   pinnedChatsMessages Chat[] @relation("ChatPinnedByUser")
   stories             Story[]
+  messageReports      MessageReport[]
 }
 
 /// Ephemeral "circle" media (24h), visible to self + direct-chat peers.
@@ -142,6 +155,7 @@ model Chat {
   hiddenBy    HiddenChat[]
   mutedBy     MuteSetting[]
   readStates  ReadState[]
+  messageReports MessageReport[]
 
   @@index([type, updatedAt])
 }
@@ -201,9 +215,31 @@ model Message {
   hiddenForUsers MessageHiddenForUser[]
 
   pinnedInChat Chat? @relation("ChatPinnedMessage")
+  reports      MessageReport[]
 
   @@index([chatId, createdAt(sort: Desc)])
   @@index([senderId])
+}
+
+model MessageReport {
+  id           String       @id @default(cuid())
+  chatId       String
+  chat         Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  messageId    String
+  message      Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporterId   String?
+  reporter     User?        @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+  source       ReportSource
+  status       ReportStatus @default(OPEN)
+  /// Comma-separated heuristic flags for AUTOMATED (e.g. many_links,spam_phrase).
+  flags        String       @default("")
+  note         String?
+  textSnapshot String?
+  createdAt    DateTime     @default(now())
+
+  @@index([messageId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([chatId, createdAt(sort: Desc)])
 }
 
 /** Per-user: message stays for others; removed only from this user's history. */

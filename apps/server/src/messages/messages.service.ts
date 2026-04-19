@@ -11,6 +11,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { WsService } from '../ws/ws.service';
 import { UsersService } from '../users/users.service';
+import { ReportsService } from '../reports/reports.service';
 
 @Injectable()
 export class MessagesService {
@@ -19,6 +20,7 @@ export class MessagesService {
     private readonly chats: ChatsService,
     private readonly ws: WsService,
     private readonly users: UsersService,
+    private readonly reports: ReportsService,
   ) {}
 
   private async assertCanPost(chatId: string, userId: string) {
@@ -121,7 +123,19 @@ export class MessagesService {
       },
     );
 
+    if (type === MessageType.TEXT && msg.text) {
+      try {
+        await this.reports.maybeAutoReportFromNewMessage(chatId, msg.id, msg.text);
+      } catch {
+        /* non-fatal moderation pipeline */
+      }
+    }
+
     return this.toDto(msg, userId, dtoOpts);
+  }
+
+  async reportMessage(userId: string, chatId: string, messageId: string, note?: string) {
+    return this.reports.createUserReport(chatId, messageId, userId, note);
   }
 
   async searchInChat(chatId: string, userId: string, q: string) {

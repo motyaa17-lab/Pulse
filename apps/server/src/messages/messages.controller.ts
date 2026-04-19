@@ -16,6 +16,7 @@ import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { ReactionDto } from './dto/reaction.dto';
+import { ReportMessageDto } from './dto/report-message.dto';
 
 @ApiTags('messages')
 @ApiBearerAuth()
@@ -41,6 +42,16 @@ export class MessagesController {
     @Query('q') q?: string,
   ) {
     return this.messages.searchInChat(chatId, user.sub, q ?? '');
+  }
+
+  @Post(':messageId/report')
+  report(
+    @CurrentUser() user: JwtUser,
+    @Param('chatId') chatId: string,
+    @Param('messageId') messageId: string,
+    @Body() dto: ReportMessageDto,
+  ) {
+    return this.messages.reportMessage(user.sub, chatId, messageId, dto.note);
   }
 
   @Post()
