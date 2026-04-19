@@ -592,7 +592,7 @@ export function Composer({
   return (
     <div
       className={cn(
-        'shrink-0 touch-manipulation px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md',
+        'mobile-chat-composer shrink-0 touch-manipulation px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md',
         'border-t border-white/[0.08] bg-[#0e1621]/96 md:border-line/75 md:bg-surface-elevated/98 dark:md:border-line/45 dark:md:bg-surface-elevated/98',
       )}
     >

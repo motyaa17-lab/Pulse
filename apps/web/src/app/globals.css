@@ -124,6 +124,15 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* iOS Safari: sub-16px inputs zoom the page on focus; enforce minimum on the chat composer. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    .mobile-chat-composer textarea {
+      font-size: max(16px, 1rem) !important;
+    }
+  }
+}
+
 /* Long-press reactions: no callout / selection on message bubbles (mobile). */
 @media (max-width: 767px) {
   .chat-bubble-touch {

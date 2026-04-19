@@ -752,7 +752,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         ref={parentRef}
-        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-2 md:px-5 md:py-2.5"
+        className="scrollbar-thin chat-thread-bg relative isolate min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-2 [-webkit-overflow-scrolling:touch] md:px-5 md:py-2.5"
         onDragEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
