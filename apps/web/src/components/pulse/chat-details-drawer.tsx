@@ -294,24 +294,7 @@ export function ChatDetailsDrawer({
                   {t('drawerAddMembers')}
                 </button>
               )}
-              {chat?.type === 'GROUP' && chat.id && (
-                <Link
-                  href={`/chats/${chat.id}/group`}
-                  onClick={onClose}
-                  className="mx-auto mt-3 block text-center text-sm font-semibold text-accent underline-offset-2 hover:underline"
-                >
-                  {t('drawerGroupSettings')}
-                </Link>
-              )}
-              {chat?.type === 'CHANNEL' && chat.id && (
-                <Link
-                  href={`/chats/${chat.id}/channel`}
-                  onClick={onClose}
-                  className="mx-auto mt-3 block text-center text-sm font-semibold text-accent underline-offset-2 hover:underline"
-                >
-                  {t('drawerChannelSettings')}
-                </Link>
-              )}
+              {/* Prevent accidental navigation on mobile: settings are opened explicitly from the chat header. */}
             </div>
           )}
 

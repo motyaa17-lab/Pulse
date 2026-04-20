@@ -738,28 +738,31 @@ export function ChatSidebar() {
               </div>
             )}
           </div>
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setShowUnreadOnly((v) => !v)}
-              className={cn(
-                'rounded-full border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition touch-manipulation',
-                showUnreadOnly
-                  ? 'border-[#3390ec] bg-[#3390ec]/25 text-white'
-                  : 'border-white/12 bg-white/[0.06] text-white/65 hover:bg-white/10 hover:text-white/90',
-              )}
-              aria-pressed={showUnreadOnly}
-              aria-label={t('filterUnreadOnlyAria')}
-            >
-              {t('filterUnreadOnly')}
-            </button>
-          </div>
+          {/* Moved to the list as a sticky row to avoid overlaying taps on the first chat row. */}
         </header>
 
         <div
           ref={listScrollRef}
           className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24"
         >
+          <div className="sticky top-0 z-10 -mx-2 bg-[#17212b] px-2 pb-2 pt-2">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowUnreadOnly((v) => !v)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition touch-manipulation',
+                  showUnreadOnly
+                    ? 'border-[#3390ec] bg-[#3390ec]/25 text-white'
+                    : 'border-white/12 bg-white/[0.06] text-white/65 hover:bg-white/10 hover:text-white/90',
+                )}
+                aria-pressed={showUnreadOnly}
+                aria-label={t('filterUnreadOnlyAria')}
+              >
+                {t('filterUnreadOnly')}
+              </button>
+            </div>
+          </div>
           {!isLoading && archivedRaw.length > 0 && (
             <button
               type="button"
