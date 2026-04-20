@@ -296,12 +296,8 @@ export function ChatSidebar() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const [storiesExpanded, setStoriesExpanded] = useState(false);
-  const storiesPullPxRef = useRef(0);
-  const storiesRafRef = useRef<number | null>(null);
   const storiesWrapRef = useRef<HTMLDivElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
-  const touchStartYRef = useRef<number | null>(null);
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
@@ -546,92 +542,17 @@ export function ChatSidebar() {
       apiFetch<{ ok: boolean }>(`/chats/pins/reorder`, { method: 'POST', body: { chatIds } }),
   });
 
-  const STORIES_COMPACT_H = 72;
-  const STORIES_FULL_H = 132;
-  const storiesExtraMax = STORIES_FULL_H - STORIES_COMPACT_H;
-  const storiesHeightMobile = storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H;
   const storiesCollapseTimerRef = useRef<number | null>(null);
 
-  // Native, passive touch listeners for the pull-to-expand interaction.
-  // Do NOT animate layout (height) during pull — it forces relayout of the chat list and janks.
-  // We only detect the gesture + threshold and then toggle an overlay animation.
+  // Stories now live above search (Telegram-like). Keep ref for potential future use.
   useEffect(() => {
-    const el = listScrollRef.current;
-    if (!el) return;
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (el.scrollTop !== 0) return;
-      touchStartYRef.current = e.touches[0]?.clientY ?? null;
-      storiesPullPxRef.current = 0;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const start = touchStartYRef.current;
-      if (start == null) return;
-      if (el.scrollTop !== 0) return;
-      if (storiesExpanded) return;
-      const y = e.touches[0]?.clientY ?? start;
-      const dy = y - start;
-      if (dy <= 0) return;
-
-      const nextPull = Math.min(storiesExtraMax, dy);
-      storiesPullPxRef.current = nextPull;
-    };
-
-    const end = () => {
-      const pulled = storiesPullPxRef.current;
-      touchStartYRef.current = null;
-      storiesPullPxRef.current = 0;
-      if (!storiesExpanded && pulled >= 48) {
-        setStoriesExpanded(true);
-        return;
-      }
-    };
-
-    const cancel = () => {
-      touchStartYRef.current = null;
-      storiesPullPxRef.current = 0;
-    };
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
-    el.addEventListener('touchend', end, { passive: true });
-    el.addEventListener('touchcancel', cancel, { passive: true });
     return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', end);
-      el.removeEventListener('touchcancel', cancel);
-    };
-  }, [storiesExpanded]);
-
-  // Avoid collapsing stories *during* scroll: it causes a full sidebar rerender and can jank.
-  // Instead, debounce the collapse until scrolling settles.
-  useEffect(() => {
-    const el = listScrollRef.current;
-    if (!el) return;
-
-    const onScroll = () => {
-      if (!storiesExpanded) return;
-      if (el.scrollTop <= 8) return;
-      if (storiesCollapseTimerRef.current != null) {
-        window.clearTimeout(storiesCollapseTimerRef.current);
-      }
-      storiesCollapseTimerRef.current = window.setTimeout(() => {
-        storiesCollapseTimerRef.current = null;
-        setStoriesExpanded(false);
-      }, 120);
-    };
-
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      el.removeEventListener('scroll', onScroll);
       if (storiesCollapseTimerRef.current != null) {
         window.clearTimeout(storiesCollapseTimerRef.current);
         storiesCollapseTimerRef.current = null;
       }
     };
-  }, [storiesExpanded]);
+  }, []);
 
   return (
     <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#17212b] text-white">
@@ -681,6 +602,11 @@ export function ChatSidebar() {
                 />
               )}
             </div>
+          </div>
+
+          {/* Telegram-like: stories above the search bar (no interaction with chats list scroll). */}
+          <div ref={storiesWrapRef} className="mt-3 md:mt-4">
+            <StoriesStrip variant="full" />
           </div>
 
           <div ref={searchBlockRef} className="relative mt-3 md:mt-4">
@@ -828,32 +754,6 @@ export function ChatSidebar() {
             </button>
           </div>
         </header>
-
-        <div
-          ref={storiesWrapRef}
-          className="relative border-b border-white/[0.06] md:border-b-0"
-          style={{ height: `${STORIES_COMPACT_H}px`, overflow: 'visible' }}
-        >
-          <div className="hidden md:block">
-            <StoriesStrip variant="full" />
-          </div>
-          <div className="relative md:hidden">
-            {/* Compact stays in-flow; full renders as overlay to avoid relayout/jank. */}
-            <div className={cn(storiesExpanded && 'pointer-events-none opacity-0')}>
-              <StoriesStrip variant="compact" />
-            </div>
-            <div
-              className={cn(
-                'pointer-events-none absolute left-0 right-0 top-0 z-30 origin-top transition-[transform,opacity] duration-200 ease-out',
-                storiesExpanded ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-[0.92]',
-              )}
-            >
-              <div className={cn(storiesExpanded && 'pointer-events-auto')}>
-                <StoriesStrip variant="full" />
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div
           ref={listScrollRef}
