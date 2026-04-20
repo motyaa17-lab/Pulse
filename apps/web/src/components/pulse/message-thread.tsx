@@ -432,7 +432,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const canPost = !chatMeta?.role || chatMeta.type !== 'CHANNEL' || chatMeta.role !== 'SUBSCRIBER';
 
   const { data: chatsForForward } = useQuery<ChatListItem[]>({
-    queryKey: ['chats', ''],
+    queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
     enabled: Boolean(forwarding),
   });
@@ -706,14 +706,31 @@ export function MessageThread({ chatId }: { chatId: string }) {
   useEffect(() => {
     const el = parentRef.current;
     if (!el) return;
+    let raf: number | null = null;
+    let lastShow: boolean | null = null;
     const onScroll = () => {
-      setMenuFor(null);
-      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setShowScrollToBottom(dist > 180);
+      // Close the message actions menu when the user scrolls.
+      // Functional update avoids stale closures and is a no-op if already null.
+      setMenuFor((cur) => (cur === null ? cur : null));
+
+      if (raf != null) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+        const nextShow = dist > 180;
+        if (lastShow === null) lastShow = nextShow;
+        if (nextShow !== lastShow) {
+          lastShow = nextShow;
+          setShowScrollToBottom(nextShow);
+        }
+      });
     };
     onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (raf != null) cancelAnimationFrame(raf);
+    };
   }, [chatId]);
 
   const markRead = async (last: MessageDto) => {
