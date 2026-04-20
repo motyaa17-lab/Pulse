@@ -551,24 +551,10 @@ export function ChatSidebar() {
   const storiesExtraMax = STORIES_FULL_H - STORIES_COMPACT_H;
   const storiesHeightMobile = storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H;
   const storiesCollapseTimerRef = useRef<number | null>(null);
-  const storiesLastAppliedHRef = useRef<number>(STORIES_COMPACT_H);
-  const storiesLastAppliedAtRef = useRef<number>(0);
-
-  const setStoriesHeight = (h: number) => {
-    const el = storiesWrapRef.current;
-    if (!el) return;
-    // Only mutate style; avoid rerendering the whole sidebar on scroll.
-    el.style.maxHeight = `${h}px`;
-  };
-
-  // Keep DOM height in sync when expanded toggles.
-  useEffect(() => {
-    setStoriesHeight(storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storiesExpanded]);
 
   // Native, passive touch listeners for the pull-to-expand interaction.
-  // React synthetic touch events are non-passive and can contribute to scroll jank.
+  // Do NOT animate layout (height) during pull — it forces relayout of the chat list and janks.
+  // We only detect the gesture + threshold and then toggle an overlay animation.
   useEffect(() => {
     const el = listScrollRef.current;
     if (!el) return;
@@ -577,7 +563,6 @@ export function ChatSidebar() {
       if (el.scrollTop !== 0) return;
       touchStartYRef.current = e.touches[0]?.clientY ?? null;
       storiesPullPxRef.current = 0;
-      if (!storiesExpanded) setStoriesHeight(STORIES_COMPACT_H);
     };
 
     const onTouchMove = (e: TouchEvent) => {
@@ -591,22 +576,6 @@ export function ChatSidebar() {
 
       const nextPull = Math.min(storiesExtraMax, dy);
       storiesPullPxRef.current = nextPull;
-      if (storiesRafRef.current != null) return;
-
-      storiesRafRef.current = requestAnimationFrame(() => {
-        storiesRafRef.current = null;
-
-        // Throttle layout updates: changing header height forces re-layout of the list below.
-        // Apply at ~30fps and only if the delta is meaningful.
-        const now = performance.now();
-        if (now - storiesLastAppliedAtRef.current < 33) return;
-        const nextH = STORIES_COMPACT_H + storiesPullPxRef.current;
-        if (Math.abs(nextH - storiesLastAppliedHRef.current) < 3) return;
-
-        storiesLastAppliedAtRef.current = now;
-        storiesLastAppliedHRef.current = nextH;
-        setStoriesHeight(nextH);
-      });
     };
 
     const end = () => {
@@ -617,16 +586,11 @@ export function ChatSidebar() {
         setStoriesExpanded(true);
         return;
       }
-      storiesLastAppliedHRef.current = STORIES_COMPACT_H;
-      setStoriesHeight(STORIES_COMPACT_H);
     };
 
     const cancel = () => {
       touchStartYRef.current = null;
       storiesPullPxRef.current = 0;
-      const h = storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H;
-      storiesLastAppliedHRef.current = h;
-      setStoriesHeight(h);
     };
 
     el.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -867,14 +831,27 @@ export function ChatSidebar() {
 
         <div
           ref={storiesWrapRef}
-          className="relative overflow-hidden border-b border-white/[0.06] md:border-b-0"
-          style={{ maxHeight: storiesHeightMobile }}
+          className="relative border-b border-white/[0.06] md:border-b-0"
+          style={{ height: `${STORIES_COMPACT_H}px`, overflow: 'visible' }}
         >
           <div className="hidden md:block">
             <StoriesStrip variant="full" />
           </div>
-          <div className="md:hidden">
-            <StoriesStrip variant={storiesExpanded ? 'full' : 'compact'} />
+          <div className="relative md:hidden">
+            {/* Compact stays in-flow; full renders as overlay to avoid relayout/jank. */}
+            <div className={cn(storiesExpanded && 'pointer-events-none opacity-0')}>
+              <StoriesStrip variant="compact" />
+            </div>
+            <div
+              className={cn(
+                'pointer-events-none absolute left-0 right-0 top-0 z-30 origin-top transition-[transform,opacity] duration-200 ease-out',
+                storiesExpanded ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-[0.92]',
+              )}
+            >
+              <div className={cn(storiesExpanded && 'pointer-events-auto')}>
+                <StoriesStrip variant="full" />
+              </div>
+            </div>
           </div>
         </div>
 
