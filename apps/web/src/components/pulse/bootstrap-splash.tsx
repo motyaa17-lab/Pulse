@@ -5,10 +5,13 @@ import { useAuthStore } from '@/stores/auth-store';
 
 export function BootstrapSplash() {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
+  const sessionError = useAuthStore((s) => s.sessionError);
+  const show = !hasHydrated || sessionStatus === 'checking';
 
   return (
     <AnimatePresence>
-      {!hasHydrated && (
+      {show && (
         <motion.div
           key="bootstrap-splash"
           role="status"
@@ -25,10 +28,20 @@ export function BootstrapSplash() {
             transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             className="text-center"
           >
-            <p className="font-display text-[1.65rem] font-semibold tracking-tight text-ink">Pulse</p>
+            <p className="font-display text-[1.65rem] font-semibold tracking-tight text-ink">
+              Pulse
+            </p>
             <p className="mt-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-ink-muted">
               Xasma
             </p>
+            {hasHydrated && sessionStatus === 'checking' && (
+              <p className="mt-4 text-sm text-ink-muted">Подключаемся к серверу…</p>
+            )}
+            {hasHydrated && sessionStatus === 'checking' && sessionError && (
+              <p className="mt-2 max-w-[22rem] text-balance text-[12.5px] text-ink-muted/90">
+                {sessionError}
+              </p>
+            )}
           </motion.div>
           <motion.div
             className="mt-10 h-[2px] w-12 overflow-hidden rounded-full bg-line/55 dark:bg-line/50"
@@ -43,6 +56,8 @@ export function BootstrapSplash() {
               transition={{
                 duration: 0.75,
                 ease: [0.45, 0, 0.55, 1],
+                repeat: Infinity,
+                repeatType: 'loop',
               }}
             />
           </motion.div>

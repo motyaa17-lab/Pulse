@@ -10,7 +10,11 @@ export type AuthState = {
   sessionId: string | null;
   /** False until zustand persist has read localStorage (avoids treating pre-hydration as logged out). */
   hasHydrated: boolean;
+  /** Runtime status of server session validation / refresh bootstrap. Not persisted. */
+  sessionStatus: 'idle' | 'checking' | 'ok' | 'error';
+  sessionError: string | null;
   setTokens: (t: { accessToken: string; refreshToken: string; sessionId?: string }) => void;
+  setSessionStatus: (s: AuthState['sessionStatus'], err?: string | null) => void;
   clear: () => void;
 };
 
@@ -21,12 +25,23 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       sessionId: null,
       hasHydrated: false,
+      sessionStatus: 'idle',
+      sessionError: null,
       setTokens: ({ accessToken, refreshToken, sessionId }) => {
         set({ accessToken, refreshToken, sessionId: sessionId ?? null });
         void syncAccessTokenCookie(accessToken);
       },
+      setSessionStatus: (sessionStatus, err) => {
+        set({ sessionStatus, sessionError: err ?? null });
+      },
       clear: () => {
-        set({ accessToken: null, refreshToken: null, sessionId: null });
+        set({
+          accessToken: null,
+          refreshToken: null,
+          sessionId: null,
+          sessionStatus: 'idle',
+          sessionError: null,
+        });
         void syncAccessTokenCookie(null);
       },
     }),
