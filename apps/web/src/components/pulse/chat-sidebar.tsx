@@ -550,6 +550,7 @@ export function ChatSidebar() {
   const STORIES_FULL_H = 132;
   const storiesExtraMax = STORIES_FULL_H - STORIES_COMPACT_H;
   const storiesHeightMobile = storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H;
+  const storiesCollapseTimerRef = useRef<number | null>(null);
 
   const setStoriesHeight = (h: number) => {
     const el = storiesWrapRef.current;
@@ -562,6 +563,34 @@ export function ChatSidebar() {
   useEffect(() => {
     setStoriesHeight(storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storiesExpanded]);
+
+  // Avoid collapsing stories *during* scroll: it causes a full sidebar rerender and can jank.
+  // Instead, debounce the collapse until scrolling settles.
+  useEffect(() => {
+    const el = listScrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      if (!storiesExpanded) return;
+      if (el.scrollTop <= 8) return;
+      if (storiesCollapseTimerRef.current != null) {
+        window.clearTimeout(storiesCollapseTimerRef.current);
+      }
+      storiesCollapseTimerRef.current = window.setTimeout(() => {
+        storiesCollapseTimerRef.current = null;
+        setStoriesExpanded(false);
+      }, 120);
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (storiesCollapseTimerRef.current != null) {
+        window.clearTimeout(storiesCollapseTimerRef.current);
+        storiesCollapseTimerRef.current = null;
+      }
+    };
   }, [storiesExpanded]);
 
   return (
@@ -775,11 +804,7 @@ export function ChatSidebar() {
 
         <div
           ref={listScrollRef}
-          className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            if (el.scrollTop > 8 && storiesExpanded) setStoriesExpanded(false);
-          }}
+          className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24"
           onTouchStart={(e) => {
             const el = listScrollRef.current;
             if (!el) return;
