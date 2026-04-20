@@ -27,7 +27,7 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
   const showListBackdrop = isChatRoute && sidebarOpen;
 
   return (
-    <div className="mobile-chats-shell relative flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-[#0e1621] md:h-[100dvh] md:max-h-[100dvh]">
+    <div className="mobile-chats-shell relative flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-[#0e1621] md:h-[100dvh] md:max-h-[100dvh] md:flex-row">
       {/* 100dvh tracks the virtual keyboard and shrinks → UI “rides up”. 100svh stays stable with interactive-widget overlays. */}
       {showListBackdrop && (
         <button
