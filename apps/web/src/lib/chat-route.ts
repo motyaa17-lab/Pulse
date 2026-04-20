@@ -1,7 +1,7 @@
 import type { ChatListItem } from '@/lib/types';
 
 export function chatHref(chat: Pick<ChatListItem, 'id' | 'type'>): string {
-  if (chat.type === 'GROUP') return `/chats/${chat.id}/group`;
-  if (chat.type === 'CHANNEL') return `/chats/${chat.id}/channel`;
+  // Telegram-like: opening a chat always goes to the conversation screen.
+  // Group/channel settings live on dedicated routes and are opened from the chat header.
   return `/chats/${chat.id}`;
 }
