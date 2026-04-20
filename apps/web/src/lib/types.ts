@@ -29,6 +29,12 @@ export interface MessageDto {
   id: string;
   chatId: string;
   senderId: string | null;
+  sender?: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  } | null;
   type: string;
   text: string | null;
   clientTempId: string | null;

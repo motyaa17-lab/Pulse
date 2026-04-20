@@ -21,6 +21,7 @@ import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 import { decodeJwtSub } from '@/lib/jwt';
 import { useAuthStore } from '@/stores/auth-store';
 import { StoriesStrip } from '@/components/pulse/stories-strip';
+import { chatHref } from '@/lib/chat-route';
 
 function formatListTime(iso: string, t: (k: I18nKey) => string, locale: string): string {
   const d = new Date(iso);
@@ -985,7 +986,7 @@ function ChatRow({
         )}
       >
         <Link
-          href={`/chats/${chat.id}`}
+          href={chatHref(chat)}
           className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3"
           onClick={() => useUiStore.getState().setSidebarOpen(false)}
         >

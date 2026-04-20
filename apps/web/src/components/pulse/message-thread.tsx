@@ -17,6 +17,7 @@ import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
 import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { Composer } from './composer';
+import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { VoiceMessageBubble } from '@/components/pulse/voice-message-bubble';
 import { VideoNoteCircle } from '@/components/pulse/video-note-circle';
 import {
@@ -896,6 +897,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   prev={prev}
                   next={next}
                   myId={myId ?? undefined}
+                  chatType={chatMeta?.type}
                   channelSubscriberRestricted={!canPost}
                   highlighted={highlighted === m.id}
                   onReply={() => setReplyTo(m)}
@@ -1052,6 +1054,7 @@ function MessageBubble({
   prev,
   next,
   myId,
+  chatType,
   channelSubscriberRestricted = false,
   highlighted,
   onReply,
@@ -1071,6 +1074,7 @@ function MessageBubble({
   prev?: MessageDto;
   next?: MessageDto;
   myId?: string;
+  chatType?: string;
   /** Channel subscribers cannot edit, delete for everyone, or pin. */
   channelSubscriberRestricted?: boolean;
   highlighted: boolean;
@@ -1258,6 +1262,12 @@ function MessageBubble({
   const showDate = !prev || !sameCalendarDay(prev.createdAt, m.createdAt);
   const firstInGroup = !prev || prev.type === 'SYSTEM' || !inSameGroup(prev, m);
   const lastInGroup = !next || next.type === 'SYSTEM' || !inSameGroup(m, next);
+  const showSenderHeader =
+    !isOutgoing &&
+    firstInGroup &&
+    Boolean(m.senderId) &&
+    (chatType === 'GROUP' || chatType === 'CHANNEL') &&
+    Boolean(m.sender);
 
   const actions = useMemo(
     () => [
@@ -1488,6 +1498,10 @@ function MessageBubble({
               return;
             if (menuOpen) return;
             if (e.button !== 0) return;
+            // Let native scrolling win. Capturing the pointer on touch devices can cause
+            // delayed / misrouted taps (e.g. opening a different tab) when the page shifts
+            // between pointerdown and click.
+            if (e.pointerType === 'touch') return;
             clearLongPressTimer();
             setSwipePx(0);
             setSwipeDragging(false);
@@ -1695,6 +1709,26 @@ function MessageBubble({
                 void toggleReaction(m.id, '❤️');
               }}
             >
+              {showSenderHeader && (
+                <div className="mb-1 flex items-center gap-2">
+                  <SafeAvatar
+                    url={m.sender?.avatarUrl ?? null}
+                    label={(m.sender?.displayName ?? m.sender?.username ?? '?')
+                      .slice(0, 1)
+                      .toUpperCase()}
+                    className="h-5 w-5 rounded-full ring-1 ring-black/10 dark:ring-white/10"
+                    fallbackClassName="text-[10px] font-bold"
+                  />
+                  <span className="min-w-0 truncate text-[12px] font-semibold text-ink/70 dark:text-ink/80">
+                    {m.sender?.displayName ?? m.sender?.username}
+                  </span>
+                  {m.sender?.username && (
+                    <span className="shrink-0 text-[11px] text-ink-muted/80">
+                      @{m.sender.username}
+                    </span>
+                  )}
+                </div>
+              )}
               {m.replyTo && (
                 <div
                   className={cn(

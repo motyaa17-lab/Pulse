@@ -434,6 +434,7 @@ export class MessagesService {
     return {
       attachments: true,
       reactions: true,
+      sender: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
       replyTo: { include: { attachments: true, reactions: true } },
       forwardedFromUser: { select: { id: true, username: true, displayName: true } },
     };
@@ -506,6 +507,14 @@ export class MessagesService {
       id: msg.id,
       chatId: msg.chatId,
       senderId: msg.senderId,
+      sender: msg.sender
+        ? {
+            id: msg.sender.id,
+            username: msg.sender.username,
+            displayName: msg.sender.displayName ?? null,
+            avatarUrl: msg.sender.avatarUrl ?? null,
+          }
+        : null,
       type: msg.type,
       text: msg.deletedAt ? null : msg.text,
       clientTempId: msg.clientTempId,

@@ -13,7 +13,7 @@ export default function ChatsLayout({ children }: { children: React.ReactNode })
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
   const pathname = usePathname();
   const barePath = pathname?.split('?')[0] ?? '';
-  const isChatRoute = /^\/chats\/[^/]+$/.test(barePath);
+  const isChatRoute = /^\/chats\/[^/]+(\/(group|channel))?$/.test(barePath);
   const isChatIndex = barePath === '/chats' || barePath === '/chats/';
 
   useEffect(() => {

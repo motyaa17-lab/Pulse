@@ -8,6 +8,7 @@ import { getOrCreateDirectChat } from '@/lib/direct-chat';
 import type { ChatListItem } from '@/lib/types';
 import { ChatsOpeningFallback } from '@/components/pulse/chats-opening-fallback';
 import { useT } from '@/lib/i18n';
+import { chatHref } from '@/lib/chat-route';
 
 export default function ChatsIndexPage() {
   return (
@@ -58,7 +59,7 @@ function ChatsIndexContent() {
     if (!first) return;
 
     didAutoOpenDesktop.current = true;
-    router.replace(`/chats/${first.id}`);
+    router.replace(chatHref(first));
   }, [data, isLoading, router, start]);
 
   if (isLoading) {
