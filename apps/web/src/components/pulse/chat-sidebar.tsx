@@ -551,6 +551,8 @@ export function ChatSidebar() {
   const storiesExtraMax = STORIES_FULL_H - STORIES_COMPACT_H;
   const storiesHeightMobile = storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H;
   const storiesCollapseTimerRef = useRef<number | null>(null);
+  const storiesLastAppliedHRef = useRef<number>(STORIES_COMPACT_H);
+  const storiesLastAppliedAtRef = useRef<number>(0);
 
   const setStoriesHeight = (h: number) => {
     const el = storiesWrapRef.current;
@@ -563,6 +565,80 @@ export function ChatSidebar() {
   useEffect(() => {
     setStoriesHeight(storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storiesExpanded]);
+
+  // Native, passive touch listeners for the pull-to-expand interaction.
+  // React synthetic touch events are non-passive and can contribute to scroll jank.
+  useEffect(() => {
+    const el = listScrollRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (el.scrollTop !== 0) return;
+      touchStartYRef.current = e.touches[0]?.clientY ?? null;
+      storiesPullPxRef.current = 0;
+      if (!storiesExpanded) setStoriesHeight(STORIES_COMPACT_H);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const start = touchStartYRef.current;
+      if (start == null) return;
+      if (el.scrollTop !== 0) return;
+      if (storiesExpanded) return;
+      const y = e.touches[0]?.clientY ?? start;
+      const dy = y - start;
+      if (dy <= 0) return;
+
+      const nextPull = Math.min(storiesExtraMax, dy);
+      storiesPullPxRef.current = nextPull;
+      if (storiesRafRef.current != null) return;
+
+      storiesRafRef.current = requestAnimationFrame(() => {
+        storiesRafRef.current = null;
+
+        // Throttle layout updates: changing header height forces re-layout of the list below.
+        // Apply at ~30fps and only if the delta is meaningful.
+        const now = performance.now();
+        if (now - storiesLastAppliedAtRef.current < 33) return;
+        const nextH = STORIES_COMPACT_H + storiesPullPxRef.current;
+        if (Math.abs(nextH - storiesLastAppliedHRef.current) < 3) return;
+
+        storiesLastAppliedAtRef.current = now;
+        storiesLastAppliedHRef.current = nextH;
+        setStoriesHeight(nextH);
+      });
+    };
+
+    const end = () => {
+      const pulled = storiesPullPxRef.current;
+      touchStartYRef.current = null;
+      storiesPullPxRef.current = 0;
+      if (!storiesExpanded && pulled >= 48) {
+        setStoriesExpanded(true);
+        return;
+      }
+      storiesLastAppliedHRef.current = STORIES_COMPACT_H;
+      setStoriesHeight(STORIES_COMPACT_H);
+    };
+
+    const cancel = () => {
+      touchStartYRef.current = null;
+      storiesPullPxRef.current = 0;
+      const h = storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H;
+      storiesLastAppliedHRef.current = h;
+      setStoriesHeight(h);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', end, { passive: true });
+    el.addEventListener('touchcancel', cancel, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', end);
+      el.removeEventListener('touchcancel', cancel);
+    };
   }, [storiesExpanded]);
 
   // Avoid collapsing stories *during* scroll: it causes a full sidebar rerender and can jank.
@@ -805,47 +881,6 @@ export function ChatSidebar() {
         <div
           ref={listScrollRef}
           className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24"
-          onTouchStart={(e) => {
-            const el = listScrollRef.current;
-            if (!el) return;
-            if (el.scrollTop !== 0) return;
-            touchStartYRef.current = e.touches[0]?.clientY ?? null;
-            storiesPullPxRef.current = 0;
-            if (!storiesExpanded) setStoriesHeight(STORIES_COMPACT_H);
-          }}
-          onTouchMove={(e) => {
-            const el = listScrollRef.current;
-            const start = touchStartYRef.current;
-            if (!el || start == null) return;
-            if (el.scrollTop !== 0) return;
-            if (storiesExpanded) return;
-            const y = e.touches[0]?.clientY ?? start;
-            const dy = y - start;
-            if (dy <= 0) return;
-            // Telegram-like: stories expand only after you reach top and pull down again.
-            const next = Math.min(storiesExtraMax, dy);
-            storiesPullPxRef.current = next;
-            if (storiesRafRef.current != null) return;
-            storiesRafRef.current = requestAnimationFrame(() => {
-              storiesRafRef.current = null;
-              setStoriesHeight(STORIES_COMPACT_H + storiesPullPxRef.current);
-            });
-          }}
-          onTouchEnd={() => {
-            const pulled = storiesPullPxRef.current;
-            touchStartYRef.current = null;
-            storiesPullPxRef.current = 0;
-            if (!storiesExpanded && pulled >= 48) {
-              setStoriesExpanded(true);
-              return;
-            }
-            setStoriesHeight(STORIES_COMPACT_H);
-          }}
-          onTouchCancel={() => {
-            touchStartYRef.current = null;
-            storiesPullPxRef.current = 0;
-            setStoriesHeight(storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H);
-          }}
         >
           {!isLoading && archivedRaw.length > 0 && (
             <button
