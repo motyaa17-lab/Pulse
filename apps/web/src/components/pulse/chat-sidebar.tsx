@@ -296,6 +296,10 @@ export function ChatSidebar() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [storiesExpanded, setStoriesExpanded] = useState(false);
+  const [storiesPullPx, setStoriesPullPx] = useState(0);
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
@@ -540,6 +544,13 @@ export function ChatSidebar() {
       apiFetch<{ ok: boolean }>(`/chats/pins/reorder`, { method: 'POST', body: { chatIds } }),
   });
 
+  const STORIES_COMPACT_H = 72;
+  const STORIES_FULL_H = 132;
+  const storiesExtraMax = STORIES_FULL_H - STORIES_COMPACT_H;
+  const storiesHeightMobile = storiesExpanded
+    ? STORIES_FULL_H
+    : STORIES_COMPACT_H + Math.min(storiesExtraMax, Math.max(0, storiesPullPx));
+
   return (
     <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#17212b] text-white">
       {/* Full width on mobile, centered preview on desktop */}
@@ -736,9 +747,54 @@ export function ChatSidebar() {
           </div>
         </header>
 
-        <StoriesStrip />
+        <div
+          className="relative overflow-hidden border-b border-white/[0.06] md:border-b-0"
+          style={{ maxHeight: storiesHeightMobile }}
+        >
+          <div className="hidden md:block">
+            <StoriesStrip variant="full" />
+          </div>
+          <div className="md:hidden">
+            <StoriesStrip variant={storiesExpanded ? 'full' : 'compact'} />
+          </div>
+        </div>
 
-        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24">
+        <div
+          ref={listScrollRef}
+          className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            if (el.scrollTop > 8 && storiesExpanded) setStoriesExpanded(false);
+          }}
+          onTouchStart={(e) => {
+            const el = listScrollRef.current;
+            if (!el) return;
+            if (el.scrollTop !== 0) return;
+            touchStartYRef.current = e.touches[0]?.clientY ?? null;
+            setStoriesPullPx(0);
+          }}
+          onTouchMove={(e) => {
+            const el = listScrollRef.current;
+            const start = touchStartYRef.current;
+            if (!el || start == null) return;
+            if (el.scrollTop !== 0) return;
+            const y = e.touches[0]?.clientY ?? start;
+            const dy = y - start;
+            if (dy <= 0) return;
+            // Telegram-like: stories expand only after you reach top and pull down again.
+            setStoriesPullPx(Math.min(storiesExtraMax, dy));
+          }}
+          onTouchEnd={() => {
+            const pulled = storiesPullPx;
+            touchStartYRef.current = null;
+            setStoriesPullPx(0);
+            if (!storiesExpanded && pulled >= 48) setStoriesExpanded(true);
+          }}
+          onTouchCancel={() => {
+            touchStartYRef.current = null;
+            setStoriesPullPx(0);
+          }}
+        >
           {!isLoading && archivedRaw.length > 0 && (
             <button
               type="button"

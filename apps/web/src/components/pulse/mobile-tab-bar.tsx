@@ -34,7 +34,7 @@ function TabItem({
     <Link
       href={href}
       className={cn(
-        'flex min-w-0 flex-1 flex-col items-center gap-0.5 py-1.5 transition active:scale-[0.98]',
+        'flex min-w-0 flex-1 touch-manipulation select-none flex-col items-center gap-0.5 py-1.5 transition active:scale-[0.98]',
         active ? 'text-[#3390ec]' : 'text-white/65 hover:text-white/85',
       )}
       aria-current={active ? 'page' : undefined}
@@ -142,11 +142,11 @@ export function MobileTabBar() {
   const initial = (me?.displayName ?? me?.username ?? '?').slice(0, 1).toUpperCase();
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] hidden max-md:flex max-md:justify-center max-md:px-3 max-md:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-[200] hidden max-md:flex max-md:justify-center max-md:px-3 max-md:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <div className="pointer-events-auto flex w-full max-w-[420px] items-end gap-2">
         <nav
           role="navigation"
-          className="flex min-w-0 flex-1 items-stretch justify-around rounded-[26px] border border-white/[0.1] bg-[#1a242e]/95 px-1 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+          className="flex min-w-0 flex-1 items-stretch justify-around rounded-[26px] border border-white/[0.12] bg-[#1a242e]/98 px-1 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.62)] backdrop-blur-2xl"
           aria-label={t('tabBarNavAria')}
         >
           <TabItem href="/contacts" active={contactsActive} label={t('tabBarContacts')}>
@@ -175,7 +175,7 @@ export function MobileTabBar() {
         <button
           type="button"
           onClick={onSearchTap}
-          className="pointer-events-auto grid h-12 w-12 shrink-0 place-items-center rounded-full border border-white/[0.1] bg-[#1a242e]/95 text-white/90 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-2xl transition hover:bg-white/[0.08] active:scale-[0.97]"
+          className="pointer-events-auto grid h-12 w-12 shrink-0 touch-manipulation place-items-center rounded-full border border-white/[0.12] bg-[#1a242e]/98 text-white/90 shadow-[0_12px_40px_rgba(0,0,0,0.62)] backdrop-blur-2xl transition hover:bg-white/[0.08] active:scale-[0.97]"
           aria-label={t('search')}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>

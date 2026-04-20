@@ -22,10 +22,12 @@ function StoryRingPreview({
   story,
   isSelf,
   onSelect,
+  size = 'full',
 }: {
   story: StoryFeedItem;
   isSelf: boolean;
   onSelect: () => void;
+  size?: 'full' | 'compact';
 }) {
   const t = useT();
   const [mediaBroken, setMediaBroken] = useState(false);
@@ -37,6 +39,12 @@ function StoryRingPreview({
   useEffect(() => {
     setMediaBroken(false);
   }, [story.id, story.url]);
+
+  const mediaClass = size === 'compact' ? 'h-10 w-10' : 'h-14 w-14';
+  const nameClass =
+    size === 'compact'
+      ? 'max-w-[4.25rem] text-[10px] text-white/60'
+      : 'max-w-[4.5rem] text-[11px] text-white/70';
 
   return (
     <button
@@ -57,7 +65,7 @@ function StoryRingPreview({
             isVideo ? (
               <video
                 src={mediaUrl}
-                className="h-14 w-14 rounded-full object-cover"
+                className={cn(mediaClass, 'rounded-full object-cover')}
                 muted
                 playsInline
                 autoPlay
@@ -69,7 +77,7 @@ function StoryRingPreview({
               <img
                 src={mediaUrl}
                 alt=""
-                className="h-14 w-14 rounded-full object-cover"
+                className={cn(mediaClass, 'rounded-full object-cover')}
                 onError={() => setMediaBroken(true)}
               />
             )
@@ -77,20 +85,23 @@ function StoryRingPreview({
             <SafeAvatar
               url={story.user.avatarUrl}
               label={userLabel}
-              className="h-14 w-14 rounded-full bg-[#111921]"
-              fallbackClassName="bg-[#111921] text-lg text-white/80"
+              className={cn(mediaClass, 'rounded-full bg-[#111921]')}
+              fallbackClassName={cn(
+                'bg-[#111921] text-white/80',
+                size === 'compact' ? 'text-sm' : 'text-lg',
+              )}
             />
           )}
         </span>
       </span>
-      <span className="max-w-[4.5rem] truncate text-center text-[11px] font-medium text-white/70">
+      <span className={cn('truncate text-center font-medium', nameClass)}>
         {isSelf ? t('storiesYou') : userLabel}
       </span>
     </button>
   );
 }
 
-export function StoriesStrip() {
+export function StoriesStrip({ variant = 'full' }: { variant?: 'full' | 'compact' }) {
   const t = useT();
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
@@ -163,13 +174,22 @@ export function StoriesStrip() {
   const ringLabel = (s: StoryFeedItem) =>
     s.user.displayName?.trim() || s.user.username || t('publicUserFallback');
 
+  const compact = variant === 'compact';
+
   return (
     <>
-      <div className="border-b border-white/[0.06] px-2 py-2">
-        <p className="mb-1.5 px-1 text-[0.6rem] font-bold uppercase tracking-[0.14em] text-white/45">
-          {t('storiesRowTitle')}
-        </p>
-        <div className="scrollbar-none flex gap-3 overflow-x-auto pb-1 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className={cn('border-b border-white/[0.06] px-2', compact ? 'py-1.5' : 'py-2')}>
+        {!compact && (
+          <p className="mb-1.5 px-1 text-[0.6rem] font-bold uppercase tracking-[0.14em] text-white/45">
+            {t('storiesRowTitle')}
+          </p>
+        )}
+        <div
+          className={cn(
+            'scrollbar-none flex gap-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            compact ? 'pb-1 pt-0.5' : 'pb-1 pt-0.5',
+          )}
+        >
           <button
             type="button"
             disabled={!token || createStory.isPending}
@@ -177,10 +197,20 @@ export function StoriesStrip() {
             className="flex shrink-0 flex-col items-center gap-1 touch-manipulation"
             aria-label={t('storiesAddAria')}
           >
-            <span className="relative grid h-[4.25rem] w-[4.25rem] place-items-center rounded-full border-2 border-dashed border-white/25 bg-white/[0.04] text-white/70 transition hover:border-[#3390ec]/80 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] disabled:opacity-50">
+            <span
+              className={cn(
+                'relative grid place-items-center rounded-full border-2 border-dashed border-white/25 bg-white/[0.04] text-white/70 transition hover:border-[#3390ec]/80 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] disabled:opacity-50',
+                compact ? 'h-11 w-11' : 'h-[4.25rem] w-[4.25rem]',
+              )}
+            >
               <PlusIcon />
             </span>
-            <span className="max-w-[4.5rem] truncate text-center text-[11px] font-medium text-white/55">
+            <span
+              className={cn(
+                'truncate text-center font-medium text-white/55',
+                compact ? 'max-w-[4.25rem] text-[10px]' : 'max-w-[4.5rem] text-[11px]',
+              )}
+            >
               {t('storiesAdd')}
             </span>
           </button>
@@ -210,6 +240,7 @@ export function StoriesStrip() {
               story={s}
               isSelf={Boolean(meId && s.userId === meId)}
               onSelect={() => setViewer(s)}
+              size={compact ? 'compact' : 'full'}
             />
           ))}
         </div>
