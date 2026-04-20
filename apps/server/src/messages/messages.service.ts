@@ -24,6 +24,17 @@ export class MessagesService {
   ) {}
 
   private async assertCanPost(chatId: string, userId: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { mutedUntil: true, bannedUntil: true },
+    });
+    const now = new Date();
+    if (u?.bannedUntil && u.bannedUntil.getTime() > now.getTime()) {
+      throw new ForbiddenException('User is banned');
+    }
+    if (u?.mutedUntil && u.mutedUntil.getTime() > now.getTime()) {
+      throw new ForbiddenException('User is muted');
+    }
     const member = await this.chats.assertMember(chatId, userId);
     const chat = member.chat;
     if (chat.type === ChatType.CHANNEL) {

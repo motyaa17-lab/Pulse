@@ -48,6 +48,17 @@ enum ReportStatus {
   CLOSED
 }
 
+enum ModerationActionType {
+  BAN_USER
+  UNBAN_USER
+  MUTE_USER
+  UNMUTE_USER
+  DELETE_MESSAGE
+  CLOSE_REPORT
+  REOPEN_REPORT
+  NOTE_REPORT
+}
+
 model User {
   id           String      @id @default(cuid())
   email        String      @unique
@@ -61,6 +72,12 @@ model User {
   shareLastSeen Boolean    @default(true)
   /// Global app role (moderation, admin UI). Distinct from ChatMember.role.
   role         UserAppRole @default(USER)
+  /// Moderation: when set and in the future, user can't send messages.
+  mutedUntil   DateTime?
+  mutedReason  String?
+  /// Moderation: when set and in the future, user is banned from sending messages.
+  bannedUntil  DateTime?
+  bannedReason String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -81,6 +98,8 @@ model User {
   pinnedChatsMessages Chat[] @relation("ChatPinnedByUser")
   stories             Story[]
   messageReports      MessageReport[]
+  moderationActions   ModerationAction[]     @relation("ModerationActor")
+  moderationTargets   ModerationAction[]     @relation("ModerationTarget")
 }
 
 /// Ephemeral "circle" media (24h), visible to self + direct-chat peers.
@@ -222,6 +241,7 @@ model Message {
 
   pinnedInChat Chat? @relation("ChatPinnedMessage")
   reports      MessageReport[]
+  moderationActions ModerationAction[]
 
   @@index([chatId, createdAt(sort: Desc)])
   @@index([senderId])
@@ -242,10 +262,32 @@ model MessageReport {
   note         String?
   textSnapshot String?
   createdAt    DateTime     @default(now())
+  moderationActions ModerationAction[]
 
   @@index([messageId])
   @@index([status, createdAt(sort: Desc)])
   @@index([chatId, createdAt(sort: Desc)])
+}
+
+model ModerationAction {
+  id           String               @id @default(cuid())
+  actorId      String
+  actor        User                 @relation("ModerationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  targetUserId String?
+  targetUser   User?                @relation("ModerationTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  reportId     String?
+  report       MessageReport?       @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  messageId    String?
+  message      Message?             @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  actionType   ModerationActionType
+  reason       String?
+  metaJson     String?
+  createdAt    DateTime             @default(now())
+
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([targetUserId, createdAt(sort: Desc)])
+  @@index([reportId])
+  @@index([messageId])
 }
 
 /** Per-user: message stays for others; removed only from this user's history. */
