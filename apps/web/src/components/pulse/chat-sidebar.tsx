@@ -297,7 +297,9 @@ export function ChatSidebar() {
   const [showArchived, setShowArchived] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [storiesExpanded, setStoriesExpanded] = useState(false);
-  const [storiesPullPx, setStoriesPullPx] = useState(0);
+  const storiesPullPxRef = useRef(0);
+  const storiesRafRef = useRef<number | null>(null);
+  const storiesWrapRef = useRef<HTMLDivElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
   const touchStartYRef = useRef<number | null>(null);
   const { data, isLoading } = useQuery<ChatListItem[]>({
@@ -547,9 +549,20 @@ export function ChatSidebar() {
   const STORIES_COMPACT_H = 72;
   const STORIES_FULL_H = 132;
   const storiesExtraMax = STORIES_FULL_H - STORIES_COMPACT_H;
-  const storiesHeightMobile = storiesExpanded
-    ? STORIES_FULL_H
-    : STORIES_COMPACT_H + Math.min(storiesExtraMax, Math.max(0, storiesPullPx));
+  const storiesHeightMobile = storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H;
+
+  const setStoriesHeight = (h: number) => {
+    const el = storiesWrapRef.current;
+    if (!el) return;
+    // Only mutate style; avoid rerendering the whole sidebar on scroll.
+    el.style.maxHeight = `${h}px`;
+  };
+
+  // Keep DOM height in sync when expanded toggles.
+  useEffect(() => {
+    setStoriesHeight(storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storiesExpanded]);
 
   return (
     <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#17212b] text-white">
@@ -748,6 +761,7 @@ export function ChatSidebar() {
         </header>
 
         <div
+          ref={storiesWrapRef}
           className="relative overflow-hidden border-b border-white/[0.06] md:border-b-0"
           style={{ maxHeight: storiesHeightMobile }}
         >
@@ -771,28 +785,41 @@ export function ChatSidebar() {
             if (!el) return;
             if (el.scrollTop !== 0) return;
             touchStartYRef.current = e.touches[0]?.clientY ?? null;
-            setStoriesPullPx(0);
+            storiesPullPxRef.current = 0;
+            if (!storiesExpanded) setStoriesHeight(STORIES_COMPACT_H);
           }}
           onTouchMove={(e) => {
             const el = listScrollRef.current;
             const start = touchStartYRef.current;
             if (!el || start == null) return;
             if (el.scrollTop !== 0) return;
+            if (storiesExpanded) return;
             const y = e.touches[0]?.clientY ?? start;
             const dy = y - start;
             if (dy <= 0) return;
             // Telegram-like: stories expand only after you reach top and pull down again.
-            setStoriesPullPx(Math.min(storiesExtraMax, dy));
+            const next = Math.min(storiesExtraMax, dy);
+            storiesPullPxRef.current = next;
+            if (storiesRafRef.current != null) return;
+            storiesRafRef.current = requestAnimationFrame(() => {
+              storiesRafRef.current = null;
+              setStoriesHeight(STORIES_COMPACT_H + storiesPullPxRef.current);
+            });
           }}
           onTouchEnd={() => {
-            const pulled = storiesPullPx;
+            const pulled = storiesPullPxRef.current;
             touchStartYRef.current = null;
-            setStoriesPullPx(0);
-            if (!storiesExpanded && pulled >= 48) setStoriesExpanded(true);
+            storiesPullPxRef.current = 0;
+            if (!storiesExpanded && pulled >= 48) {
+              setStoriesExpanded(true);
+              return;
+            }
+            setStoriesHeight(STORIES_COMPACT_H);
           }}
           onTouchCancel={() => {
             touchStartYRef.current = null;
-            setStoriesPullPx(0);
+            storiesPullPxRef.current = 0;
+            setStoriesHeight(storiesExpanded ? STORIES_FULL_H : STORIES_COMPACT_H);
           }}
         >
           {!isLoading && archivedRaw.length > 0 && (
