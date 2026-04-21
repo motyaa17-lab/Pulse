@@ -842,9 +842,9 @@ export function ChatSidebar() {
 
         <div
           ref={listScrollRef}
-          className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24"
+          className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0 pb-[max(1rem,calc(4.25rem+env(safe-area-inset-bottom)))] md:pb-24"
         >
-          <div className="sticky top-0 z-10 -mx-2 bg-[#17212b] px-2 pb-2 pt-2">
+          <div className="sticky top-0 z-10 bg-surface-muted/90 px-3 pb-2 pt-2 backdrop-blur md:bg-transparent dark:bg-[rgb(var(--tg-panel))]/92">
             <div className="flex justify-end">
               <button
                 type="button"
@@ -852,8 +852,8 @@ export function ChatSidebar() {
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition touch-manipulation',
                   showUnreadOnly
-                    ? 'border-[#3390ec] bg-[#3390ec]/25 text-white'
-                    : 'border-white/12 bg-white/[0.06] text-white/65 hover:bg-white/10 hover:text-white/90',
+                    ? 'border-accent/80 bg-accent/15 text-ink dark:border-[#3390ec] dark:bg-[#3390ec]/25 dark:text-white'
+                    : 'border-line/70 bg-surface-elevated/70 text-ink-muted hover:bg-surface-elevated/90 hover:text-ink dark:border-white/12 dark:bg-white/[0.06] dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white/90',
                 )}
                 aria-pressed={showUnreadOnly}
                 aria-label={t('filterUnreadOnlyAria')}
@@ -866,11 +866,11 @@ export function ChatSidebar() {
             <button
               type="button"
               onClick={() => setShowArchived((v) => !v)}
-              className="mx-2 mt-1 flex w-[calc(100%-1rem)] items-center gap-2 rounded-2xl border border-white/10 bg-white/7 px-3 py-3 text-left text-sm text-white/85 shadow-[0_10px_26px_rgba(0,0,0,0.25)] backdrop-blur transition hover:bg-white/10 active:scale-[0.99]"
+              className="relative flex w-full items-center gap-3 px-3 py-2 text-left transition active:bg-line/25 dark:active:bg-white/[0.08]"
               aria-label={t('archivedChats')}
             >
-              <span className="grid h-9 w-9 place-items-center rounded-2xl bg-white/10 text-white/80">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#2f98ff] text-white shadow-sm">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path
                     d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"
                     stroke="currentColor"
@@ -887,14 +887,20 @@ export function ChatSidebar() {
                 </svg>
               </span>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold leading-tight">{t('archivedChats')}</div>
-                <div className="mt-0.5 text-[12.5px] text-white/50">
+                <div className="truncate text-[16px] font-semibold leading-tight text-ink dark:text-white">
+                  {t('archivedChats')}
+                </div>
+                <div className="mt-0.5 truncate text-[14px] leading-snug text-ink-muted dark:text-white/55">
                   {showArchived ? t('archivedTapToHide') : t('archivedTapToShow')}
                 </div>
               </div>
-              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/12 px-2 text-[12px] font-bold text-white/80">
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-line/70 px-2 text-[12px] font-bold text-ink-muted dark:bg-white/12 dark:text-white/80">
                 {archivedRaw.length}
               </span>
+              <div
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 right-0 h-px bg-line/60 dark:bg-white/[0.10] left-[5rem]"
+              />
             </button>
           )}
           {isLoading && (
@@ -911,10 +917,7 @@ export function ChatSidebar() {
             </div>
           )}
           {!isLoading && pinned.length > 0 && (
-            <div className="mb-1">
-              <p className="px-3 pb-1 pt-2 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/45">
-                {t('pinned')}
-              </p>
+            <div className="mb-0">
               <Reorder.Group
                 axis="y"
                 values={pinned}
@@ -933,7 +936,7 @@ export function ChatSidebar() {
                   void reorderPinned.mutateAsync(next.map((x) => x.id)).catch(() => void 0);
                 }}
                 dragListener={editMode}
-                className="space-y-px"
+                className=""
               >
                 {pinned.map((c: ChatListItem) => (
                   <Reorder.Item
@@ -964,7 +967,7 @@ export function ChatSidebar() {
               </Reorder.Group>
             </div>
           )}
-          <div className="space-y-1">
+          <div className="">
             {rest.map((c: ChatListItem) => (
               <ChatRow
                 key={c.id}
@@ -986,11 +989,8 @@ export function ChatSidebar() {
             ))}
           </div>
           {!isLoading && archivedRaw.length > 0 && showArchived && (
-            <div className="mt-2">
-              <p className="px-3 pb-1 pt-3 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/45">
-                {t('archived')}
-              </p>
-              <div className="space-y-1 opacity-[0.9]">
+            <div className="mt-2 opacity-[0.9]">
+              <div className="">
                 {archived.map((c: ChatListItem) => (
                   <ChatRow
                     key={c.id}
@@ -1093,14 +1093,10 @@ function ChatRow({
     >
       <div
         className={cn(
-          'relative flex items-stretch gap-0 rounded-xl transition md:rounded-2xl',
-          'active:scale-[0.99]',
-          // Telegram iOS-like selection/pinned states
-          chat.isPinned && !active && 'bg-surface-elevated/70 dark:bg-[rgb(var(--tg-pinned))]',
-          active
-            ? 'bg-line/35 shadow-[0_10px_32px_rgba(0,0,0,0.12)] dark:bg-white/[0.10] dark:shadow-[0_8px_28px_rgba(0,0,0,0.35)]'
-            : 'hover:bg-surface-muted/70 dark:hover:bg-white/[0.06]',
-          chat.isMuted && 'opacity-[0.9]',
+          'relative flex items-stretch gap-0 transition',
+          // Telegram iOS-like pinned subtle background (no rounding)
+          chat.isPinned && !active && 'bg-surface-elevated/50 dark:bg-[rgb(var(--tg-pinned))]',
+          chat.isMuted && 'opacity-[0.92]',
         )}
       >
         {editMode && (
@@ -1116,18 +1112,21 @@ function ChatRow({
         <Link
           href={chatHref(chat)}
           className={cn(
-            // iOS Telegram: slightly taller row, denser horizontal rhythm
-            'relative z-[1] flex min-h-[64px] min-w-0 flex-1 items-center gap-3 px-3 py-2',
+            // iOS Telegram: larger avatar + more vertical whitespace
+            'relative z-[1] flex min-h-[76px] min-w-0 flex-1 items-center gap-3 px-3 py-3',
+            active
+              ? 'bg-line/30 dark:bg-white/[0.08]'
+              : 'active:bg-line/25 dark:active:bg-white/[0.08]',
             editMode && 'pl-2',
           )}
           onClick={() => useUiStore.getState().setSidebarOpen(false)}
         >
-          <div className="relative h-12 w-12 shrink-0">
+          <div className="relative h-14 w-14 shrink-0">
             <SafeAvatar
               url={rawAvatar}
               label={chatInitial(chat, t)}
-              className="h-12 w-12 rounded-full ring-1 ring-line/40 dark:ring-white/12"
-              fallbackClassName="bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-[0.95rem] text-white"
+              className="h-14 w-14 rounded-full ring-1 ring-line/35 dark:ring-white/12"
+              fallbackClassName="bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-[1.05rem] text-white"
             />
             {chat.isMuted ? (
               <span
@@ -1138,7 +1137,7 @@ function ChatRow({
               chat.type === 'DIRECT' &&
               chat.peer?.isOnline && (
                 <span
-                  className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#4dcd5e] ring-[2.5px] ring-surface-muted dark:ring-[rgb(var(--tg-panel))]"
+                  className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-[#4dcd5e] ring-[2.5px] ring-surface-muted dark:ring-[rgb(var(--tg-panel))]"
                   title={t('online')}
                   aria-hidden
                 />
@@ -1149,7 +1148,7 @@ function ChatRow({
             <div className="flex items-baseline gap-2">
               <span
                 className={cn(
-                  'min-w-0 flex-1 truncate text-[15px] font-semibold leading-tight text-ink dark:text-white',
+                  'min-w-0 flex-1 truncate text-[16px] font-semibold leading-tight text-ink dark:text-white',
                 )}
               >
                 {label}
@@ -1165,7 +1164,7 @@ function ChatRow({
               )}
               <span
                 className={cn(
-                  'shrink-0 text-[0.7rem] tabular-nums text-ink-muted dark:text-white/50',
+                  'shrink-0 text-[13px] tabular-nums text-ink-muted dark:text-white/50',
                   chat.unreadCount > 0 && 'font-semibold text-accent dark:text-[#58a6ff]',
                 )}
               >
@@ -1175,7 +1174,7 @@ function ChatRow({
             <div className="mt-0.5 flex items-center gap-2">
               <p
                 className={cn(
-                  'min-w-0 flex-1 truncate text-[12.5px] leading-snug',
+                  'min-w-0 flex-1 truncate text-[14px] leading-snug',
                   isTyping
                     ? 'text-emerald-600 dark:text-emerald-300/90'
                     : 'text-ink-muted dark:text-white/55',
@@ -1184,7 +1183,7 @@ function ChatRow({
                 {preview}
               </p>
               {chat.unreadCount > 0 && (
-                <span className="flex h-[1.05rem] min-w-[1.05rem] shrink-0 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold leading-none text-white shadow-none dark:bg-[#3390ec]">
+                <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold leading-none text-white shadow-none dark:bg-[#3390ec]">
                   {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                 </span>
               )}
@@ -1267,9 +1266,9 @@ function ChatRow({
           aria-hidden
           className={cn(
             'pointer-events-none absolute bottom-0 right-0 z-0 h-px bg-line/60 dark:bg-white/[0.10]',
-            // px-3 + h-12 + gap-3 = 0.75rem + 3rem + 0.75rem
+            // px-3 + h-14 + gap-3 = 0.75rem + 3.5rem + 0.75rem = 5rem
             // md+: reorder handle hidden; row still uses pl-2 in edit mode
-            editMode ? 'left-[6.75rem] md:left-[4.25rem]' : 'left-[4.5rem]',
+            editMode ? 'left-[7.25rem] md:left-[4.75rem]' : 'left-[5rem]',
           )}
         />
       </div>
