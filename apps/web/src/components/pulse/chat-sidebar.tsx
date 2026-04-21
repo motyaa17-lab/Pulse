@@ -294,6 +294,8 @@ export function ChatSidebar() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [channelModalOpen, setChannelModalOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [chip, setChip] = useState<'all' | 'telegram' | 'channels' | 'groups' | 'direct'>('all');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -323,6 +325,15 @@ export function ChatSidebar() {
       return label.includes(needle) || preview.includes(needle) || uname.includes(needle);
     });
   }, [data, search]);
+
+  const chipFiltered = useMemo(() => {
+    if (chip === 'all') return listFiltered;
+    if (chip === 'direct') return listFiltered.filter((c) => c.type === 'DIRECT');
+    if (chip === 'groups') return listFiltered.filter((c) => c.type === 'GROUP');
+    if (chip === 'channels') return listFiltered.filter((c) => c.type === 'CHANNEL');
+    // “Telegram” in the iOS UI is commonly a folder; approximate it as channels.
+    return listFiltered.filter((c) => c.type === 'CHANNEL');
+  }, [chip, listFiltered]);
 
   useEffect(() => {
     const onFocusEvt = () => {
@@ -528,8 +539,8 @@ export function ChatSidebar() {
     };
   }, [data, pathname, t]);
 
-  const pinnedRaw = listFiltered.filter((c: ChatListItem) => c.isPinned && !c.isArchived);
-  const restRaw = listFiltered.filter((c: ChatListItem) => !c.isPinned && !c.isArchived);
+  const pinnedRaw = chipFiltered.filter((c: ChatListItem) => c.isPinned && !c.isArchived);
+  const restRaw = chipFiltered.filter((c: ChatListItem) => !c.isPinned && !c.isArchived);
   const archivedRaw = data?.filter((c: ChatListItem) => c.isArchived) ?? [];
   const unreadFilter = (list: ChatListItem[]) =>
     !showUnreadOnly ? list : list.filter((c) => c.unreadCount > 0);
@@ -560,48 +571,80 @@ export function ChatSidebar() {
       {/* Full width on mobile, centered preview on desktop */}
       <div className="flex h-full min-h-0 w-full flex-col md:mx-auto md:max-w-[420px]">
         <header className="shrink-0 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4 md:pt-10">
-          <div className="flex items-end justify-between gap-2.5 md:gap-3">
-            <div className="flex min-w-0 flex-1 items-end gap-2.5 md:gap-3">
+          <div className="flex items-center justify-between gap-2.5 md:items-end md:gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 md:items-end md:gap-3">
               <div className="hidden md:block">
                 <AppMenu pathname={pathname} />
               </div>
-              <h1 className="min-w-0 flex-1 truncate font-display text-2xl font-semibold tracking-tight text-white md:text-4xl">
+              <button
+                type="button"
+                onClick={() => setEditMode((v) => !v)}
+                className="inline-flex min-h-[44px] items-center px-1 text-[14px] font-semibold text-[#58a6ff] md:hidden"
+                aria-pressed={editMode}
+              >
+                {editMode ? t('chatsDone') : t('chatsEdit')}
+              </button>
+              <h1 className="min-w-0 flex-1 truncate text-center font-display text-[20px] font-semibold tracking-tight text-white md:text-left md:text-4xl">
                 {t('chats')}
               </h1>
             </div>
-            <div className="relative shrink-0" ref={createHeaderWrapRef}>
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
-                onClick={() =>
-                  setCreateMenuPlacement((p) => (p === 'header' ? 'closed' : 'header'))
-                }
-                className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.07] text-xl font-light text-white/90 backdrop-blur transition hover:bg-white/12 hover:text-white active:scale-[0.99] md:h-12 md:w-12"
-                aria-expanded={createMenuPlacement === 'header'}
-                aria-haspopup="menu"
-                aria-label={t('sidebarCreateMenuAria')}
+                className="grid h-11 w-11 place-items-center rounded-full text-white/75 transition hover:bg-white/10 active:scale-[0.99] md:hidden"
+                onClick={() => window.alert('Soon')}
+                aria-label="Shield"
               >
-                +
+                <span className="text-[18px]" aria-hidden>
+                  🛡️
+                </span>
               </button>
-              {createMenuPlacement === 'header' && (
-                <SidebarCreateMenu
-                  t={t}
-                  onClose={() => setCreateMenuPlacement('closed')}
-                  onNewGroup={() => setGroupModalOpen(true)}
-                  onNewChannel={() => setChannelModalOpen(true)}
-                  onExploreChannels={() => {
-                    setCreateMenuPlacement('closed');
-                    router.push('/chats/explore');
-                  }}
-                  onJoinGroup={() => {
-                    setCreateMenuPlacement('closed');
-                    router.push('/join');
-                  }}
-                  onJoinChannel={() => {
-                    setCreateMenuPlacement('closed');
-                    router.push('/join/channel');
-                  }}
-                />
-              )}
+              <div className="relative shrink-0" ref={createHeaderWrapRef}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCreateMenuPlacement((p) => (p === 'header' ? 'closed' : 'header'))
+                  }
+                  className="grid h-11 w-11 place-items-center rounded-full text-white/85 transition hover:bg-white/10 active:scale-[0.99] md:h-12 md:w-12 md:rounded-full md:border md:border-white/10 md:bg-white/[0.07] md:text-xl md:font-light md:text-white/90 md:backdrop-blur"
+                  aria-expanded={createMenuPlacement === 'header'}
+                  aria-haspopup="menu"
+                  aria-label={t('sidebarCreateMenuAria')}
+                >
+                  <span className="text-[18px] md:text-inherit" aria-hidden>
+                    ＋
+                  </span>
+                </button>
+                {createMenuPlacement === 'header' && (
+                  <SidebarCreateMenu
+                    t={t}
+                    onClose={() => setCreateMenuPlacement('closed')}
+                    onNewGroup={() => setGroupModalOpen(true)}
+                    onNewChannel={() => setChannelModalOpen(true)}
+                    onExploreChannels={() => {
+                      setCreateMenuPlacement('closed');
+                      router.push('/chats/explore');
+                    }}
+                    onJoinGroup={() => {
+                      setCreateMenuPlacement('closed');
+                      router.push('/join');
+                    }}
+                    onJoinChannel={() => {
+                      setCreateMenuPlacement('closed');
+                      router.push('/join/channel');
+                    }}
+                  />
+                )}
+              </div>
+              <button
+                type="button"
+                className="grid h-11 w-11 place-items-center rounded-full text-white/75 transition hover:bg-white/10 active:scale-[0.99] md:hidden"
+                onClick={() => window.alert('Soon')}
+                aria-label="New message"
+              >
+                <span className="text-[18px]" aria-hidden>
+                  ✍️
+                </span>
+              </button>
             </div>
           </div>
 
@@ -737,6 +780,31 @@ export function ChatSidebar() {
                 )}
               </div>
             )}
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {(
+              [
+                { id: 'all', label: t('chatsChipAll') },
+                { id: 'telegram', label: t('chatsChipTelegram') },
+                { id: 'channels', label: t('chatsChipChannels') },
+                { id: 'groups', label: t('chatsChipGroups') },
+                { id: 'direct', label: t('chatsChipDirect') },
+              ] as const
+            ).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setChip(c.id)}
+                className={cn(
+                  'shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition',
+                  chip === c.id
+                    ? 'bg-white/12 text-white'
+                    : 'bg-[#111921] text-white/70 hover:bg-white/[0.08]',
+                )}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
           {/* Moved to the list as a sticky row to avoid overlaying taps on the first chat row. */}
         </header>
