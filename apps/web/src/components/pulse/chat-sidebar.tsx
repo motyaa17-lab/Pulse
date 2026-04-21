@@ -984,6 +984,7 @@ function ChatRow({
         className={cn(
           'flex items-stretch gap-0 rounded-xl transition md:rounded-2xl',
           'active:scale-[0.99]',
+          chat.isPinned && !active && 'bg-white/[0.06]',
           active ? 'bg-white/[0.1] shadow-[0_8px_28px_rgba(0,0,0,0.35)]' : 'hover:bg-white/[0.05]',
           chat.isMuted && 'opacity-[0.88]',
         )}
@@ -1025,6 +1026,15 @@ function ChatRow({
               >
                 {label}
               </span>
+              {chat.isPinned && (
+                <span
+                  className="shrink-0 text-[0.7rem] text-white/45"
+                  title={t('pinned')}
+                  aria-hidden
+                >
+                  📌
+                </span>
+              )}
               <span
                 className={cn(
                   'shrink-0 text-[0.7rem] tabular-nums text-white/50',

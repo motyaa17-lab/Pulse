@@ -803,6 +803,146 @@ export class ChatsService {
     return { ok: true };
   }
 
+  async setMemberRole(actorId: string, chatId: string, targetUserId: string, role: MemberRole) {
+    const actor = await this.assertAdminOrOwner(chatId, actorId);
+    const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      select: { type: true },
+    });
+    if (!chat || chat.type !== ChatType.GROUP) throw new BadRequestException('Not a group');
+    if (targetUserId === actorId) throw new BadRequestException('Cannot change your own role');
+    const target = await this.prisma.chatMember.findFirst({
+      where: { chatId, userId: targetUserId, leftAt: null },
+    });
+    if (!target) throw new NotFoundException();
+    if (target.role === MemberRole.OWNER) throw new ForbiddenException();
+    if (actor.role !== MemberRole.OWNER && role === MemberRole.ADMIN) {
+      // Only owner can appoint admins (Telegram-like).
+      throw new ForbiddenException();
+    }
+    const nextRole = role === MemberRole.ADMIN ? MemberRole.ADMIN : MemberRole.MEMBER;
+    await this.prisma.chatMember.update({ where: { id: target.id }, data: { role: nextRole } });
+    const u = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    await this.prisma.message.create({
+      data: {
+        chatId,
+        senderId: null,
+        type: MessageType.SYSTEM,
+        text:
+          nextRole === MemberRole.ADMIN
+            ? `${u?.displayName ?? u?.username ?? 'Someone'} was promoted to admin`
+            : `${u?.displayName ?? u?.username ?? 'Someone'} is no longer an admin`,
+      },
+    });
+    return this.getChatDetail(chatId, actorId);
+  }
+
+  async transferOwnership(actorId: string, chatId: string, targetUserId: string) {
+    const actor = await this.assertAdminOrOwner(chatId, actorId);
+    if (actor.role !== MemberRole.OWNER) throw new ForbiddenException();
+    if (targetUserId === actorId) throw new BadRequestException();
+    const target = await this.prisma.chatMember.findFirst({
+      where: { chatId, userId: targetUserId, leftAt: null },
+    });
+    if (!target) throw new NotFoundException();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.chatMember.update({ where: { id: actor.id }, data: { role: MemberRole.ADMIN } });
+      await tx.chatMember.update({ where: { id: target.id }, data: { role: MemberRole.OWNER } });
+    });
+    const u = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    await this.prisma.message.create({
+      data: {
+        chatId,
+        senderId: null,
+        type: MessageType.SYSTEM,
+        text: `${u?.displayName ?? u?.username ?? 'Someone'} is now the group owner`,
+      },
+    });
+    return this.getChatDetail(chatId, actorId);
+  }
+
+  async listBannedUsers(userId: string, chatId: string) {
+    await this.assertAdminOrOwner(chatId, userId);
+    const rows = await this.prisma.chatBannedUser.findMany({
+      where: { chatId },
+      orderBy: { bannedAt: 'desc' },
+      include: {
+        user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+      },
+    });
+    return {
+      items: rows.map((r) => ({
+        user: r.user,
+        bannedAt: r.bannedAt.toISOString(),
+        reason: r.reason ?? null,
+      })),
+    };
+  }
+
+  async banUser(actorId: string, chatId: string, targetUserId: string, reason?: string) {
+    await this.assertAdminOrOwner(chatId, actorId);
+    if (targetUserId === actorId) throw new BadRequestException();
+    const target = await this.prisma.chatMember.findFirst({
+      where: { chatId, userId: targetUserId, leftAt: null },
+    });
+    if (target?.role === MemberRole.OWNER) throw new ForbiddenException();
+    await this.prisma.chatBannedUser.upsert({
+      where: { chatId_userId: { chatId, userId: targetUserId } },
+      create: { chatId, userId: targetUserId, actorId, reason: reason?.trim() || null },
+      update: { actorId, reason: reason?.trim() || null, bannedAt: new Date() },
+    });
+    if (target) {
+      await this.prisma.chatMember.update({
+        where: { id: target.id },
+        data: { leftAt: new Date() },
+      });
+    }
+    const u = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    await this.prisma.message.create({
+      data: {
+        chatId,
+        senderId: null,
+        type: MessageType.SYSTEM,
+        text: `${u?.displayName ?? u?.username ?? 'Someone'} was banned`,
+      },
+    });
+    return { ok: true };
+  }
+
+  async unbanUser(actorId: string, chatId: string, targetUserId: string) {
+    await this.assertAdminOrOwner(chatId, actorId);
+    await this.prisma.chatBannedUser.delete({
+      where: { chatId_userId: { chatId, userId: targetUserId } },
+    });
+    const u = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    await this.prisma.message.create({
+      data: {
+        chatId,
+        senderId: null,
+        type: MessageType.SYSTEM,
+        text: `${u?.displayName ?? u?.username ?? 'Someone'} was unbanned`,
+      },
+    });
+    return { ok: true };
+  }
+
+  async listRecentActions(userId: string, chatId: string) {
+    await this.assertMember(chatId, userId);
+    const rows = await this.prisma.message.findMany({
+      where: { chatId, type: MessageType.SYSTEM },
+      orderBy: { createdAt: 'desc' },
+      take: 60,
+      select: { id: true, text: true, createdAt: true },
+    });
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        text: r.text ?? '',
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  }
+
   async leave(userId: string, chatId: string) {
     const m = await this.assertMember(chatId, userId);
     if (m.role === MemberRole.OWNER) {

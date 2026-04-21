@@ -14,6 +14,9 @@ import { PatchChannelSettingsDto } from './dto/patch-channel-settings.dto';
 import { JoinChannelDto } from './dto/join-channel.dto';
 import { IsOptional, IsString } from 'class-validator';
 import { IsArray } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum } from 'class-validator';
+import { MemberRole } from '@prisma/client';
 
 class PinMessageDto {
   @IsOptional()
@@ -24,6 +27,18 @@ class PinMessageDto {
 class ReorderPinnedDto {
   @IsArray()
   chatIds!: string[];
+}
+
+class PatchMemberRoleDto {
+  @ApiProperty({ enum: MemberRole })
+  @IsEnum(MemberRole)
+  role!: MemberRole;
+}
+
+class BanUserDto {
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }
 
 @ApiTags('chats')
@@ -172,6 +187,54 @@ export class ChatsController {
     @Param('userId') targetUserId: string,
   ) {
     return this.chats.removeMember(user.sub, id, targetUserId);
+  }
+
+  @Post(':id/members/:userId/role')
+  setMemberRole(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+    @Body() dto: PatchMemberRoleDto,
+  ) {
+    return this.chats.setMemberRole(user.sub, id, targetUserId, dto.role);
+  }
+
+  @Post(':id/transfer-ownership')
+  transferOwnership(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Body('userId') targetUserId: string,
+  ) {
+    return this.chats.transferOwnership(user.sub, id, targetUserId);
+  }
+
+  @Get(':id/bans')
+  listBans(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return this.chats.listBannedUsers(user.sub, id);
+  }
+
+  @Post(':id/bans/:userId')
+  banUser(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+    @Body() dto: BanUserDto,
+  ) {
+    return this.chats.banUser(user.sub, id, targetUserId, dto.reason);
+  }
+
+  @Post(':id/bans/:userId/unban')
+  unbanUser(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.chats.unbanUser(user.sub, id, targetUserId);
+  }
+
+  @Get(':id/recent-actions')
+  recentActions(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return this.chats.listRecentActions(user.sub, id);
   }
 
   @Post(':id/leave')

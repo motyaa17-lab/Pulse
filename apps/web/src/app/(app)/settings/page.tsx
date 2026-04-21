@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUiStore, type VisualPreset } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -10,9 +10,58 @@ import { apiFetch } from '@/lib/api';
 import { disconnectSocket } from '@/lib/socket';
 import { useLanguageStore } from '@/stores/language-store';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/cn';
 import type { MeUserDto } from '@/lib/types';
 
-type SettingsTab = 'general' | 'privacy';
+function Row({
+  icon,
+  title,
+  right,
+  href,
+  onClick,
+}: {
+  icon: ReactNode;
+  title: string;
+  right?: string;
+  href?: string;
+  onClick?: () => void;
+}) {
+  const inner = (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/8 text-white/90 md:bg-surface-muted md:text-ink-muted">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white md:text-ink">
+        {title}
+      </span>
+      {right ? (
+        <span className="shrink-0 truncate text-[13px] text-white/45 md:text-ink-muted">
+          {right}
+        </span>
+      ) : null}
+      <span className="shrink-0 text-white/35 md:text-ink-muted">›</span>
+    </div>
+  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block border-t border-white/10 first:border-t-0 hover:bg-white/[0.06] md:border-line/50"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="block w-full border-t border-white/10 text-left first:border-t-0 hover:bg-white/[0.06] md:border-line/50"
+    >
+      {inner}
+    </button>
+  );
+}
 
 export default function SettingsPage() {
   const theme = useUiStore((s) => s.theme);
@@ -30,7 +79,6 @@ export default function SettingsPage() {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<SettingsTab>('general');
 
   const { data: me } = useQuery({
     queryKey: ['me'],
@@ -62,7 +110,7 @@ export default function SettingsPage() {
     const p = me?.notificationPrefs;
     if (!p) return;
     setSoundEnabled(p.soundEnabled);
-  }, [me?.notificationPrefs?.soundEnabled, setSoundEnabled]);
+  }, [me?.notificationPrefs?.soundEnabled, setSoundEnabled, me?.notificationPrefs]);
 
   const logout = async () => {
     try {
@@ -80,292 +128,239 @@ export default function SettingsPage() {
   const shareLastSeen = me?.shareLastSeen !== false;
 
   return (
-    <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-6 py-10">
-      <Link href="/chats" className="text-sm text-accent">
-        ← {t('backToChats')}
-      </Link>
-      <h1 className="mt-4 font-display text-3xl font-semibold text-ink">{t('settings')}</h1>
-      <p className="mt-2 text-sm text-ink-muted">{t('settingsIntro')}</p>
-
-      <section className="mt-6 space-y-2 rounded-2xl border border-line bg-surface-elevated p-2">
-        <p className="px-2 pt-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
-          {t('settingsAccountSection')}
-        </p>
+    <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto bg-[#0e1621] px-4 py-6 text-white md:bg-transparent md:px-6 md:py-10 md:text-ink">
+      <div className="flex items-center justify-between">
         <Link
-          href="/profile"
-          className="block rounded-xl px-3 py-2.5 text-sm font-medium text-ink transition hover:bg-surface-muted/60"
+          href="/chats"
+          className="inline-flex min-h-[44px] items-center text-sm font-semibold text-sky-300 md:text-accent"
         >
-          {t('myProfile')}
+          ← {t('backToChats')}
         </Link>
-        <Link
-          href="/sessions"
-          className="block rounded-xl px-3 py-2.5 text-sm font-medium text-ink transition hover:bg-surface-muted/60"
-        >
-          {t('mainMenuSessions')}
-        </Link>
-      </section>
-
-      <div className="mt-6 flex gap-2 border-b border-line pb-2">
-        {(['general', 'privacy'] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`rounded-t-lg px-3 py-2 text-sm font-medium ${
-              tab === id
-                ? 'bg-surface-elevated text-ink ring-1 ring-line'
-                : 'text-ink-muted hover:text-ink'
-            }`}
-          >
-            {id === 'general' ? t('settingsTabGeneral') : t('settingsTabPrivacy')}
-          </button>
-        ))}
+        <span className="font-display text-lg font-semibold">{t('settings')}</span>
+        <span className="w-10" />
       </div>
 
-      {tab === 'general' ? (
-        <>
-          <section className="mt-6 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold text-ink">{t('appearance')}</h2>
-            <div className="flex flex-wrap gap-2">
-              {(['light', 'dark', 'system'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setTheme(mode)}
-                  className={`rounded-full border px-3 py-1 text-xs capitalize ${
-                    theme === mode
-                      ? 'border-accent bg-accent/10 text-ink'
-                      : 'border-line text-ink-muted hover:text-ink'
-                  }`}
-                >
-                  {mode === 'light'
-                    ? t('themeLight')
-                    : mode === 'dark'
-                      ? t('themeDark')
-                      : t('themeSystem')}
-                </button>
-              ))}
-            </div>
-          </section>
+      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
+        <Row
+          icon={<span className="text-[18px] font-bold">👤</span>}
+          title={t('myProfile')}
+          href="/profile"
+        />
+        <Row
+          icon={<span className="text-[18px] font-bold">🧩</span>}
+          title={t('settingsProxies')}
+          right={t('settingsEnergySavingOff')}
+          onClick={() => window.alert('Soon')}
+        />
+        <Row
+          icon={<span className="text-[18px] font-bold">💳</span>}
+          title={t('settingsWallet')}
+          onClick={() => window.alert('Soon')}
+        />
+      </div>
 
-          <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold text-ink">{t('chatVisualPresetTitle')}</h2>
-            <p className="text-xs text-ink-muted">{t('chatVisualPresetHint')}</p>
-            <div className="flex flex-wrap gap-2">
-              {(
-                ['default', 'ocean', 'sunset', 'forest'] as const satisfies readonly VisualPreset[]
-              ).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setVisualPreset(p)}
-                  className={`rounded-full border px-3 py-1 text-xs ${
-                    visualPreset === p
-                      ? 'border-accent bg-accent/10 text-ink'
-                      : 'border-line text-ink-muted hover:text-ink'
-                  }`}
-                >
-                  {p === 'default'
-                    ? t('presetDefault')
-                    : p === 'ocean'
-                      ? t('presetOcean')
-                      : p === 'sunset'
-                        ? t('presetSunset')
-                        : t('presetForest')}
-                </button>
-              ))}
-            </div>
-          </section>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
+        <Row
+          icon={<span className="text-[18px]">⭐</span>}
+          title={t('settingsSavedMessages')}
+          onClick={() => router.push('/chats')}
+        />
+        <Row
+          icon={<span className="text-[18px]">📞</span>}
+          title={t('settingsRecentCalls')}
+          href="/calls"
+        />
+        <Row
+          icon={<span className="text-[18px]">📱</span>}
+          title={t('settingsDevices')}
+          href="/sessions"
+        />
+        <Row
+          icon={<span className="text-[18px]">🗂️</span>}
+          title={t('settingsChatFolders')}
+          onClick={() => window.alert('Soon')}
+        />
+      </div>
 
-          <section className="mt-4 space-y-2 rounded-2xl border border-line bg-surface-elevated p-4">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-line text-accent"
-                checked={soundEnabled}
-                disabled={!me || patchNotif.isPending}
-                onChange={(e) => {
-                  const v = e.target.checked;
-                  setSoundEnabled(v);
-                  patchNotif.mutate({ notificationSoundEnabled: v });
-                }}
-              />
-              <span>
-                <span className="block text-sm text-ink">{t('soundEffectsLabel')}</span>
-                <span className="mt-0.5 block text-xs text-ink-muted">{t('soundEffectsHint')}</span>
-              </span>
-            </label>
-          </section>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
+        <Row
+          icon={<span className="text-[18px]">🔔</span>}
+          title={t('settingsNotificationsAndSounds')}
+          onClick={() => window.alert('See toggles below')}
+        />
+        <Row
+          icon={<span className="text-[18px]">🔒</span>}
+          title={t('settingsPrivacyRow')}
+          onClick={() => window.alert('See toggles below')}
+        />
+        <Row
+          icon={<span className="text-[18px]">💾</span>}
+          title={t('settingsDataAndStorage')}
+          onClick={() => window.alert('Soon')}
+        />
+        <Row
+          icon={<span className="text-[18px]">🎨</span>}
+          title={t('settingsAppearanceRow')}
+          onClick={() => window.alert('See options below')}
+        />
+        <Row
+          icon={<span className="text-[18px]">🌐</span>}
+          title={t('settingsLanguageRow')}
+          right={language === 'ru' ? t('wordRussian') : t('wordEnglish')}
+          onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}
+        />
+        <Row
+          icon={<span className="text-[18px]">🔋</span>}
+          title={t('settingsPowerSaving')}
+          right={t('settingsEnergySavingOff')}
+          onClick={() => window.alert('Soon')}
+        />
+      </div>
 
-          <section className="mt-4 space-y-4 rounded-2xl border border-line bg-surface-elevated p-4">
-            <div>
-              <h2 className="text-sm font-semibold text-ink">{t('settingsNotificationsTitle')}</h2>
-              <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-                {t('settingsNotificationsHint')}
-              </p>
-            </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
-                checked={me?.notificationPrefs?.desktopEnabled ?? false}
-                disabled={!me || patchNotif.isPending}
-                onChange={(e) =>
-                  patchNotif.mutate({ notificationDesktopEnabled: e.target.checked })
-                }
-              />
-              <span>
-                <span className="block text-sm font-medium text-ink">
-                  {t('notifyDesktopLabel')}
-                </span>
-                <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                  {t('notifyDesktopHint')}
-                </span>
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
-                checked={me?.notificationPrefs?.showPreview ?? true}
-                disabled={!me || patchNotif.isPending}
-                onChange={(e) => patchNotif.mutate({ notificationShowPreview: e.target.checked })}
-              />
-              <span>
-                <span className="block text-sm font-medium text-ink">
-                  {t('notifyShowPreviewLabel')}
-                </span>
-                <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                  {t('notifyShowPreviewHint')}
-                </span>
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
-                checked={me?.notificationPrefs?.mentionOnlyInChannels ?? false}
-                disabled={!me || patchNotif.isPending}
-                onChange={(e) =>
-                  patchNotif.mutate({ notificationMentionOnlyInChannels: e.target.checked })
-                }
-              />
-              <span>
-                <span className="block text-sm font-medium text-ink">
-                  {t('notifyMentionChannelsLabel')}
-                </span>
-                <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                  {t('notifyMentionChannelsHint')}
-                </span>
-              </span>
-            </label>
-            <button
-              type="button"
-              disabled={!me}
-              onClick={() =>
-                void (async () => {
-                  if (typeof Notification === 'undefined') return;
-                  const r = await Notification.requestPermission();
-                  if (r === 'denied') window.alert(t('notifyPermissionDenied'));
-                  if (r === 'granted') window.alert(t('notifyPermissionGranted'));
-                })()
-              }
-              className="w-full rounded-xl border border-line px-3 py-2 text-sm text-accent hover:bg-surface-muted/40 disabled:opacity-50"
-            >
-              {t('notifyPermissionButton')}
-            </button>
-          </section>
-
-          <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold text-ink">{t('languageSection')}</h2>
-            <div className="flex flex-wrap gap-2">
-              {(['en', 'ru'] as const).map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setLanguage(lang)}
-                  className={`rounded-full border px-3 py-1 text-xs uppercase ${
-                    language === lang
-                      ? 'border-accent bg-accent/10 text-ink'
-                      : 'border-line text-ink-muted hover:text-ink'
-                  }`}
-                >
-                  {lang === 'en' ? t('wordEnglish') : t('wordRussian')}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold text-ink">{t('sessions')}</h2>
-            <p className="text-xs text-ink-muted">{t('sessionsIntro')}</p>
-            <Link
-              href="/sessions"
-              className="inline-flex rounded-xl border border-line px-3 py-2 text-sm text-accent"
-            >
-              {t('openDeviceList')}
-            </Link>
-          </section>
-
-          <section className="mt-4 space-y-3 rounded-2xl border border-line bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold text-ink">{t('account')}</h2>
-            <Link
-              href="/profile"
-              className="inline-flex rounded-xl border border-line px-3 py-2 text-sm text-accent"
-            >
-              {t('myProfile')}
-            </Link>
-          </section>
-        </>
-      ) : (
-        <section className="mt-6 space-y-4 rounded-2xl border border-line bg-surface-elevated p-4">
-          <div>
-            <h2 className="text-sm font-semibold text-ink">{t('privacyLastSeenTitle')}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-              {t('privacyLastSeenHint')}
-            </p>
-          </div>
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
-              checked={shareLastSeen}
-              disabled={!me || patchShareLastSeen.isPending}
-              onChange={(e) => {
-                const next = e.target.checked;
-                patchShareLastSeen.mutate(next);
-              }}
-            />
-            <span className="text-sm text-ink">{t('showLastSeenToOthers')}</span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line/70 bg-surface-muted/30 px-3 py-3 dark:border-line/45 dark:bg-surface-muted/15">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent"
-              checked={hideChatListPreviews}
-              onChange={(e) => setHideChatListPreviews(e.target.checked)}
-            />
-            <span>
-              <span className="block text-sm font-medium text-ink">
-                {t('privacyHideChatPreviews')}
-              </span>
-              <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                {t('privacyHideChatPreviewsHint')}
-              </span>
+      <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
+          {t('settingsNotificationsTitle')}
+        </h2>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={soundEnabled}
+            disabled={!me || patchNotif.isPending}
+            onChange={(e) => {
+              const v = e.target.checked;
+              setSoundEnabled(v);
+              patchNotif.mutate({ notificationSoundEnabled: v });
+            }}
+          />
+          <span>
+            <span className="block text-sm font-medium text-white md:text-ink">
+              {t('soundEffectsLabel')}
             </span>
-          </label>
-        </section>
-      )}
+            <span className="mt-0.5 block text-xs text-white/55 md:text-ink-muted">
+              {t('soundEffectsHint')}
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={me?.notificationPrefs?.desktopEnabled ?? false}
+            disabled={!me || patchNotif.isPending}
+            onChange={(e) => patchNotif.mutate({ notificationDesktopEnabled: e.target.checked })}
+          />
+          <span>
+            <span className="block text-sm font-medium text-white md:text-ink">
+              {t('notifyDesktopLabel')}
+            </span>
+            <span className="mt-0.5 block text-xs text-white/55 md:text-ink-muted">
+              {t('notifyDesktopHint')}
+            </span>
+          </span>
+        </label>
+      </div>
 
-      <section className="mt-6 rounded-2xl border border-line bg-surface-elevated p-4">
+      <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
+          {t('settingsPrivacyRow')}
+        </h2>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={shareLastSeen}
+            disabled={!me || patchShareLastSeen.isPending}
+            onChange={(e) => patchShareLastSeen.mutate(e.target.checked)}
+          />
+          <span>
+            <span className="block text-sm font-medium text-white md:text-ink">
+              {t('showLastSeenToOthers')}
+            </span>
+            <span className="mt-0.5 block text-xs text-white/55 md:text-ink-muted">
+              {t('privacyLastSeenHint')}
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={hideChatListPreviews}
+            onChange={(e) => setHideChatListPreviews(e.target.checked)}
+          />
+          <span>
+            <span className="block text-sm font-medium text-white md:text-ink">
+              {t('privacyHideChatPreviews')}
+            </span>
+            <span className="mt-0.5 block text-xs text-white/55 md:text-ink-muted">
+              {t('privacyHideChatPreviewsHint')}
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
+          {t('settingsAppearanceRow')}
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {(['light', 'dark', 'system'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setTheme(mode)}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-xs font-semibold',
+                theme === mode
+                  ? 'border-[#3390ec]/60 bg-[#3390ec]/15 text-white'
+                  : 'border-white/10 bg-white/5 text-white/70',
+              )}
+            >
+              {mode === 'light'
+                ? t('themeLight')
+                : mode === 'dark'
+                  ? t('themeDark')
+                  : t('themeSystem')}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(
+            ['default', 'ocean', 'sunset', 'forest'] as const satisfies readonly VisualPreset[]
+          ).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setVisualPreset(p)}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-xs font-semibold',
+                visualPreset === p
+                  ? 'border-[#3390ec]/60 bg-[#3390ec]/15 text-white'
+                  : 'border-white/10 bg-white/5 text-white/70',
+              )}
+            >
+              {p === 'default'
+                ? t('presetDefault')
+                : p === 'ocean'
+                  ? t('presetOcean')
+                  : p === 'sunset'
+                    ? t('presetSunset')
+                    : t('presetForest')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-red-500/35 bg-red-500/5 p-4">
         <button
           type="button"
           onClick={() => void logout()}
-          className="w-full rounded-xl border border-red-500/40 px-3 py-2.5 text-sm text-red-500 hover:bg-red-500/5"
+          className="w-full rounded-xl border border-red-400/50 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-500/15"
         >
           {t('signOut')}
         </button>
-      </section>
+      </div>
     </div>
   );
 }
