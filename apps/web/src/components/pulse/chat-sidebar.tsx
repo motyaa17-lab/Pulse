@@ -1093,7 +1093,7 @@ function ChatRow({
     >
       <div
         className={cn(
-          'flex items-stretch gap-0 rounded-xl transition md:rounded-2xl',
+          'relative flex items-stretch gap-0 rounded-xl transition md:rounded-2xl',
           'active:scale-[0.99]',
           // Telegram iOS-like selection/pinned states
           chat.isPinned && !active && 'bg-surface-elevated/70 dark:bg-[rgb(var(--tg-pinned))]',
@@ -1106,7 +1106,7 @@ function ChatRow({
         {editMode && (
           <div className="flex items-center pl-2 pr-1 md:hidden">
             <span
-              className="inline-flex h-9 w-7 items-center justify-center rounded-full text-white/45"
+              className="inline-flex h-9 w-7 items-center justify-center rounded-full text-ink-muted dark:text-white/45"
               aria-hidden
             >
               ≡
@@ -1117,7 +1117,7 @@ function ChatRow({
           href={chatHref(chat)}
           className={cn(
             // iOS Telegram: slightly taller row, denser horizontal rhythm
-            'flex min-h-[64px] min-w-0 flex-1 items-center gap-3 px-3 py-2',
+            'relative z-[1] flex min-h-[64px] min-w-0 flex-1 items-center gap-3 px-3 py-2',
             editMode && 'pl-2',
           )}
           onClick={() => useUiStore.getState().setSidebarOpen(false)}
@@ -1191,7 +1191,7 @@ function ChatRow({
             </div>
           </div>
         </Link>
-        <div className="relative hidden shrink-0 items-center pr-1 md:flex">
+        <div className="relative z-[1] hidden shrink-0 items-center pr-1 md:flex">
           <motion.button
             type="button"
             className={cn(
@@ -1218,7 +1218,7 @@ function ChatRow({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.985 }}
                 transition={{ duration: 0.14, ease: [0.2, 0.8, 0.2, 1] }}
-                className="absolute right-0 top-full z-50 mt-1 min-w-[9.5rem] rounded-2xl border border-white/12 bg-[#0B1020]/85 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]"
+                className="absolute right-0 top-full z-50 mt-1 min-w-[9.5rem] rounded-2xl border border-line/70 bg-surface-elevated/95 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.18)] backdrop-blur-[26px] dark:border-white/12 dark:bg-[rgb(var(--tg-bg))]/92 dark:shadow-[0_22px_60px_rgba(0,0,0,0.6)]"
                 role="menu"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -1226,7 +1226,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={pinPending}
-                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-ink transition hover:bg-surface-muted/80 disabled:opacity-50 dark:text-white/90 dark:hover:bg-white/10"
                   onClick={() => onPinToggle(!chat.isPinned)}
                 >
                   {chat.isPinned ? t('unpin') : t('pin')}
@@ -1235,7 +1235,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={archivePending}
-                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-ink transition hover:bg-surface-muted/80 disabled:opacity-50 dark:text-white/90 dark:hover:bg-white/10"
                   onClick={() => onArchiveToggle(!chat.isArchived)}
                 >
                   {chat.isArchived ? t('unarchive') : t('archive')}
@@ -1244,7 +1244,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={mutePending}
-                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-ink transition hover:bg-surface-muted/80 disabled:opacity-50 dark:text-white/90 dark:hover:bg-white/10"
                   onClick={() => onMuteToggle(!chat.isMuted)}
                 >
                   {chat.isMuted ? t('unmute') : t('mute')}
@@ -1253,7 +1253,7 @@ function ChatRow({
                   type="button"
                   role="menuitem"
                   disabled={hidePending}
-                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-50"
+                  className="w-full px-3 py-2 text-left text-[12.5px] font-medium text-ink transition hover:bg-surface-muted/80 disabled:opacity-50 dark:text-white/90 dark:hover:bg-white/10"
                   onClick={() => confirmHide()}
                 >
                   {t('hideChat')}
@@ -1262,6 +1262,16 @@ function ChatRow({
             )}
           </AnimatePresence>
         </div>
+        {/* iOS-style inset separator: starts after avatar + gaps (edit handle only on small screens). */}
+        <div
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute bottom-0 right-0 z-0 h-px bg-line/60 dark:bg-white/[0.10]',
+            // px-3 + h-12 + gap-3 = 0.75rem + 3rem + 0.75rem
+            // md+: reorder handle hidden; row still uses pl-2 in edit mode
+            editMode ? 'left-[6.75rem] md:left-[4.25rem]' : 'left-[4.5rem]',
+          )}
+        />
       </div>
     </motion.div>
   );
