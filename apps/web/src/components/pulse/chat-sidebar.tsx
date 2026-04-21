@@ -595,40 +595,94 @@ export function ChatSidebar() {
               <button
                 type="button"
                 onClick={() => setEditMode((v) => !v)}
-                className="inline-flex min-h-[44px] items-center px-1 text-[14px] font-semibold text-[#58a6ff] md:hidden"
+                className={cn(
+                  'inline-flex min-h-[36px] items-center rounded-full bg-surface-elevated/70 px-3 text-[14px] font-semibold text-accent shadow-sm ring-1 ring-line/60',
+                  'dark:bg-white/[0.08] dark:text-[#58a6ff] dark:ring-white/[0.10]',
+                  'md:hidden',
+                )}
                 aria-pressed={editMode}
               >
                 {editMode ? t('chatsDone') : t('chatsEdit')}
               </button>
-              <h1 className="min-w-0 flex-1 truncate text-center font-display text-[20px] font-semibold tracking-tight text-white md:text-left md:text-4xl">
+              <h1 className="min-w-0 flex-1 truncate text-center font-display text-[20px] font-semibold tracking-tight text-ink dark:text-white md:text-left md:text-4xl">
                 {t('chats')}
               </h1>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                className="grid h-11 w-11 place-items-center rounded-full text-white/75 transition hover:bg-white/10 active:scale-[0.99] md:hidden"
-                onClick={() => router.push('/settings/security')}
-                aria-label="Shield"
-              >
-                <span className="text-[18px]" aria-hidden>
-                  🛡️
-                </span>
-              </button>
-              <div className="relative shrink-0" ref={createHeaderWrapRef}>
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="flex items-center overflow-hidden rounded-full bg-surface-elevated/70 shadow-sm ring-1 ring-line/60 dark:bg-white/[0.08] dark:ring-white/[0.10] md:hidden">
+                <button
+                  type="button"
+                  className="grid h-9 w-10 place-items-center text-ink-muted transition active:bg-line/25 dark:text-white/75 dark:active:bg-white/[0.08]"
+                  onClick={() => router.push('/settings/security')}
+                  aria-label="Shield"
+                >
+                  <span className="text-[17px]" aria-hidden>
+                    🛡️
+                  </span>
+                </button>
+                <div className="h-6 w-px bg-line/60 dark:bg-white/[0.10]" aria-hidden />
+                <div className="relative shrink-0" ref={createHeaderWrapRef}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCreateMenuPlacement((p) => (p === 'header' ? 'closed' : 'header'))
+                    }
+                    className="grid h-9 w-10 place-items-center text-ink transition active:bg-line/25 dark:text-white/85 dark:active:bg-white/[0.08]"
+                    aria-expanded={createMenuPlacement === 'header'}
+                    aria-haspopup="menu"
+                    aria-label={t('sidebarCreateMenuAria')}
+                  >
+                    <span className="text-[18px]" aria-hidden>
+                      ＋
+                    </span>
+                  </button>
+                  {createMenuPlacement === 'header' && (
+                    <SidebarCreateMenu
+                      t={t}
+                      onClose={() => setCreateMenuPlacement('closed')}
+                      onNewGroup={() => setGroupModalOpen(true)}
+                      onNewChannel={() => setChannelModalOpen(true)}
+                      onExploreChannels={() => {
+                        setCreateMenuPlacement('closed');
+                        router.push('/chats/explore');
+                      }}
+                      onJoinGroup={() => {
+                        setCreateMenuPlacement('closed');
+                        router.push('/join');
+                      }}
+                      onJoinChannel={() => {
+                        setCreateMenuPlacement('closed');
+                        router.push('/join/channel');
+                      }}
+                    />
+                  )}
+                </div>
+                <div className="h-6 w-px bg-line/60 dark:bg-white/[0.10]" aria-hidden />
+                <button
+                  type="button"
+                  className="grid h-9 w-10 place-items-center text-ink-muted transition active:bg-line/25 dark:text-white/75 dark:active:bg-white/[0.08]"
+                  onClick={() => router.push('/compose')}
+                  aria-label="New message"
+                >
+                  <span className="text-[17px]" aria-hidden>
+                    ✍️
+                  </span>
+                </button>
+              </div>
+
+              {/* Desktop: keep the + button with the same menu */}
+              <div className="relative hidden shrink-0 md:block" ref={createHeaderWrapRef}>
                 <button
                   type="button"
                   onClick={() =>
                     setCreateMenuPlacement((p) => (p === 'header' ? 'closed' : 'header'))
                   }
-                  className="grid h-11 w-11 place-items-center rounded-full text-white/85 transition hover:bg-white/10 active:scale-[0.99] md:h-12 md:w-12 md:rounded-full md:border md:border-white/10 md:bg-white/[0.07] md:text-xl md:font-light md:text-white/90 md:backdrop-blur"
+                  className="grid h-12 w-12 place-items-center rounded-full border border-line/70 bg-surface-elevated/70 text-xl font-light text-ink shadow-sm backdrop-blur transition hover:bg-surface-elevated/90 dark:border-white/10 dark:bg-white/[0.07] dark:text-white/90"
                   aria-expanded={createMenuPlacement === 'header'}
                   aria-haspopup="menu"
                   aria-label={t('sidebarCreateMenuAria')}
                 >
-                  <span className="text-[18px] md:text-inherit" aria-hidden>
-                    ＋
-                  </span>
+                  ＋
                 </button>
                 {createMenuPlacement === 'header' && (
                   <SidebarCreateMenu
@@ -651,16 +705,6 @@ export function ChatSidebar() {
                   />
                 )}
               </div>
-              <button
-                type="button"
-                className="grid h-11 w-11 place-items-center rounded-full text-white/75 transition hover:bg-white/10 active:scale-[0.99] md:hidden"
-                onClick={() => router.push('/compose')}
-                aria-label="New message"
-              >
-                <span className="text-[18px]" aria-hidden>
-                  ✍️
-                </span>
-              </button>
             </div>
           </div>
 
@@ -670,7 +714,7 @@ export function ChatSidebar() {
           </div>
 
           <div ref={searchBlockRef} className="relative mt-3 md:mt-4">
-            <div className="flex items-center gap-2 rounded-full border border-line/70 bg-surface-elevated/70 px-3.5 py-2.5 shadow-inner dark:border-white/[0.08] dark:bg-[rgb(var(--tg-search))] md:px-4 md:py-3">
+            <div className="flex items-center gap-2 rounded-xl border border-line/70 bg-surface-elevated/70 px-3.5 py-2 shadow-inner dark:border-white/[0.08] dark:bg-[rgb(var(--tg-search))] md:px-4 md:py-2.5">
               <MagnifierIcon className="shrink-0 text-ink-muted dark:text-white/55" />
               <input
                 ref={searchInputRef}
@@ -797,45 +841,59 @@ export function ChatSidebar() {
               </div>
             )}
           </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {(
-              [
-                { id: 'all', label: t('chatsChipAll') },
-                { id: 'telegram', label: t('chatsChipTelegram') },
-                { id: 'channels', label: t('chatsChipChannels') },
-                { id: 'groups', label: t('chatsChipGroups') },
-                { id: 'direct', label: t('chatsChipDirect') },
-              ] as const
-            ).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setChip(c.id)}
-                className={cn(
-                  'shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition',
-                  chip === c.id
-                    ? 'bg-white/12 text-white'
-                    : 'bg-[#111921] text-white/70 hover:bg-white/[0.08]',
-                )}
-              >
-                {c.label}
-              </button>
-            ))}
-            {(folders?.items ?? []).map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setFolderId((cur) => (cur === f.id ? null : f.id))}
-                className={cn(
-                  'shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition',
-                  folderId === f.id
-                    ? 'bg-[#3390ec]/22 text-white'
-                    : 'bg-[#111921] text-white/70 hover:bg-white/[0.08]',
-                )}
-              >
-                {f.title}
-              </button>
-            ))}
+          <div className="mt-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex shrink-0 items-center rounded-xl bg-surface-elevated/70 p-1 shadow-sm ring-1 ring-line/60 dark:bg-white/[0.08] dark:ring-white/[0.10]">
+                {(
+                  [
+                    { id: 'all', label: t('chatsChipAll') },
+                    { id: 'telegram', label: t('chatsChipTelegram') },
+                    { id: 'channels', label: t('chatsChipChannels') },
+                    { id: 'groups', label: t('chatsChipGroups') },
+                    { id: 'direct', label: t('chatsChipDirect') },
+                  ] as const
+                ).map((seg) => {
+                  const activeSeg = chip === seg.id && folderId == null;
+                  return (
+                    <button
+                      key={seg.id}
+                      type="button"
+                      onClick={() => {
+                        setFolderId(null);
+                        setChip(seg.id);
+                      }}
+                      className={cn(
+                        'min-w-[4.25rem] rounded-[0.65rem] px-3 py-1.5 text-[13px] font-semibold transition',
+                        activeSeg
+                          ? 'bg-surface-muted text-ink shadow-sm dark:bg-white/15 dark:text-white'
+                          : 'text-ink-muted hover:bg-surface-muted/70 hover:text-ink dark:text-white/70 dark:hover:bg-white/[0.08] dark:hover:text-white',
+                      )}
+                      aria-pressed={activeSeg}
+                    >
+                      {seg.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {(folders?.items ?? []).map((f) => {
+                const activeFolder = folderId === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFolderId((cur) => (cur === f.id ? null : f.id))}
+                    className={cn(
+                      'shrink-0 rounded-xl bg-surface-elevated/70 px-3 py-2 text-[13px] font-semibold shadow-sm ring-1 ring-line/60 transition dark:bg-white/[0.08] dark:ring-white/[0.10]',
+                      activeFolder
+                        ? 'text-ink dark:text-white'
+                        : 'text-ink-muted hover:bg-surface-elevated/90 hover:text-ink dark:text-white/70 dark:hover:bg-white/[0.10] dark:hover:text-white',
+                    )}
+                  >
+                    {f.title}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           {/* Moved to the list as a sticky row to avoid overlaying taps on the first chat row. */}
         </header>
