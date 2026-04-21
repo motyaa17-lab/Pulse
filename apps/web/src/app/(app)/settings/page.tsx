@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,56 +11,14 @@ import { useLanguageStore } from '@/stores/language-store';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 import type { MeUserDto } from '@/lib/types';
-
-function Row({
-  icon,
-  title,
-  right,
-  href,
-  onClick,
-}: {
-  icon: ReactNode;
-  title: string;
-  right?: string;
-  href?: string;
-  onClick?: () => void;
-}) {
-  const inner = (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/8 text-white/90 md:bg-surface-muted md:text-ink-muted">
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white md:text-ink">
-        {title}
-      </span>
-      {right ? (
-        <span className="shrink-0 truncate text-[13px] text-white/45 md:text-ink-muted">
-          {right}
-        </span>
-      ) : null}
-      <span className="shrink-0 text-white/35 md:text-ink-muted">›</span>
-    </div>
-  );
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="block border-t border-white/10 first:border-t-0 hover:bg-white/[0.06] md:border-line/50"
-      >
-        {inner}
-      </Link>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="block w-full border-t border-white/10 text-left first:border-t-0 hover:bg-white/[0.06] md:border-line/50"
-    >
-      {inner}
-    </button>
-  );
-}
+import {
+  TgCard,
+  TgChevron,
+  TgIconBadge,
+  TgNav,
+  TgPage,
+  TgRow,
+} from '@/components/telegram/telegram-ui';
 
 export default function SettingsPage() {
   const theme = useUiStore((s) => s.theme);
@@ -128,99 +85,130 @@ export default function SettingsPage() {
   const shareLastSeen = me?.shareLastSeen !== false;
 
   return (
-    <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto bg-[#0e1621] px-4 py-6 text-white md:bg-transparent md:px-6 md:py-10 md:text-ink">
-      <div className="flex items-center justify-between">
-        <Link
-          href="/chats"
-          className="inline-flex min-h-[44px] items-center text-sm font-semibold text-sky-300 md:text-accent"
-        >
-          ← {t('backToChats')}
-        </Link>
-        <span className="font-display text-lg font-semibold">{t('settings')}</span>
-        <span className="w-10" />
-      </div>
+    <TgPage className="dark:bg-[rgb(var(--tg-bg))] dark:text-white">
+      <TgNav title={t('settings')} backHref="/chats" backLabel={`← ${t('backToChats')}`} />
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
-        <Row
-          icon={<span className="text-[18px] font-bold">👤</span>}
-          title={t('myProfile')}
-          href="/profile"
-        />
-        <Row
-          icon={<span className="text-[18px] font-bold">🧩</span>}
-          title={t('settingsProxies')}
-          right={t('settingsEnergySavingOff')}
-          href="/settings/proxies"
-        />
-        <Row
-          icon={<span className="text-[18px] font-bold">💳</span>}
-          title={t('settingsWallet')}
-          href="/settings/wallet"
-        />
-      </div>
+      <div className="mt-6 space-y-4">
+        <TgCard>
+          <TgRow href="/profile">
+            <TgIconBadge>👤</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('myProfile')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow href="/settings/proxies">
+            <TgIconBadge>🧩</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsProxies')}
+            </span>
+            <span className="text-[13px] text-ink-muted dark:text-white/45">
+              {t('settingsEnergySavingOff')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow href="/settings/wallet">
+            <TgIconBadge>💳</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsWallet')}
+            </span>
+            <TgChevron />
+          </TgRow>
+        </TgCard>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
-        <Row
-          icon={<span className="text-[18px]">⭐</span>}
-          title={t('settingsSavedMessages')}
-          onClick={() => router.push('/saved')}
-        />
-        <Row
-          icon={<span className="text-[18px]">📞</span>}
-          title={t('settingsRecentCalls')}
-          href="/calls"
-        />
-        <Row
-          icon={<span className="text-[18px]">📱</span>}
-          title={t('settingsDevices')}
-          href="/sessions"
-        />
-        <Row
-          icon={<span className="text-[18px]">🗂️</span>}
-          title={t('settingsChatFolders')}
-          href="/settings/folders"
-        />
-      </div>
+        <TgCard>
+          <TgRow onClick={() => router.push('/saved')}>
+            <TgIconBadge>⭐</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsSavedMessages')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow href="/calls">
+            <TgIconBadge>📞</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsRecentCalls')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow href="/sessions">
+            <TgIconBadge>📱</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsDevices')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow href="/settings/folders">
+            <TgIconBadge>🗂️</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsChatFolders')}
+            </span>
+            <TgChevron />
+          </TgRow>
+        </TgCard>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
-        <Row
-          icon={<span className="text-[18px]">🔔</span>}
-          title={t('settingsNotificationsAndSounds')}
-          onClick={() =>
-            document.getElementById('tg-notifications')?.scrollIntoView({ behavior: 'smooth' })
-          }
-        />
-        <Row
-          icon={<span className="text-[18px]">🔒</span>}
-          title={t('settingsPrivacyRow')}
-          onClick={() =>
-            document.getElementById('tg-privacy')?.scrollIntoView({ behavior: 'smooth' })
-          }
-        />
-        <Row
-          icon={<span className="text-[18px]">💾</span>}
-          title={t('settingsDataAndStorage')}
-          href="/settings/data"
-        />
-        <Row
-          icon={<span className="text-[18px]">🎨</span>}
-          title={t('settingsAppearanceRow')}
-          onClick={() =>
-            document.getElementById('tg-appearance')?.scrollIntoView({ behavior: 'smooth' })
-          }
-        />
-        <Row
-          icon={<span className="text-[18px]">🌐</span>}
-          title={t('settingsLanguageRow')}
-          right={language === 'ru' ? t('wordRussian') : t('wordEnglish')}
-          onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}
-        />
-        <Row
-          icon={<span className="text-[18px]">🔋</span>}
-          title={t('settingsPowerSaving')}
-          right={t('settingsEnergySavingOff')}
-          href="/settings/power"
-        />
+        <TgCard>
+          <TgRow
+            onClick={() =>
+              document.getElementById('tg-notifications')?.scrollIntoView({ behavior: 'smooth' })
+            }
+          >
+            <TgIconBadge>🔔</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsNotificationsAndSounds')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow
+            onClick={() =>
+              document.getElementById('tg-privacy')?.scrollIntoView({ behavior: 'smooth' })
+            }
+          >
+            <TgIconBadge>🔒</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsPrivacyRow')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow href="/settings/data">
+            <TgIconBadge>💾</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsDataAndStorage')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow
+            onClick={() =>
+              document.getElementById('tg-appearance')?.scrollIntoView({ behavior: 'smooth' })
+            }
+          >
+            <TgIconBadge>🎨</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsAppearanceRow')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}>
+            <TgIconBadge>🌐</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsLanguageRow')}
+            </span>
+            <span className="text-[13px] text-ink-muted dark:text-white/45">
+              {language === 'ru' ? t('wordRussian') : t('wordEnglish')}
+            </span>
+            <TgChevron />
+          </TgRow>
+          <TgRow href="/settings/power">
+            <TgIconBadge>🔋</TgIconBadge>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              {t('settingsPowerSaving')}
+            </span>
+            <span className="text-[13px] text-ink-muted dark:text-white/45">
+              {t('settingsEnergySavingOff')}
+            </span>
+            <TgChevron />
+          </TgRow>
+        </TgCard>
       </div>
 
       <div
@@ -376,6 +364,6 @@ export default function SettingsPage() {
           {t('signOut')}
         </button>
       </div>
-    </div>
+    </TgPage>
   );
 }

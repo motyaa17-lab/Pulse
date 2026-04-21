@@ -15,6 +15,12 @@
   --bubble-in: 241 245 249;
   --bubble-out: 79 70 229;
   --bubble-out-ink: 255 255 255;
+
+  /* Telegram iOS geometry tokens */
+  --tg-radius-card: 16px;
+  --tg-radius-row: 12px;
+  --tg-row-h: 52px;
+  --tg-avatar: 44px;
 }
 
 .dark {
@@ -31,6 +37,13 @@
   --bubble-in: 36 47 61;
   --bubble-out: 43 82 120;
   --bubble-out-ink: 228 244 255;
+
+  /* Telegram iOS dark list colors */
+  --tg-panel: 23 33 43; /* #17212b */
+  --tg-bg: 14 22 33; /* #0e1621 */
+  --tg-search: 17 25 33; /* #111921 */
+  --tg-pinned: 31 42 54; /* pinned item bg */
+  --tg-sep: 255 255 255; /* use with low alpha */
 }
 
 html {
@@ -164,5 +177,79 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Telegram iOS-like page layout primitives (used across /chats, /settings, etc.) */
+  .tg-page {
+    @apply mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-4 py-6 text-ink md:px-6 md:py-10;
+  }
+
+  .dark .tg-page {
+    background-color: rgb(var(--tg-bg) / 1);
+    color: rgb(var(--ink) / 1);
+  }
+
+  .tg-nav {
+    @apply flex items-center justify-between;
+  }
+
+  .tg-nav-title {
+    @apply font-display text-lg font-semibold;
+  }
+
+  .tg-nav-back {
+    @apply inline-flex min-h-[44px] items-center text-sm font-semibold text-accent;
+  }
+
+  .dark .tg-nav-back {
+    color: rgb(88 166 255);
+  }
+
+  .tg-card {
+    @apply overflow-hidden rounded-2xl border border-line/70 bg-surface-elevated/80;
+  }
+
+  .dark .tg-card {
+    border-color: rgb(255 255 255 / 0.10);
+    background-color: rgb(var(--tg-panel) / 0.86);
+    backdrop-filter: blur(18px);
+  }
+
+  .tg-card-title {
+    @apply px-4 pb-2 pt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-muted;
+  }
+
+  .dark .tg-card-title {
+    color: rgb(255 255 255 / 0.45);
+  }
+
+  .tg-row {
+    @apply flex min-h-[52px] w-full items-center gap-3 px-4 py-3 text-left transition;
+  }
+
+  .tg-row + .tg-row {
+    @apply border-t border-line/50;
+  }
+
+  .dark .tg-row + .tg-row {
+    border-top-color: rgb(255 255 255 / 0.10);
+  }
+
+  .tg-row:hover {
+    @apply bg-surface-muted/60;
+  }
+
+  .dark .tg-row:hover {
+    background-color: rgb(255 255 255 / 0.06);
+  }
+
+  .tg-chevron {
+    @apply shrink-0 text-ink-muted;
+  }
+
+  .dark .tg-chevron {
+    color: rgb(255 255 255 / 0.35);
   }
 }

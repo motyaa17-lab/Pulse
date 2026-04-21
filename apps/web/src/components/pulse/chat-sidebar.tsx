@@ -583,7 +583,7 @@ export function ChatSidebar() {
   }, []);
 
   return (
-    <aside className="relative flex h-full min-h-0 w-full flex-col bg-[#17212b] text-white">
+    <aside className="relative flex h-full min-h-0 w-full flex-col bg-surface-muted text-ink dark:bg-[rgb(var(--tg-panel))] dark:text-white">
       {/* Full width on mobile, centered preview on desktop */}
       <div className="flex h-full min-h-0 w-full flex-col md:mx-auto md:max-w-[420px]">
         <header className="shrink-0 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4 md:pt-10">
@@ -670,23 +670,23 @@ export function ChatSidebar() {
           </div>
 
           <div ref={searchBlockRef} className="relative mt-3 md:mt-4">
-            <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#111921] px-3.5 py-2.5 shadow-inner md:px-4 md:py-3">
-              <MagnifierIcon className="shrink-0 text-white/55" />
+            <div className="flex items-center gap-2 rounded-full border border-line/70 bg-surface-elevated/70 px-3.5 py-2.5 shadow-inner dark:border-white/[0.08] dark:bg-[rgb(var(--tg-search))] md:px-4 md:py-3">
+              <MagnifierIcon className="shrink-0 text-ink-muted dark:text-white/55" />
               <input
                 ref={searchInputRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 placeholder={t('searchPlaceholder')}
-                className="w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/40 outline-none"
+                className="w-full min-w-0 bg-transparent text-[14px] text-ink placeholder:text-ink-muted outline-none dark:text-white dark:placeholder:text-white/40"
                 aria-label={t('search')}
                 aria-autocomplete="list"
                 aria-expanded={searchFocused}
               />
             </div>
             {searchFocused && (
-              <div className="absolute left-0 right-0 top-full z-[55] mt-1 max-h-[min(52vh,22rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#111921]/98 py-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-                <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-white/45">
+              <div className="absolute left-0 right-0 top-full z-[55] mt-1 max-h-[min(52vh,22rem)] overflow-y-auto rounded-2xl border border-line/70 bg-surface-elevated/95 py-2 shadow-[0_18px_50px_rgba(0,0,0,0.25)] backdrop-blur-xl dark:border-white/10 dark:bg-[rgb(var(--tg-search))]/98 dark:shadow-[0_18px_50px_rgba(0,0,0,0.55)]">
+                <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-ink-muted dark:text-white/45">
                   {t('searchHint')}
                 </p>
                 {searchNeedle.length < 2 && (
