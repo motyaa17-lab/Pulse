@@ -150,12 +150,12 @@ export default function SettingsPage() {
           icon={<span className="text-[18px] font-bold">🧩</span>}
           title={t('settingsProxies')}
           right={t('settingsEnergySavingOff')}
-          onClick={() => window.alert('Soon')}
+          href="/settings/proxies"
         />
         <Row
           icon={<span className="text-[18px] font-bold">💳</span>}
           title={t('settingsWallet')}
-          onClick={() => window.alert('Soon')}
+          href="/settings/wallet"
         />
       </div>
 
@@ -163,7 +163,7 @@ export default function SettingsPage() {
         <Row
           icon={<span className="text-[18px]">⭐</span>}
           title={t('settingsSavedMessages')}
-          onClick={() => router.push('/chats')}
+          onClick={() => router.push('/saved')}
         />
         <Row
           icon={<span className="text-[18px]">📞</span>}
@@ -178,7 +178,7 @@ export default function SettingsPage() {
         <Row
           icon={<span className="text-[18px]">🗂️</span>}
           title={t('settingsChatFolders')}
-          onClick={() => window.alert('Soon')}
+          href="/settings/folders"
         />
       </div>
 
@@ -186,22 +186,28 @@ export default function SettingsPage() {
         <Row
           icon={<span className="text-[18px]">🔔</span>}
           title={t('settingsNotificationsAndSounds')}
-          onClick={() => window.alert('See toggles below')}
+          onClick={() =>
+            document.getElementById('tg-notifications')?.scrollIntoView({ behavior: 'smooth' })
+          }
         />
         <Row
           icon={<span className="text-[18px]">🔒</span>}
           title={t('settingsPrivacyRow')}
-          onClick={() => window.alert('See toggles below')}
+          onClick={() =>
+            document.getElementById('tg-privacy')?.scrollIntoView({ behavior: 'smooth' })
+          }
         />
         <Row
           icon={<span className="text-[18px]">💾</span>}
           title={t('settingsDataAndStorage')}
-          onClick={() => window.alert('Soon')}
+          href="/settings/data"
         />
         <Row
           icon={<span className="text-[18px]">🎨</span>}
           title={t('settingsAppearanceRow')}
-          onClick={() => window.alert('See options below')}
+          onClick={() =>
+            document.getElementById('tg-appearance')?.scrollIntoView({ behavior: 'smooth' })
+          }
         />
         <Row
           icon={<span className="text-[18px]">🌐</span>}
@@ -213,11 +219,14 @@ export default function SettingsPage() {
           icon={<span className="text-[18px]">🔋</span>}
           title={t('settingsPowerSaving')}
           right={t('settingsEnergySavingOff')}
-          onClick={() => window.alert('Soon')}
+          href="/settings/power"
         />
       </div>
 
-      <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80">
+      <div
+        id="tg-notifications"
+        className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80"
+      >
         <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
           {t('settingsNotificationsTitle')}
         </h2>
@@ -261,7 +270,10 @@ export default function SettingsPage() {
         </label>
       </div>
 
-      <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80">
+      <div
+        id="tg-privacy"
+        className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80"
+      >
         <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
           {t('settingsPrivacyRow')}
         </h2>
@@ -300,7 +312,10 @@ export default function SettingsPage() {
         </label>
       </div>
 
-      <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80">
+      <div
+        id="tg-appearance"
+        className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80"
+      >
         <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
           {t('settingsAppearanceRow')}
         </h2>

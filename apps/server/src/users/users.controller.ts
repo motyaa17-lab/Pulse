@@ -26,6 +26,13 @@ export class UsersController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Get('me/saved-chat')
+  savedChat(@CurrentUser() user: JwtUser) {
+    return this.users.getOrCreateSavedChat(user.sub);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   getOne(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     return this.users.getById(id, user.sub);

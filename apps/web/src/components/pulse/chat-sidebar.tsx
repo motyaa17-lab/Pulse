@@ -296,6 +296,7 @@ export function ChatSidebar() {
   const [channelModalOpen, setChannelModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [chip, setChip] = useState<'all' | 'telegram' | 'channels' | 'groups' | 'direct'>('all');
+  const [folderId, setFolderId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -312,6 +313,13 @@ export function ChatSidebar() {
     queryFn: () =>
       apiFetch<SearchResult>(`/search?q=${encodeURIComponent(debouncedSearch.trim())}`),
   });
+
+  const { data: folders } = useQuery<{ items: { id: string; title: string; chatIds: string[] }[] }>(
+    {
+      queryKey: ['folders'],
+      queryFn: () => apiFetch(`/folders`),
+    },
+  );
 
   const listFiltered = useMemo(() => {
     if (!data) return [];
@@ -334,6 +342,14 @@ export function ChatSidebar() {
     // “Telegram” in the iOS UI is commonly a folder; approximate it as channels.
     return listFiltered.filter((c) => c.type === 'CHANNEL');
   }, [chip, listFiltered]);
+
+  const folderFiltered = useMemo(() => {
+    if (!folderId) return chipFiltered;
+    const f = folders?.items.find((x) => x.id === folderId);
+    if (!f) return chipFiltered;
+    const set = new Set(f.chatIds);
+    return chipFiltered.filter((c) => set.has(c.id));
+  }, [chipFiltered, folderId, folders?.items]);
 
   useEffect(() => {
     const onFocusEvt = () => {
@@ -539,8 +555,8 @@ export function ChatSidebar() {
     };
   }, [data, pathname, t]);
 
-  const pinnedRaw = chipFiltered.filter((c: ChatListItem) => c.isPinned && !c.isArchived);
-  const restRaw = chipFiltered.filter((c: ChatListItem) => !c.isPinned && !c.isArchived);
+  const pinnedRaw = folderFiltered.filter((c: ChatListItem) => c.isPinned && !c.isArchived);
+  const restRaw = folderFiltered.filter((c: ChatListItem) => !c.isPinned && !c.isArchived);
   const archivedRaw = data?.filter((c: ChatListItem) => c.isArchived) ?? [];
   const unreadFilter = (list: ChatListItem[]) =>
     !showUnreadOnly ? list : list.filter((c) => c.unreadCount > 0);
@@ -592,7 +608,7 @@ export function ChatSidebar() {
               <button
                 type="button"
                 className="grid h-11 w-11 place-items-center rounded-full text-white/75 transition hover:bg-white/10 active:scale-[0.99] md:hidden"
-                onClick={() => window.alert('Soon')}
+                onClick={() => router.push('/settings/security')}
                 aria-label="Shield"
               >
                 <span className="text-[18px]" aria-hidden>
@@ -638,7 +654,7 @@ export function ChatSidebar() {
               <button
                 type="button"
                 className="grid h-11 w-11 place-items-center rounded-full text-white/75 transition hover:bg-white/10 active:scale-[0.99] md:hidden"
-                onClick={() => window.alert('Soon')}
+                onClick={() => router.push('/compose')}
                 aria-label="New message"
               >
                 <span className="text-[18px]" aria-hidden>
@@ -803,6 +819,21 @@ export function ChatSidebar() {
                 )}
               >
                 {c.label}
+              </button>
+            ))}
+            {(folders?.items ?? []).map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFolderId((cur) => (cur === f.id ? null : f.id))}
+                className={cn(
+                  'shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition',
+                  folderId === f.id
+                    ? 'bg-[#3390ec]/22 text-white'
+                    : 'bg-[#111921] text-white/70 hover:bg-white/[0.08]',
+                )}
+              >
+                {f.title}
               </button>
             ))}
           </div>

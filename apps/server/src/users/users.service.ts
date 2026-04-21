@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { ChatType, MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PresenceService } from '../redis/presence.service';
@@ -10,6 +11,27 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly presence: PresenceService,
   ) {}
+
+  async getOrCreateSavedChat(userId: string) {
+    const existing = await this.prisma.chatMember.findFirst({
+      where: { userId, leftAt: null, chat: { type: ChatType.SAVED } },
+      select: { chatId: true },
+    });
+    if (existing) return { chatId: existing.chatId };
+
+    const chat = await this.prisma.chat.create({
+      data: {
+        type: ChatType.SAVED,
+        title: 'Saved Messages',
+        createdById: userId,
+        members: {
+          create: [{ userId, role: MemberRole.MEMBER }],
+        },
+      },
+      select: { id: true },
+    });
+    return { chatId: chat.id };
+  }
 
   async getById(id: string, viewerId?: string) {
     const user = await this.prisma.user.findUnique({

@@ -243,6 +243,29 @@ export default function ChannelSettingsPage() {
         )}
       </section>
 
+      <section className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
+        <button
+          type="button"
+          onClick={() => router.push(`/chats/${chatId}/channel/admins`)}
+          className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-white/[0.06]"
+        >
+          <span className="text-[15px] font-semibold text-white md:text-ink">
+            {t('channelSettingsAdminsTitle')}
+          </span>
+          <span className="text-white/35 md:text-ink-muted">›</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push(`/chats/${chatId}/channel/recent-actions`)}
+          className="flex w-full items-center justify-between border-t border-white/10 px-4 py-3 text-left transition hover:bg-white/[0.06] md:border-line/50"
+        >
+          <span className="text-[15px] font-semibold text-white md:text-ink">
+            {t('channelSettingsRecentActionsTitle')}
+          </span>
+          <span className="text-white/35 md:text-ink-muted">›</span>
+        </button>
+      </section>
+
       <section className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
         <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
           {t('channelSettingsMembersTitle')} ({membersSorted.length})

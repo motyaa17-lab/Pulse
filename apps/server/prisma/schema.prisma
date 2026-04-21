@@ -103,6 +103,8 @@ model User {
 
   chatBans        ChatBannedUser[]
   chatBansIssued  ChatBannedUser[]          @relation("ChatBanActor")
+
+  chatFolders     ChatFolder[]
 }
 
 /// Ephemeral "circle" media (24h), visible to self + direct-chat peers.
@@ -177,6 +179,7 @@ model Chat {
   readStates  ReadState[]
   messageReports MessageReport[]
   bannedUsers ChatBannedUser[]
+  folderLinks ChatFolderChat[]
 
   @@index([type, updatedAt])
 }
@@ -232,6 +235,32 @@ model ChatBannedUser {
   @@id([chatId, userId])
   @@index([chatId, bannedAt(sort: Desc)])
   @@index([userId])
+}
+
+/// Telegram-like chat folders/filters (per-user).
+model ChatFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chats ChatFolderChat[]
+
+  @@index([userId, sortOrder])
+}
+
+model ChatFolderChat {
+  folderId String
+  folder   ChatFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  chatId   String
+  chat     Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  addedAt  DateTime   @default(now())
+
+  @@id([folderId, chatId])
+  @@index([chatId])
 }
 
 model Message {

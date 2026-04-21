@@ -14,6 +14,8 @@ import { AdminModule } from './admin/admin.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { WsModule } from './ws/ws.module';
+import { FoldersModule } from './folders/folders.module';
+import { StorageModule } from './storage/storage.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -34,6 +36,8 @@ import { HealthController } from './health.controller';
     StoriesModule,
     AdminModule,
     WsModule,
+    FoldersModule,
+    StorageModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -809,7 +809,9 @@ export class ChatsService {
       where: { id: chatId },
       select: { type: true },
     });
-    if (!chat || chat.type !== ChatType.GROUP) throw new BadRequestException('Not a group');
+    if (!chat || (chat.type !== ChatType.GROUP && chat.type !== ChatType.CHANNEL)) {
+      throw new BadRequestException('Not a group or channel');
+    }
     if (targetUserId === actorId) throw new BadRequestException('Cannot change your own role');
     const target = await this.prisma.chatMember.findFirst({
       where: { chatId, userId: targetUserId, leftAt: null },
@@ -820,7 +822,12 @@ export class ChatsService {
       // Only owner can appoint admins (Telegram-like).
       throw new ForbiddenException();
     }
-    const nextRole = role === MemberRole.ADMIN ? MemberRole.ADMIN : MemberRole.MEMBER;
+    const nextRole =
+      role === MemberRole.ADMIN
+        ? MemberRole.ADMIN
+        : chat.type === ChatType.CHANNEL
+          ? MemberRole.SUBSCRIBER
+          : MemberRole.MEMBER;
     await this.prisma.chatMember.update({ where: { id: target.id }, data: { role: nextRole } });
     const u = await this.prisma.user.findUnique({ where: { id: targetUserId } });
     await this.prisma.message.create({
