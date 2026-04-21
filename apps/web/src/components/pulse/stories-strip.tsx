@@ -60,7 +60,7 @@ function StoryRingPreview({
             : 'from-[#3390ec]/90 via-cyan-400/80 to-emerald-400/70',
         )}
       >
-        <span className="block rounded-full bg-[#17212b] p-[2px]">
+        <span className="block rounded-full bg-surface-muted p-[2px] dark:bg-[rgb(var(--tg-panel))]">
           {mediaUrl && !mediaBroken ? (
             isVideo ? (
               <video
@@ -85,9 +85,12 @@ function StoryRingPreview({
             <SafeAvatar
               url={story.user.avatarUrl}
               label={userLabel}
-              className={cn(mediaClass, 'rounded-full bg-[#111921]')}
+              className={cn(
+                mediaClass,
+                'rounded-full bg-surface-elevated/70 dark:bg-[rgb(var(--tg-search))]',
+              )}
               fallbackClassName={cn(
-                'bg-[#111921] text-white/80',
+                'bg-surface-elevated/70 text-ink/80 dark:bg-[rgb(var(--tg-search))] dark:text-white/80',
                 size === 'compact' ? 'text-sm' : 'text-lg',
               )}
             />
@@ -101,7 +104,13 @@ function StoryRingPreview({
   );
 }
 
-export function StoriesStrip({ variant = 'full' }: { variant?: 'full' | 'compact' }) {
+export function StoriesStrip({
+  variant = 'full',
+  embedded = false,
+}: {
+  variant?: 'full' | 'compact';
+  embedded?: boolean;
+}) {
   const t = useT();
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
@@ -178,7 +187,12 @@ export function StoriesStrip({ variant = 'full' }: { variant?: 'full' | 'compact
 
   return (
     <>
-      <div className={cn('border-b border-white/[0.06] px-2', compact ? 'py-1.5' : 'py-2')}>
+      <div
+        className={cn(
+          embedded ? 'px-0' : 'border-b border-white/[0.06] px-2',
+          compact ? (embedded ? 'py-0' : 'py-1.5') : 'py-2',
+        )}
+      >
         {!compact && (
           <p className="mb-1.5 px-1 text-[0.6rem] font-bold uppercase tracking-[0.14em] text-white/45">
             {t('storiesRowTitle')}

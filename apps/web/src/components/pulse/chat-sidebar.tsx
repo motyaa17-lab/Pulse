@@ -300,7 +300,7 @@ export function ChatSidebar() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const storiesWrapRef = useRef<HTMLDivElement>(null);
+  // Reserved for future interactions (e.g., measuring story strip), currently unused.
   const listScrollRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
@@ -572,7 +572,7 @@ export function ChatSidebar() {
 
   const storiesCollapseTimerRef = useRef<number | null>(null);
 
-  // Stories now live above search (Telegram-like). Keep ref for potential future use.
+  // Stories are shown compact near the title now.
   useEffect(() => {
     return () => {
       if (storiesCollapseTimerRef.current != null) {
@@ -604,9 +604,15 @@ export function ChatSidebar() {
               >
                 {editMode ? t('chatsDone') : t('chatsEdit')}
               </button>
-              <h1 className="min-w-0 flex-1 truncate text-center font-display text-[20px] font-semibold tracking-tight text-ink dark:text-white md:text-left md:text-4xl">
-                {t('chats')}
-              </h1>
+              <div className="flex min-w-0 flex-1 items-center justify-center gap-2 md:justify-start">
+                <h1 className="min-w-0 truncate text-center font-display text-[20px] font-semibold tracking-tight text-ink dark:text-white md:text-left md:text-4xl">
+                  {t('chats')}
+                </h1>
+                {/* Telegram iOS: small story circles next to title */}
+                <div className="hidden max-w-[46vw] min-w-0 md:hidden sm:block">
+                  <StoriesStrip variant="compact" embedded />
+                </div>
+              </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <div className="flex items-center overflow-hidden rounded-full bg-surface-elevated/70 shadow-sm ring-1 ring-line/60 dark:bg-white/[0.08] dark:ring-white/[0.10] md:hidden">
@@ -706,11 +712,6 @@ export function ChatSidebar() {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Telegram-like: stories above the search bar (no interaction with chats list scroll). */}
-          <div ref={storiesWrapRef} className="mt-3 md:mt-4">
-            <StoriesStrip variant="full" />
           </div>
 
           <div ref={searchBlockRef} className="relative mt-3 md:mt-4">
