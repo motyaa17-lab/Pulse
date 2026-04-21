@@ -1095,9 +1095,12 @@ function ChatRow({
         className={cn(
           'flex items-stretch gap-0 rounded-xl transition md:rounded-2xl',
           'active:scale-[0.99]',
-          chat.isPinned && !active && 'bg-[#1f2a36]',
-          active ? 'bg-white/[0.1] shadow-[0_8px_28px_rgba(0,0,0,0.35)]' : 'hover:bg-white/[0.05]',
-          chat.isMuted && 'opacity-[0.88]',
+          // Telegram iOS-like selection/pinned states
+          chat.isPinned && !active && 'bg-surface-elevated/70 dark:bg-[rgb(var(--tg-pinned))]',
+          active
+            ? 'bg-line/35 shadow-[0_10px_32px_rgba(0,0,0,0.12)] dark:bg-white/[0.10] dark:shadow-[0_8px_28px_rgba(0,0,0,0.35)]'
+            : 'hover:bg-surface-muted/70 dark:hover:bg-white/[0.06]',
+          chat.isMuted && 'opacity-[0.9]',
         )}
       >
         {editMode && (
@@ -1112,26 +1115,30 @@ function ChatRow({
         )}
         <Link
           href={chatHref(chat)}
-          className={cn('flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5', editMode && 'pl-2')}
+          className={cn(
+            // iOS Telegram: slightly taller row, denser horizontal rhythm
+            'flex min-h-[64px] min-w-0 flex-1 items-center gap-3 px-3 py-2',
+            editMode && 'pl-2',
+          )}
           onClick={() => useUiStore.getState().setSidebarOpen(false)}
         >
-          <div className="relative h-11 w-11 shrink-0">
+          <div className="relative h-12 w-12 shrink-0">
             <SafeAvatar
               url={rawAvatar}
               label={chatInitial(chat, t)}
-              className="h-11 w-11 rounded-full ring-1 ring-white/12"
-              fallbackClassName="bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-[0.9rem] text-white"
+              className="h-12 w-12 rounded-full ring-1 ring-line/40 dark:ring-white/12"
+              fallbackClassName="bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-[0.95rem] text-white"
             />
             {chat.isMuted ? (
               <span
-                className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-white/65 ring-2 ring-[#17212b]"
+                className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-ink/55 ring-2 ring-surface-muted dark:bg-white/65 dark:ring-[rgb(var(--tg-panel))]"
                 title={t('mutedTooltip')}
               />
             ) : (
               chat.type === 'DIRECT' &&
               chat.peer?.isOnline && (
                 <span
-                  className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#4dcd5e] ring-[2.5px] ring-[#17212b]"
+                  className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#4dcd5e] ring-[2.5px] ring-surface-muted dark:ring-[rgb(var(--tg-panel))]"
                   title={t('online')}
                   aria-hidden
                 />
@@ -1142,14 +1149,14 @@ function ChatRow({
             <div className="flex items-baseline gap-2">
               <span
                 className={cn(
-                  'min-w-0 flex-1 truncate text-[15px] font-semibold leading-tight text-white',
+                  'min-w-0 flex-1 truncate text-[15px] font-semibold leading-tight text-ink dark:text-white',
                 )}
               >
                 {label}
               </span>
               {chat.isPinned && (
                 <span
-                  className="shrink-0 text-[0.7rem] text-white/45"
+                  className="shrink-0 text-[0.7rem] text-ink-muted dark:text-white/45"
                   title={t('pinned')}
                   aria-hidden
                 >
@@ -1158,8 +1165,8 @@ function ChatRow({
               )}
               <span
                 className={cn(
-                  'shrink-0 text-[0.7rem] tabular-nums text-white/50',
-                  chat.unreadCount > 0 && 'font-semibold text-[#3390ec]',
+                  'shrink-0 text-[0.7rem] tabular-nums text-ink-muted dark:text-white/50',
+                  chat.unreadCount > 0 && 'font-semibold text-accent dark:text-[#58a6ff]',
                 )}
               >
                 {timeLabel}
@@ -1169,13 +1176,15 @@ function ChatRow({
               <p
                 className={cn(
                   'min-w-0 flex-1 truncate text-[12.5px] leading-snug',
-                  isTyping ? 'text-emerald-300/90' : 'text-white/55',
+                  isTyping
+                    ? 'text-emerald-600 dark:text-emerald-300/90'
+                    : 'text-ink-muted dark:text-white/55',
                 )}
               >
                 {preview}
               </p>
               {chat.unreadCount > 0 && (
-                <span className="flex h-[1.05rem] min-w-[1.05rem] shrink-0 items-center justify-center rounded-full bg-[#3390ec] px-1 text-[9px] font-bold leading-none text-white shadow-none">
+                <span className="flex h-[1.05rem] min-w-[1.05rem] shrink-0 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold leading-none text-white shadow-none dark:bg-[#3390ec]">
                   {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                 </span>
               )}
@@ -1186,7 +1195,7 @@ function ChatRow({
           <motion.button
             type="button"
             className={cn(
-              'flex h-10 w-9 items-center justify-center rounded-2xl text-white/55 transition hover:bg-white/10 hover:text-white',
+              'flex h-10 w-9 items-center justify-center rounded-2xl text-ink-muted transition hover:bg-surface-muted/70 hover:text-ink dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white',
               'opacity-100 sm:opacity-0 sm:group-hover/row:opacity-100 sm:focus:opacity-100',
               menuOpen && 'opacity-100',
             )}
