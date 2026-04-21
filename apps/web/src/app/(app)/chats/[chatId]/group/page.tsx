@@ -173,23 +173,186 @@ export default function GroupSettingsPage() {
     onlyAdminsAdd !== Boolean(chat.group?.onlyAdminsCanAddMembers) ||
     inviteOn !== (chat.group?.inviteEnabled !== false);
 
+  const scrollToId = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const SectionCard = ({
+    id,
+    title,
+    children,
+  }: {
+    id: string;
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <section
+      id={id}
+      className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45"
+    >
+      <div className="px-4 pb-2 pt-3">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
+          {title}
+        </h2>
+      </div>
+      <div className="px-4 pb-4">{children}</div>
+    </section>
+  );
+
+  const Row = ({
+    icon,
+    label,
+    value,
+    onClick,
+    danger,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    value?: string;
+    onClick?: () => void;
+    danger?: boolean;
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.06] active:bg-white/[0.08]',
+        'border-t border-white/10 first:border-t-0 md:border-line/50 dark:md:border-line/40',
+      )}
+    >
+      <span
+        className={cn(
+          'grid h-9 w-9 place-items-center rounded-xl bg-white/8 text-white/85',
+          danger && 'bg-red-500/10 text-red-200',
+        )}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={cn('block truncate text-[15px] font-medium', danger && 'text-red-200')}>
+          {label}
+        </span>
+        {value ? (
+          <span className="mt-0.5 block truncate text-[12px] text-white/45">{value}</span>
+        ) : null}
+      </span>
+      <span className="shrink-0 text-white/35">›</span>
+    </button>
+  );
+
   return (
     <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-white md:max-h-none md:flex-none md:py-8 md:text-ink">
-      <div className="mb-6 flex items-center gap-3">
+      <div className="flex items-center justify-between">
         <Link
           href={`/chats/${chatId}`}
-          className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/85 transition hover:bg-white/10 md:border-line/70 md:bg-transparent md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45"
+          className="inline-flex min-h-[44px] items-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white/90 transition hover:bg-white/10 md:border-line/70 md:bg-transparent md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45"
         >
-          {t('groupSettingsBack')}
+          ← {t('groupSettingsBack')}
         </Link>
+        <button
+          type="button"
+          onClick={() => scrollToId('tg-profile')}
+          className="inline-flex min-h-[44px] items-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white/90 transition hover:bg-white/10 md:border-line/70 md:bg-transparent md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45"
+        >
+          {t('editMessage')}
+        </button>
       </div>
-      <h1 className="font-display text-2xl font-semibold md:text-ink">{t('groupSettingsTitle')}</h1>
-      <p className="mt-1 text-sm text-white/60 md:text-ink-muted">{t('groupSettingsSubtitle')}</p>
 
-      <section className="mt-8 space-y-4 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-          {t('groupSettingsProfileSection')}
-        </h2>
+      <div className="mt-6 flex flex-col items-center text-center">
+        <SafeAvatar
+          url={chat.avatarUrl ?? null}
+          label={(chat.title ?? '?').slice(0, 1)}
+          className="h-24 w-24 rounded-full ring-2 ring-white/10"
+          fallbackClassName="text-2xl font-semibold text-white/85"
+        />
+        <h1 className="mt-4 font-display text-2xl font-semibold text-white md:text-ink">
+          {chat.title ?? t('group')}
+        </h1>
+        <p className="mt-1 text-sm text-white/55 md:text-ink-muted">
+          {membersSorted.length} {t('groupSettingsMembersTitle').toLowerCase()}
+        </p>
+        {(chat.group?.description ?? '').trim() ? (
+          <p className="mt-3 max-w-[28rem] rounded-2xl bg-white/5 px-4 py-3 text-sm leading-relaxed text-white/70 md:bg-surface-muted/40 md:text-ink-muted">
+            {(chat.group?.description ?? '').trim()}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
+        <Row
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          }
+          label={t('groupSettingsMembersTitle')}
+          value={`${membersSorted.length}`}
+          onClick={() => scrollToId('tg-members')}
+        />
+        <Row
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          label={t('groupSettingsProfileSection')}
+          value={isAdmin ? t('groupSettingsSaveProfile') : t('drawerYourRole')}
+          onClick={() => scrollToId('tg-profile')}
+        />
+        <Row
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M12 1l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1 3-5z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          label={t('groupSettingsPermissionsSection')}
+          value={onlyAdminsAdd ? t('memberRoleAdmin') : t('memberRoleMember')}
+          onClick={() => scrollToId('tg-perms')}
+        />
+        <Row
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1-7.07 7.07L10 20"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          label={t('groupSettingsInviteSection')}
+          value={inviteOn ? t('createGroupInviteLinkOn') : t('groupSettingsInviteDisabledWarning')}
+          onClick={() => scrollToId('tg-invite')}
+        />
+      </div>
+
+      <SectionCard id="tg-profile" title={t('groupSettingsProfileSection')}>
         <label className="block text-sm font-medium md:text-ink">
           {t('createGroupNameLabel')}
           <input
@@ -226,12 +389,12 @@ export default function GroupSettingsPage() {
             {t('groupSettingsSaveFailed')}
           </p>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-          {t('groupSettingsMembersTitle')} ({membersSorted.length})
-        </h2>
+      <SectionCard
+        id="tg-members"
+        title={`${t('groupSettingsMembersTitle')} (${membersSorted.length})`}
+      >
         <ul className="space-y-2">
           {membersSorted.map((m) => {
             const uid = m.user.id ?? m.userId;
@@ -275,12 +438,9 @@ export default function GroupSettingsPage() {
             );
           })}
         </ul>
-      </section>
+      </SectionCard>
 
-      <section className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-          {t('groupSettingsPermissionsSection')}
-        </h2>
+      <SectionCard id="tg-perms" title={t('groupSettingsPermissionsSection')}>
         <label
           className={cn(
             'flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50 dark:md:border-line/40',
@@ -338,12 +498,9 @@ export default function GroupSettingsPage() {
             {t('groupSettingsSaveFailed')}
           </p>
         )}
-      </section>
+      </SectionCard>
 
-      <section className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-          {t('groupSettingsInviteSection')}
-        </h2>
+      <SectionCard id="tg-invite" title={t('groupSettingsInviteSection')}>
         {chat.group?.inviteSlug ? (
           <>
             <p className="break-all rounded-xl bg-white/5 px-3 py-2 font-mono text-[12px] text-white/90 md:bg-surface-muted/40 md:text-ink">
@@ -387,7 +544,7 @@ export default function GroupSettingsPage() {
             {t('groupSettingsNoInviteSlug')}
           </p>
         )}
-      </section>
+      </SectionCard>
 
       <section className="mt-8 rounded-2xl border border-red-500/35 bg-red-500/5 p-4 md:border-red-500/30 md:bg-red-500/[0.06]">
         <h2 className="text-xs font-bold uppercase tracking-wide text-red-200/90 md:text-red-700">

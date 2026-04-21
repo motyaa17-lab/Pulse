@@ -990,15 +990,15 @@ function ChatRow({
       >
         <Link
           href={chatHref(chat)}
-          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3"
+          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5"
           onClick={() => useUiStore.getState().setSidebarOpen(false)}
         >
-          <div className="relative h-12 w-12 shrink-0">
+          <div className="relative h-11 w-11 shrink-0">
             <SafeAvatar
               url={rawAvatar}
               label={chatInitial(chat, t)}
-              className="h-12 w-12 rounded-full ring-1 ring-white/12"
-              fallbackClassName="bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-[0.95rem] text-white"
+              className="h-11 w-11 rounded-full ring-1 ring-white/12"
+              fallbackClassName="bg-gradient-to-br from-sky-400/35 via-blue-500/15 to-emerald-300/10 text-[0.9rem] text-white"
             />
             {chat.isMuted ? (
               <span
@@ -1027,24 +1027,24 @@ function ChatRow({
               </span>
               <span
                 className={cn(
-                  'shrink-0 text-[0.72rem] tabular-nums text-white/55',
+                  'shrink-0 text-[0.7rem] tabular-nums text-white/50',
                   chat.unreadCount > 0 && 'font-semibold text-[#3390ec]',
                 )}
               >
                 {timeLabel}
               </span>
             </div>
-            <div className="mt-px flex items-center gap-1.5">
+            <div className="mt-0.5 flex items-center gap-2">
               <p
                 className={cn(
-                  'min-w-0 flex-1 truncate text-[13px] leading-snug',
+                  'min-w-0 flex-1 truncate text-[12.5px] leading-snug',
                   isTyping ? 'text-emerald-300/90' : 'text-white/55',
                 )}
               >
                 {preview}
               </p>
               {chat.unreadCount > 0 && (
-                <span className="flex h-[1.125rem] min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-[#3390ec] px-1 text-[10px] font-bold leading-none text-white shadow-none">
+                <span className="flex h-[1.05rem] min-w-[1.05rem] shrink-0 items-center justify-center rounded-full bg-[#3390ec] px-1 text-[9px] font-bold leading-none text-white shadow-none">
                   {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                 </span>
               )}
