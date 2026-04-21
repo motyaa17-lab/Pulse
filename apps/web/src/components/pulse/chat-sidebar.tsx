@@ -901,14 +901,22 @@ export function ChatSidebar() {
                   );
                   void reorderPinned.mutateAsync(next.map((x) => x.id)).catch(() => void 0);
                 }}
+                dragListener={editMode}
                 className="space-y-px"
               >
                 {pinned.map((c: ChatListItem) => (
-                  <Reorder.Item key={c.id} value={c} className="cursor-grab active:cursor-grabbing">
+                  <Reorder.Item
+                    key={c.id}
+                    value={c}
+                    className={cn(
+                      editMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-default',
+                    )}
+                  >
                     <ChatRow
                       chat={c}
                       locale={locale}
                       active={pathname === `/chats/${c.id}`}
+                      editMode={editMode}
                       menuOpen={openMenuId === c.id}
                       onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
                       onHide={() => hideChat.mutate(c.id)}
@@ -932,6 +940,7 @@ export function ChatSidebar() {
                 chat={c}
                 locale={locale}
                 active={pathname === `/chats/${c.id}`}
+                editMode={editMode}
                 menuOpen={openMenuId === c.id}
                 onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
                 onHide={() => hideChat.mutate(c.id)}
@@ -957,6 +966,7 @@ export function ChatSidebar() {
                     chat={c}
                     locale={locale}
                     active={pathname === `/chats/${c.id}`}
+                    editMode={editMode}
                     menuOpen={openMenuId === c.id}
                     onToggleMenu={() => setOpenMenuId((open) => (open === c.id ? null : c.id))}
                     onHide={() => hideChat.mutate(c.id)}
@@ -999,6 +1009,7 @@ function ChatRow({
   chat,
   locale,
   active,
+  editMode,
   menuOpen,
   onToggleMenu,
   onHide,
@@ -1013,6 +1024,7 @@ function ChatRow({
   chat: ChatListItem;
   locale: string;
   active: boolean;
+  editMode?: boolean;
   menuOpen: boolean;
   onToggleMenu: () => void;
   onHide: () => void;
@@ -1052,14 +1064,24 @@ function ChatRow({
         className={cn(
           'flex items-stretch gap-0 rounded-xl transition md:rounded-2xl',
           'active:scale-[0.99]',
-          chat.isPinned && !active && 'bg-white/[0.06]',
+          chat.isPinned && !active && 'bg-[#1f2a36]',
           active ? 'bg-white/[0.1] shadow-[0_8px_28px_rgba(0,0,0,0.35)]' : 'hover:bg-white/[0.05]',
           chat.isMuted && 'opacity-[0.88]',
         )}
       >
+        {editMode && (
+          <div className="flex items-center pl-2 pr-1 md:hidden">
+            <span
+              className="inline-flex h-9 w-7 items-center justify-center rounded-full text-white/45"
+              aria-hidden
+            >
+              ≡
+            </span>
+          </div>
+        )}
         <Link
           href={chatHref(chat)}
-          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5"
+          className={cn('flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5', editMode && 'pl-2')}
           onClick={() => useUiStore.getState().setSidebarOpen(false)}
         >
           <div className="relative h-11 w-11 shrink-0">
