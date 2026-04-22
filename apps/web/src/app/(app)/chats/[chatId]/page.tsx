@@ -204,7 +204,12 @@ export default function ChatPage() {
             />
           </Link>
         ) : (
-          <div className="relative h-9 w-9 shrink-0 md:h-10 md:w-10">
+          <button
+            type="button"
+            onClick={() => setDetailsOpen(true)}
+            className="relative h-9 w-9 shrink-0 md:h-10 md:w-10"
+            aria-label={t('info')}
+          >
             <SafeAvatar
               url={avatarRaw}
               label={initial}
@@ -218,9 +223,20 @@ export default function ChatPage() {
                 'md:border-transparent md:bg-gradient-to-br md:from-accent/30 md:to-accent/10 md:text-accent dark:md:from-accent/25 dark:md:to-accent/5',
               )}
             />
-          </div>
+          </button>
         )}
-        <div className="min-w-0 flex-1 py-0.5">
+        <button
+          type="button"
+          onClick={() => {
+            if (peerId) {
+              router.push(`/users/${peerId}`);
+              return;
+            }
+            setDetailsOpen(true);
+          }}
+          className="min-w-0 flex-1 py-0.5 text-left"
+          aria-label={peerId ? t('openProfileAria') : t('info')}
+        >
           <h1
             className={cn(
               'truncate font-display text-[1.02rem] font-semibold leading-tight tracking-tight md:text-[1.0625rem]',
@@ -237,7 +253,7 @@ export default function ChatPage() {
           >
             {statusText}
           </p>
-        </div>
+        </button>
         <button
           type="button"
           className={cn(
@@ -256,21 +272,7 @@ export default function ChatPage() {
             />
           </svg>
         </button>
-        <button
-          type="button"
-          className={cn(
-            'inline-flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full text-ink-muted transition active:bg-line/25 dark:text-white/75 dark:active:bg-white/[0.08]',
-            'md:h-9 md:w-9 md:min-h-0 md:min-w-0',
-          )}
-          onClick={() => setDetailsOpen(true)}
-          aria-label={t('info')}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
-            <path d="M12 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M12 8h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-          </svg>
-        </button>
+        {/* Info is opened via avatar/title tap (Telegram iOS-like). */}
       </header>
       {pinned && (
         <button

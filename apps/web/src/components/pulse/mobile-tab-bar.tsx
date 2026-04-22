@@ -146,7 +146,9 @@ export function MobileTabBar() {
 
   return (
     <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-[200] hidden max-md:flex max-md:justify-center max-md:px-3 max-md:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <div className="pointer-events-auto flex w-full max-w-[420px] items-end gap-2">
+      {/* Capture taps inside tabbar zone to prevent “tap-through” to chat rows. */}
+      <div className="absolute inset-0 z-0" aria-hidden />
+      <div className="pointer-events-auto relative z-10 flex w-full max-w-[420px] items-end gap-2">
         <nav
           role="navigation"
           className="flex min-w-0 flex-1 items-stretch justify-around rounded-[26px] border border-line/70 bg-surface-elevated/95 px-1 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl dark:border-white/[0.12] dark:bg-[#1a242e]/98 dark:shadow-[0_12px_40px_rgba(0,0,0,0.62)]"
