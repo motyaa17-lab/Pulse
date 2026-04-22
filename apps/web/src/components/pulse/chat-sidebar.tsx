@@ -23,6 +23,84 @@ import { useAuthStore } from '@/stores/auth-store';
 import { StoriesStrip } from '@/components/pulse/stories-strip';
 import { chatHref } from '@/lib/chat-route';
 
+function SegmentedPill({
+  value,
+  items,
+  onChange,
+}: {
+  value: string;
+  items: { id: string; label: string }[];
+  onChange: (id: string) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+
+  const update = () => {
+    const wrap = wrapRef.current;
+    const btn = btnRefs.current[value];
+    if (!wrap || !btn) return;
+    const wr = wrap.getBoundingClientRect();
+    const br = btn.getBoundingClientRect();
+    setPill({ left: br.left - wr.left, width: br.width });
+  };
+
+  useEffect(() => {
+    update();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, items.length]);
+
+  useEffect(() => {
+    update();
+    const onResize = () => update();
+    window.addEventListener('resize', onResize, { passive: true });
+    const ro = 'ResizeObserver' in window ? new ResizeObserver(() => update()) : null;
+    if (ro && wrapRef.current) ro.observe(wrapRef.current);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      ro?.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative flex shrink-0 items-center rounded-xl bg-surface-elevated/70 p-1 shadow-sm ring-1 ring-line/60 dark:bg-white/[0.08] dark:ring-white/[0.10]"
+    >
+      {pill ? (
+        <div
+          aria-hidden
+          className="absolute bottom-1 top-1 rounded-[0.65rem] bg-surface-muted shadow-sm transition-[transform,width] duration-200 ease-out dark:bg-white/15"
+          style={{ width: pill.width, transform: `translateX(${pill.left}px)` }}
+        />
+      ) : null}
+      {items.map((seg) => {
+        const activeSeg = value === seg.id;
+        return (
+          <button
+            key={seg.id}
+            ref={(el) => {
+              btnRefs.current[seg.id] = el;
+            }}
+            type="button"
+            onClick={() => onChange(seg.id)}
+            className={cn(
+              'relative z-[1] min-w-[4.1rem] rounded-[0.65rem] px-3 py-1.5 text-[13px] font-semibold transition',
+              activeSeg
+                ? 'text-ink dark:text-white'
+                : 'text-ink-muted hover:text-ink dark:text-white/70 dark:hover:text-white',
+            )}
+            aria-pressed={activeSeg}
+          >
+            {seg.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function formatListTime(iso: string, t: (k: I18nKey) => string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -844,45 +922,30 @@ export function ChatSidebar() {
           </div>
           <div className="mt-3">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex shrink-0 items-center rounded-xl bg-surface-elevated/70 p-1 shadow-sm ring-1 ring-line/60 dark:bg-white/[0.08] dark:ring-white/[0.10]">
-                {(
-                  [
-                    { id: 'all', label: t('chatsChipAll') },
-                    { id: 'telegram', label: t('chatsChipTelegram') },
-                    { id: 'channels', label: t('chatsChipChannels') },
-                    { id: 'groups', label: t('chatsChipGroups') },
-                    { id: 'direct', label: t('chatsChipDirect') },
-                  ] as const
-                ).map((seg) => {
-                  const activeSeg = chip === seg.id && folderId == null;
-                  return (
-                    <button
-                      key={seg.id}
-                      type="button"
-                      onClick={() => {
-                        setFolderId(null);
-                        setChip(seg.id);
-                      }}
-                      className={cn(
-                        'min-w-[4.25rem] rounded-[0.65rem] px-3 py-1.5 text-[13px] font-semibold transition',
-                        activeSeg
-                          ? 'bg-surface-muted text-ink shadow-sm dark:bg-white/15 dark:text-white'
-                          : 'text-ink-muted hover:bg-surface-muted/70 hover:text-ink dark:text-white/70 dark:hover:bg-white/[0.08] dark:hover:text-white',
-                      )}
-                      aria-pressed={activeSeg}
-                    >
-                      {seg.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <SegmentedPill
+                value={folderId ? `folder:${folderId}` : chip}
+                items={[
+                  { id: 'all', label: t('chatsChipAll') },
+                  { id: 'telegram', label: t('chatsChipTelegram') },
+                  { id: 'channels', label: t('chatsChipChannels') },
+                  { id: 'groups', label: t('chatsChipGroups') },
+                  { id: 'direct', label: t('chatsChipDirect') },
+                ]}
+                onChange={(id) => {
+                  setFolderId(null);
+                  setChip(id as typeof chip);
+                }}
+              />
               {(folders?.items ?? []).map((f) => {
                 const activeFolder = folderId === f.id;
                 return (
                   <button
                     key={f.id}
                     type="button"
-                    onClick={() => setFolderId((cur) => (cur === f.id ? null : f.id))}
+                    onClick={() => {
+                      setChip('all');
+                      setFolderId((cur) => (cur === f.id ? null : f.id));
+                    }}
                     className={cn(
                       'shrink-0 rounded-xl bg-surface-elevated/70 px-3 py-2 text-[13px] font-semibold shadow-sm ring-1 ring-line/60 transition dark:bg-white/[0.08] dark:ring-white/[0.10]',
                       activeFolder

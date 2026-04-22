@@ -150,7 +150,7 @@ export default function ChatPage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#0e1621] text-white',
+        'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden chat-thread-bg text-ink dark:text-white',
         'max-md:z-[25]',
         'md:relative md:h-full md:min-h-0 md:flex-1 md:bg-transparent md:text-inherit',
       )}
@@ -158,20 +158,21 @@ export default function ChatPage() {
       <header
         className={cn(
           'flex shrink-0 items-center gap-2.5 px-3',
-          'relative z-20 border-b border-black/25 bg-[#17212b]/95 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-[0_6px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl',
-          'md:static md:z-auto md:border-b md:border-line/75 md:bg-surface-elevated/98 md:py-1.5 md:pt-1.5 md:shadow-[0_1px_0_rgba(0,0,0,0.04)] md:backdrop-blur-md dark:md:border-line/45 dark:md:bg-surface-elevated/95 dark:md:shadow-[0_1px_0_rgba(255,255,255,0.04)]',
+          'relative z-20 border-b border-line/70 bg-surface-elevated/90 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl',
+          'dark:border-white/[0.10] dark:bg-[rgb(var(--tg-panel))]/92',
+          'md:static md:z-auto md:py-1.5 md:pt-1.5',
         )}
       >
         <button
           type="button"
           className={cn(
-            'flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full transition md:hidden',
-            'border border-white/12 bg-white/8 text-white/85 hover:bg-white/12 hover:text-white active:scale-[0.99]',
+            'flex min-h-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full transition md:hidden',
+            'px-3 text-[15px] font-semibold text-accent active:bg-line/25 dark:text-[#58a6ff] dark:active:bg-white/[0.08]',
           )}
           onClick={() => router.push('/chats')}
           aria-label={t('backToChatListAria')}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="-ml-1">
             <path
               d="M15 18l-6-6 6-6"
               stroke="currentColor"
@@ -180,6 +181,7 @@ export default function ChatPage() {
               strokeLinejoin="round"
             />
           </svg>
+          <span className="ml-0.5">{t('chats')}</span>
         </button>
         {peerId ? (
           <Link
@@ -222,15 +224,15 @@ export default function ChatPage() {
           <h1
             className={cn(
               'truncate font-display text-[1.02rem] font-semibold leading-tight tracking-tight md:text-[1.0625rem]',
-              'text-white md:text-ink',
+              'text-ink dark:text-white',
             )}
           >
             {title}
           </h1>
           <p
             className={cn(
-              'mt-0.5 truncate text-[0.65rem] font-semibold uppercase tracking-[0.14em]',
-              'text-white/55 md:text-ink-muted/85',
+              'mt-0.5 truncate text-[13px] leading-tight',
+              'text-ink-muted dark:text-white/55',
             )}
           >
             {statusText}
@@ -239,8 +241,8 @@ export default function ChatPage() {
         <button
           type="button"
           className={cn(
-            'inline-flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/80 transition hover:bg-white/12 active:scale-[0.99]',
-            'md:h-9 md:w-9 md:min-h-0 md:min-w-0 md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 dark:md:border-line/50',
+            'inline-flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full text-ink-muted transition active:bg-line/25 dark:text-white/75 dark:active:bg-white/[0.08]',
+            'md:h-9 md:w-9 md:min-h-0 md:min-w-0',
           )}
           onClick={() => setInChatSearchOpen(true)}
           aria-label={t('chatSearchTitle')}
@@ -257,12 +259,17 @@ export default function ChatPage() {
         <button
           type="button"
           className={cn(
-            'inline-flex min-h-[44px] shrink-0 touch-manipulation items-center rounded-full border border-white/12 bg-white/8 px-3.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/12 hover:text-white active:scale-[0.99]',
-            'md:h-9 md:min-h-0 md:border-line/75 md:bg-transparent md:text-ink-muted md:hover:border-accent/35 md:hover:bg-surface-muted/55 md:hover:text-ink dark:md:border-line/50 dark:md:hover:bg-surface-elevated/55',
+            'inline-flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-full text-ink-muted transition active:bg-line/25 dark:text-white/75 dark:active:bg-white/[0.08]',
+            'md:h-9 md:w-9 md:min-h-0 md:min-w-0',
           )}
           onClick={() => setDetailsOpen(true)}
+          aria-label={t('info')}
         >
-          {t('info')}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+            <path d="M12 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M12 8h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
         </button>
       </header>
       {pinned && (
@@ -271,15 +278,15 @@ export default function ChatPage() {
           onClick={() => router.push(`/chats/${chatId}?highlight=${pinned.id}`)}
           className={cn(
             'flex shrink-0 items-center gap-2 px-3 py-2 text-left text-sm',
-            'border-b border-white/10 bg-white/6 text-white/70 hover:bg-white/10',
-            'md:border-b md:border-line/60 md:bg-surface-elevated/90 md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45 dark:md:bg-surface-elevated/95',
+            'border-b border-line/60 bg-surface-elevated/70 text-ink-muted hover:bg-surface-muted/60',
+            'dark:border-white/[0.10] dark:bg-[rgb(var(--tg-panel))]/65 dark:text-white/70 dark:hover:bg-white/[0.06]',
           )}
           aria-label={t('pinnedMessageAria')}
         >
           <span className="inline-flex rounded-full border border-line/70 bg-surface-muted/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-muted">
             {t('pinnedBadge')}
           </span>
-          <span className={cn('min-w-0 flex-1 truncate text-[13px]', 'text-white md:text-ink')}>
+          <span className={cn('min-w-0 flex-1 truncate text-[13px]', 'text-ink dark:text-white')}>
             {pinned.deletedAt
               ? t('messageDeleted')
               : pinned.text?.trim()
