@@ -71,6 +71,7 @@ export const useUiStore = create<UiState>()(
     {
       name: 'pulse-ui',
       partialize: (s) => ({
+        theme: s.theme,
         visualPreset: s.visualPreset,
         soundEnabled: s.soundEnabled,
         reduceMotion: s.reduceMotion,

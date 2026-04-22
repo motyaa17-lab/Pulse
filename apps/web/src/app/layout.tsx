@@ -26,6 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geist.variable} ${outfit.variable} font-sans`}>
+        <script
+          // Apply theme/preset before paint to avoid a dark flash on navigation/hydration.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var raw=localStorage.getItem('pulse-ui');var st=raw?JSON.parse(raw):null;var s=st&&st.state?st.state:{};var theme=s.theme||'system';var preset=s.visualPreset||'default';var root=document.documentElement;var isDark=(theme==='dark')||(theme==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(isDark)root.classList.add('dark');else root.classList.remove('dark');if(preset&&preset!=='default')root.dataset.visualPreset=preset;else delete root.dataset.visualPreset;}catch(e){}})();`,
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>
