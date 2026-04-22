@@ -162,6 +162,7 @@ export function ChatDetailsDrawer({
   chat: ChatDetailForDrawer | undefined;
 }) {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [tab, setTab] = useState<InfoTab>('members');
   const t = useT();
   const language = useLanguageStore((s) => s.language);
   const onCloseRef = useRef(onClose);
@@ -226,7 +227,6 @@ export function ChatDetailsDrawer({
 
   const groupDesc = chat?.type === 'GROUP' ? chat.group?.description : null;
   const channelMeta = chat?.type === 'CHANNEL' ? chat.channel : null;
-  const [tab, setTab] = useState<InfoTab>('members');
 
   return createPortal(
     <>
