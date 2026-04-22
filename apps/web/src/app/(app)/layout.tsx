@@ -9,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGate>
       {/* Mobile: bounded flex column so chat list / thread get min-h-0 + scroll; desktop: no extra wrapper. */}
-      <div className="max-md:flex max-md:h-[100dvh] max-md:min-h-0 max-md:flex-col max-md:overflow-hidden md:contents">
+      <div className="max-md:fixed max-md:inset-0 max-md:flex max-md:h-[100svh] max-md:min-h-0 max-md:flex-col max-md:overflow-hidden md:contents">
         {children}
       </div>
       <MobileTabBar />

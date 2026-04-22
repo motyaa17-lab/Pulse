@@ -163,14 +163,16 @@ type SearchResult = {
 
 function SearchHighlight({ text, needle }: { text: string; needle: string }) {
   const i = text.toLowerCase().indexOf(needle.toLowerCase());
-  if (i < 0) return <span className="text-white/90">{text}</span>;
+  if (i < 0) return <span className="text-ink dark:text-white/90">{text}</span>;
   const before = text.slice(0, i);
   const match = text.slice(i, i + needle.length);
   const after = text.slice(i + needle.length);
   return (
-    <span className="text-white/90">
+    <span className="text-ink dark:text-white/90">
       {before}
-      <mark className="rounded bg-sky-500/35 px-0.5 text-white">{match}</mark>
+      <mark className="rounded bg-accent/20 px-0.5 text-ink dark:bg-sky-500/35 dark:text-white">
+        {match}
+      </mark>
       {after}
     </span>
   );
@@ -194,11 +196,11 @@ function SidebarCreateMenu({
   t: (k: I18nKey) => string;
 }) {
   const itemClass =
-    'block w-full px-3 py-2.5 text-left text-[13px] font-medium text-white/90 transition hover:bg-white/10';
+    'block w-full px-3 py-2.5 text-left text-[13px] font-medium text-ink transition hover:bg-surface-muted/80 dark:text-white/90 dark:hover:bg-white/10';
   return (
     <div
       role="menu"
-      className="absolute right-0 top-full z-[60] mt-2 min-w-[13.5rem] overflow-hidden rounded-2xl border border-white/12 bg-[#0B1020]/96 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-[26px]"
+      className="absolute right-0 top-full z-[60] mt-2 min-w-[13.5rem] overflow-hidden rounded-2xl border border-line/70 bg-surface-elevated/95 py-1 shadow-[0_22px_60px_rgba(0,0,0,0.18)] backdrop-blur-[26px] dark:border-white/12 dark:bg-[rgb(var(--tg-bg))]/92 dark:shadow-[0_22px_60px_rgba(0,0,0,0.6)]"
     >
       <button
         type="button"

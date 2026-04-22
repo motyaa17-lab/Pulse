@@ -183,7 +183,8 @@ body {
 @layer components {
   /* Telegram iOS-like page layout primitives (used across /chats, /settings, etc.) */
   .tg-page {
-    @apply mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-4 py-6 text-ink md:px-6 md:py-10;
+    @apply mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-4 pt-6 text-ink md:px-6 md:py-10;
+    padding-bottom: max(1rem, calc(4.75rem + env(safe-area-inset-bottom)));
   }
 
   .dark .tg-page {
