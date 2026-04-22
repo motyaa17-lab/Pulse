@@ -9,6 +9,7 @@ import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import type { ChatDetailForDrawer } from '@/components/pulse/chat-details-drawer';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
+import { TgCard, TgNav, TgPage, TgRow } from '@/components/telegram/telegram-ui';
 
 type BanList = {
   items: {
@@ -88,43 +89,34 @@ export default function GroupBansPage() {
   }
 
   return (
-    <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto bg-[#0e1621] px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-white md:bg-transparent md:px-6 md:py-10 md:text-ink">
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/chats/${chatId}/group`}
-          className="inline-flex min-h-[44px] items-center text-sm font-semibold text-sky-300 md:text-accent"
-        >
-          {t('groupSettingsBackToGroupSettings')}
-        </Link>
-        <span className="font-display text-lg font-semibold">{t('groupSettingsBansTitle')}</span>
-        <span className="w-10" />
-      </div>
+    <TgPage className="max-w-lg">
+      <TgNav
+        title={t('groupSettingsBansTitle')}
+        backHref={`/chats/${chatId}/group`}
+        backLabel={t('groupSettingsBackToGroupSettings')}
+      />
 
-      <p className="mt-3 text-sm text-white/55 md:text-ink-muted">
+      <p className="mt-2 text-[13px] text-ink-muted dark:text-white/55">
         {t('groupSettingsBansSubtitle')}
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
-        <div className="px-4 pb-2 pt-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
-            {t('groupSettingsBanUser')}
-          </h2>
-        </div>
+      <TgCard title={t('groupSettingsBanUser')} className="mt-4">
         <div className="px-4 pb-4">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t('groupSettingsBanSearchPlaceholder')}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50 md:border-line md:bg-surface-muted/30 md:text-ink"
+            className="w-full rounded-xl border border-line/60 bg-surface-muted/30 px-3 py-2 text-[15px] text-ink outline-none focus:border-accent dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-white"
           />
           <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('groupSettingsBanReasonPlaceholder')}
-            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 outline-none focus:border-sky-400/50 md:border-line md:bg-surface-muted/30 md:text-ink"
+            className="mt-3 w-full rounded-xl border border-line/60 bg-surface-muted/30 px-3 py-2 text-[15px] text-ink outline-none focus:border-accent dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-white"
           />
-          {q.trim() && candidates.length > 0 && (
-            <div className="mt-3 overflow-hidden rounded-xl border border-white/10 md:border-line/50">
+
+          {q.trim() && candidates.length > 0 ? (
+            <div className="mt-3 overflow-hidden rounded-2xl border border-line/60 dark:border-white/[0.10]">
               {candidates.map((m) => {
                 const uid = m.user.id ?? m.userId;
                 const name = m.user.displayName ?? m.user.username;
@@ -134,87 +126,79 @@ export default function GroupBansPage() {
                     type="button"
                     onClick={() => ban.mutate(uid)}
                     disabled={ban.isPending}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-white/[0.06] disabled:opacity-50"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-muted/60 disabled:opacity-50 dark:hover:bg-white/[0.06]"
                   >
                     <SafeAvatar
                       url={m.user.avatarUrl ?? null}
                       label={name.slice(0, 1).toUpperCase()}
-                      className="h-9 w-9 shrink-0 rounded-full ring-1 ring-white/15"
-                      fallbackClassName="text-xs font-semibold text-sky-200"
+                      className="h-9 w-9 shrink-0 rounded-full ring-1 ring-line/50 dark:ring-white/10"
+                      fallbackClassName="text-xs font-semibold text-ink"
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[14px] font-semibold text-white md:text-ink">
+                      <div className="truncate text-[15px] font-semibold text-ink dark:text-white">
                         {name}
                       </div>
-                      <div className="truncate text-xs text-white/50 md:text-ink-muted">
+                      <div className="truncate text-[13px] text-ink-muted dark:text-white/55">
                         @{m.user.username}
                       </div>
                     </div>
-                    <span
-                      className={cn(
-                        'shrink-0 rounded-lg border px-2.5 py-1 text-xs font-semibold',
-                        'border-red-400/40 bg-red-500/10 text-red-200',
-                      )}
-                    >
+                    <span className="shrink-0 rounded-lg px-2.5 py-1 text-[13px] font-semibold text-red-500">
                       {t('groupSettingsBanUser')}
                     </span>
                   </button>
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
-      </div>
+      </TgCard>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80">
-        <div className="px-4 pb-2 pt-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
-            {t('groupSettingsBansTitle')}
-          </h2>
-        </div>
-        <ul className="divide-y divide-white/10 md:divide-line/50">
-          {(bans?.items ?? []).length === 0 ? (
-            <li className="px-4 pb-4 text-sm text-white/55 md:text-ink-muted">
-              {t('groupSettingsNoBans')}
-            </li>
-          ) : (
-            (bans?.items ?? []).map((b) => {
-              const name = b.user.displayName ?? b.user.username;
-              return (
-                <li key={b.user.id} className="flex items-center gap-3 px-4 py-3">
-                  <SafeAvatar
-                    url={b.user.avatarUrl}
-                    label={name.slice(0, 1).toUpperCase()}
-                    className="h-10 w-10 shrink-0 rounded-full ring-1 ring-white/15"
-                    fallbackClassName="text-sm font-semibold text-sky-200"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[15px] font-semibold text-white md:text-ink">
-                      {name}
-                    </div>
-                    <div className="truncate text-xs text-white/50 md:text-ink-muted">
-                      @{b.user.username}
-                    </div>
-                    {b.reason ? (
-                      <div className="mt-0.5 truncate text-xs text-white/45 md:text-ink-muted">
-                        {b.reason}
-                      </div>
-                    ) : null}
+      <TgCard title={t('groupSettingsBansTitle')} className="mt-6">
+        {(bans?.items ?? []).length === 0 ? (
+          <div className="px-4 py-4 text-[13px] text-ink-muted dark:text-white/55">
+            {t('groupSettingsNoBans')}
+          </div>
+        ) : (
+          (bans?.items ?? []).map((b) => {
+            const name = b.user.displayName ?? b.user.username;
+            return (
+              <TgRow key={b.user.id}>
+                <SafeAvatar
+                  url={b.user.avatarUrl}
+                  label={name.slice(0, 1).toUpperCase()}
+                  className="h-10 w-10 shrink-0 rounded-full ring-1 ring-line/50 dark:ring-white/10"
+                  fallbackClassName="text-sm font-semibold text-ink"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[15px] font-semibold text-ink dark:text-white">
+                    {name}
                   </div>
-                  <button
-                    type="button"
-                    disabled={unban.isPending}
-                    onClick={() => unban.mutate(b.user.id)}
-                    className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/85 transition hover:bg-white/10 disabled:opacity-50 md:border-line/60"
-                  >
-                    {t('groupSettingsUnbanUser')}
-                  </button>
-                </li>
-              );
-            })
-          )}
-        </ul>
-      </div>
-    </div>
+                  <div className="truncate text-[13px] text-ink-muted dark:text-white/55">
+                    @{b.user.username}
+                  </div>
+                  {b.reason ? (
+                    <div className="mt-0.5 truncate text-[12px] text-ink-muted dark:text-white/55">
+                      {b.reason}
+                    </div>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  disabled={unban.isPending}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    unban.mutate(b.user.id);
+                  }}
+                  className="ml-2 shrink-0 rounded-lg px-2.5 py-1 text-[13px] font-semibold text-accent disabled:opacity-50"
+                >
+                  {t('groupSettingsUnbanUser')}
+                </button>
+              </TgRow>
+            );
+          })
+        )}
+      </TgCard>
+    </TgPage>
   );
 }

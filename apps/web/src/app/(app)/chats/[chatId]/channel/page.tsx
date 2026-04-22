@@ -10,6 +10,14 @@ import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 import type { MeUserDto } from '@/lib/types';
+import {
+  TgCard,
+  TgChevron,
+  TgIconBadge,
+  TgNav,
+  TgPage,
+  TgRow,
+} from '@/components/telegram/telegram-ui';
 
 function memberRoleLabel(role: string, t: (k: I18nKey) => string) {
   switch (role) {
@@ -182,305 +190,360 @@ export default function ChannelSettingsPage() {
     ? inviteOn !== (chat.channel?.inviteEnabled !== false)
     : handleNorm !== (chat.channel?.handle ?? '').trim().toLowerCase();
 
+  const scrollToId = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-white md:max-h-none md:flex-none md:py-8 md:text-ink">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          href={`/chats/${chatId}`}
-          className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/85 transition hover:bg-white/10 md:border-line/70 md:bg-transparent md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45"
-        >
-          {t('channelSettingsBack')}
-        </Link>
-      </div>
-      <h1 className="font-display text-2xl font-semibold md:text-ink">
-        {t('channelSettingsTitle')}
-      </h1>
-      <p className="mt-1 text-sm text-white/60 md:text-ink-muted">{t('channelSettingsSubtitle')}</p>
-
-      <p className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center text-[11px] text-white/70 md:border-line/60 md:bg-surface-muted/25 md:text-ink-muted">
-        {isPrivate ? t('channelSettingsTypePrivate') : t('channelSettingsTypePublic')}
-      </p>
-
-      <section className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-          {t('channelSettingsProfileSection')}
-        </h2>
-        <label className="block text-sm font-medium md:text-ink">
-          {t('createChannelNameLabel')}
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={!isAdmin}
-            className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50 disabled:opacity-60 md:border-line md:bg-surface-muted/30 md:text-ink md:focus:border-accent dark:md:border-line/45"
-            maxLength={120}
-          />
-        </label>
-        <label className="block text-sm font-medium md:text-ink">
-          {t('createChannelDescLabel')}
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={!isAdmin}
-            rows={3}
-            maxLength={500}
-            className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50 disabled:opacity-60 md:border-line md:bg-surface-muted/30 md:text-ink md:focus:border-accent dark:md:border-line/45"
-          />
-        </label>
-        {isAdmin && (
+    <TgPage className="max-w-lg">
+      <TgNav
+        title={t('channelSettingsTitle')}
+        backHref={`/chats/${chatId}`}
+        backLabel={t('backToChatsLink')}
+        right={
           <button
             type="button"
-            disabled={!profileDirty || saveProfile.isPending}
-            onClick={() => saveProfile.mutate()}
-            className="w-full rounded-xl bg-sky-500 py-2.5 text-sm font-semibold text-white disabled:opacity-45 md:bg-accent"
+            className="min-h-[44px] px-2 text-[15px] font-semibold text-accent"
+            onClick={() => scrollToId('tg-profile')}
           >
-            {saveProfile.isPending ? t('commonLoading') : t('channelSettingsSaveProfile')}
+            {t('editMessage')}
           </button>
-        )}
-        {saveProfile.isError && (
-          <p className="text-center text-xs text-red-400 md:text-red-500">
-            {t('channelSettingsSaveFailed')}
+        }
+      />
+
+      <div className="mt-4 flex flex-col items-center text-center">
+        <SafeAvatar
+          url={chat.avatarUrl ?? null}
+          label={(chat.title ?? '?').slice(0, 1)}
+          className="h-24 w-24 rounded-full ring-1 ring-line/60 dark:ring-white/10"
+          fallbackClassName="text-2xl font-semibold text-ink"
+        />
+        <h1 className="mt-4 font-display text-[1.55rem] font-semibold leading-tight text-ink dark:text-white">
+          {chat.title ?? t('channel')}
+        </h1>
+        <p className="mt-1 text-[13px] text-ink-muted dark:text-white/55">
+          {isPrivate ? t('channelSettingsTypePrivate') : t('channelSettingsTypePublic')}
+        </p>
+        {(chat.channel?.description ?? '').trim() ? (
+          <p className="mt-3 max-w-[28rem] rounded-2xl bg-surface-muted/35 px-4 py-3 text-[14px] leading-relaxed text-ink-muted dark:bg-white/[0.06] dark:text-white/60">
+            {(chat.channel?.description ?? '').trim()}
           </p>
-        )}
-      </section>
+        ) : null}
+      </div>
 
-      <section className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <button
-          type="button"
-          onClick={() => router.push(`/chats/${chatId}/channel/admins`)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-white/[0.06]"
-        >
-          <span className="text-[15px] font-semibold text-white md:text-ink">
-            {t('channelSettingsAdminsTitle')}
-          </span>
-          <span className="text-white/35 md:text-ink-muted">›</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push(`/chats/${chatId}/channel/recent-actions`)}
-          className="flex w-full items-center justify-between border-t border-white/10 px-4 py-3 text-left transition hover:bg-white/[0.06] md:border-line/50"
-        >
-          <span className="text-[15px] font-semibold text-white md:text-ink">
-            {t('channelSettingsRecentActionsTitle')}
-          </span>
-          <span className="text-white/35 md:text-ink-muted">›</span>
-        </button>
-      </section>
+      <TgCard className="mt-6">
+        <TgRow href={`/chats/${chatId}/channel/admins`}>
+          <TgIconBadge>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M20 8v6M23 11h-6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </TgIconBadge>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold">
+              {t('channelSettingsAdminsTitle')}
+            </div>
+            <div className="mt-0.5 text-[13px] text-ink-muted">
+              {t('channelSettingsAdminsSubtitle')}
+            </div>
+          </div>
+          <TgChevron />
+        </TgRow>
+        <TgRow href={`/chats/${chatId}/channel/recent-actions`}>
+          <TgIconBadge>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </TgIconBadge>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold">
+              {t('channelSettingsRecentActionsTitle')}
+            </div>
+            <div className="mt-0.5 text-[13px] text-ink-muted">
+              {t('channelSettingsActionsSubtitle')}
+            </div>
+          </div>
+          <TgChevron />
+        </TgRow>
+      </TgCard>
 
-      <section className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-          {t('channelSettingsMembersTitle')} ({membersSorted.length})
-        </h2>
-        <ul className="space-y-2">
-          {membersSorted.map((m) => {
-            const uid = m.user.id ?? m.userId;
-            const canRemove = isAdmin && uid !== me?.id && m.role !== 'OWNER';
-            return (
-              <li
-                key={m.userId}
-                className="flex items-center gap-3 rounded-xl border border-white/10 px-3 py-2 md:border-line/50 dark:md:border-line/40"
-              >
-                <SafeAvatar
-                  url={m.user.avatarUrl ?? null}
-                  label={(m.user.displayName ?? m.user.username).slice(0, 1).toUpperCase()}
-                  className="h-10 w-10 shrink-0 rounded-full ring-1 ring-white/15"
-                  fallbackClassName="text-sm font-semibold text-sky-200"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium md:text-ink">
-                    {m.user.displayName ?? m.user.username}
-                  </p>
-                  <p className="truncate text-xs text-white/50 md:text-ink-muted">
-                    @{m.user.username}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/70 md:bg-surface-muted md:text-ink-muted">
-                  {memberRoleLabel(m.role, t)}
-                </span>
-                {canRemove ? (
-                  <button
-                    type="button"
-                    disabled={removeMember.isPending}
-                    className="shrink-0 rounded-lg border border-red-400/40 px-2.5 py-1 text-xs font-semibold text-red-300 transition hover:bg-red-500/15 disabled:opacity-50 md:text-red-600"
-                    onClick={() => {
-                      if (!window.confirm(t('groupSettingsRemoveMemberConfirm'))) return;
-                      removeMember.mutate(uid);
-                    }}
-                  >
-                    {t('groupSettingsRemoveMember')}
-                  </button>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {!isPrivate && (
-        <section className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-            {t('channelSettingsHandleSection')}
-          </h2>
-          <label className="block text-sm font-medium md:text-ink">
-            {t('createChannelHandleLabel')}
-            <input
-              value={handle}
-              onChange={(e) => setHandle(e.target.value.replace(/[^a-z0-9_]/gi, ''))}
-              disabled={!isAdmin}
-              maxLength={32}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white outline-none focus:border-sky-400/50 disabled:opacity-60 md:border-line md:bg-surface-muted/30 md:text-ink md:focus:border-accent dark:md:border-line/45"
-              placeholder="my_channel"
-            />
-            <span className="mt-1 block text-[11px] text-white/50 md:text-ink-muted">
-              {t('createChannelHandleHint')}
-            </span>
-          </label>
-          {isAdmin && (
-            <button
-              type="button"
-              disabled={!flagsDirty || saveChannelFlags.isPending}
-              onClick={() => saveChannelFlags.mutate()}
-              className="w-full rounded-xl border border-sky-400/40 bg-sky-500/15 py-2.5 text-sm font-semibold text-sky-200 disabled:opacity-45 md:border-accent/50 md:bg-accent/10 md:text-accent"
-            >
-              {saveChannelFlags.isPending ? t('commonLoading') : t('channelSettingsSaveHandle')}
-            </button>
-          )}
-          {publicJoinUrl ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/45 md:text-ink-muted">
-                {t('channelSettingsPublicLinkSection')}
-              </p>
-              <p className="break-all rounded-xl bg-white/5 px-3 py-2 font-mono text-[12px] text-white/90 md:bg-surface-muted/40 md:text-ink">
-                {publicJoinUrl}
-              </p>
+      <div id="tg-profile" className="mt-6">
+        <TgCard title={t('channelSettingsProfileSection')}>
+          <div className="px-4 pb-4">
+            <label className="block text-[13px] font-semibold text-ink-muted">
+              {t('createChannelNameLabel')}
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={!isAdmin}
+                className="mt-2 w-full rounded-xl border border-line/60 bg-surface-muted/30 px-3 py-2 text-[15px] text-ink outline-none focus:border-accent disabled:opacity-60 dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-white"
+                maxLength={120}
+              />
+            </label>
+            <label className="mt-4 block text-[13px] font-semibold text-ink-muted">
+              {t('createChannelDescLabel')}
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={!isAdmin}
+                rows={3}
+                maxLength={500}
+                className="mt-2 w-full resize-none rounded-xl border border-line/60 bg-surface-muted/30 px-3 py-2 text-[15px] text-ink outline-none focus:border-accent disabled:opacity-60 dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-white"
+              />
+            </label>
+            {isAdmin && (
               <button
                 type="button"
-                onClick={() => void copyText(publicJoinUrl)}
-                className="w-full rounded-xl bg-sky-500/90 py-2 text-sm font-semibold text-white md:bg-accent"
+                disabled={!profileDirty || saveProfile.isPending}
+                onClick={() => saveProfile.mutate()}
+                className="mt-4 w-full rounded-xl bg-accent py-2.5 text-[15px] font-semibold text-white disabled:opacity-45"
               >
-                {t('channelSettingsCopyPublicLink')}
+                {saveProfile.isPending ? t('commonLoading') : t('channelSettingsSaveProfile')}
               </button>
-            </div>
-          ) : (
-            <p className="text-sm text-white/55 md:text-ink-muted">
-              {t('channelSettingsNoHandleHint')}
-            </p>
-          )}
-          {saveChannelFlags.isError && (
-            <p className="text-center text-xs text-red-400 md:text-red-500">
-              {t('channelSettingsSaveFailed')}
-            </p>
-          )}
-        </section>
-      )}
-
-      {isPrivate && (
-        <section className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-[#17212b]/85 p-4 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-white/50 md:text-ink-muted">
-            {t('channelSettingsInviteSection')}
-          </h2>
-          <label
-            className={cn(
-              'flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50 dark:md:border-line/40',
-              !isAdmin && 'cursor-not-allowed opacity-60',
             )}
-          >
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={inviteOn}
-              disabled={!isAdmin}
-              onChange={(e) => setInviteOn(e.target.checked)}
-            />
-            <span>
-              <span className="font-medium md:text-ink">
-                {t('channelSettingsInviteLinkEnabled')}
-              </span>
-              <span className="mt-0.5 block text-xs text-white/55 md:text-ink-muted">
-                {t('channelSettingsInviteLinkEnabledHint')}
-              </span>
-            </span>
-          </label>
-          {isAdmin && (
-            <button
-              type="button"
-              disabled={!flagsDirty || saveChannelFlags.isPending}
-              onClick={() => saveChannelFlags.mutate()}
-              className="w-full rounded-xl border border-sky-400/40 bg-sky-500/15 py-2.5 text-sm font-semibold text-sky-200 disabled:opacity-45 md:border-accent/50 md:bg-accent/10 md:text-accent"
-            >
-              {saveChannelFlags.isPending
-                ? t('commonLoading')
-                : t('channelSettingsSaveInviteToggle')}
-            </button>
-          )}
-          {chat.channel?.inviteSlug ? (
-            <>
-              <p className="break-all rounded-xl bg-white/5 px-3 py-2 font-mono text-[12px] text-white/90 md:bg-surface-muted/40 md:text-ink">
-                {privateInviteUrl || `…/join/c/${chat.channel.inviteSlug}`}
+            {saveProfile.isError && (
+              <p className="mt-2 text-center text-xs text-red-500">
+                {t('channelSettingsSaveFailed')}
               </p>
-              <div className="flex flex-wrap gap-2">
+            )}
+          </div>
+        </TgCard>
+      </div>
+
+      <TgCard
+        title={`${t('channelSettingsMembersTitle')} (${membersSorted.length})`}
+        className="mt-6"
+      >
+        {membersSorted.map((m) => {
+          const uid = m.user.id ?? m.userId;
+          const canRemove = isAdmin && uid !== me?.id && m.role !== 'OWNER';
+          return (
+            <TgRow
+              key={m.userId}
+              href={uid ? `/users/${uid}` : undefined}
+              className={cn(!uid && 'cursor-default')}
+            >
+              <SafeAvatar
+                url={m.user.avatarUrl ?? null}
+                label={(m.user.displayName ?? m.user.username).slice(0, 1).toUpperCase()}
+                className="h-10 w-10 shrink-0 rounded-full ring-1 ring-line/50 dark:ring-white/10"
+                fallbackClassName="text-sm font-semibold text-ink"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-semibold text-ink dark:text-white">
+                  {m.user.displayName ?? m.user.username}
+                </div>
+                <div className="truncate text-[13px] text-ink-muted dark:text-white/55">
+                  @{m.user.username}
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-semibold text-ink-muted dark:bg-white/[0.08] dark:text-white/65">
+                {memberRoleLabel(m.role, t)}
+              </span>
+              {canRemove ? (
                 <button
                   type="button"
-                  onClick={() => void copyText(privateInviteUrl)}
-                  className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white md:bg-accent"
+                  disabled={removeMember.isPending}
+                  className="ml-1 shrink-0 rounded-lg px-2.5 py-1 text-[13px] font-semibold text-red-500 disabled:opacity-50"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!window.confirm(t('groupSettingsRemoveMemberConfirm'))) return;
+                    removeMember.mutate(uid);
+                  }}
                 >
-                  {t('channelSettingsCopyInvite')}
+                  {t('groupSettingsRemoveMember')}
                 </button>
-                {isAdmin && (
+              ) : (
+                <TgChevron />
+              )}
+            </TgRow>
+          );
+        })}
+      </TgCard>
+
+      {!isPrivate ? (
+        <TgCard title={t('channelSettingsHandleSection')} className="mt-6">
+          <div className="px-4 pb-4">
+            <label className="block text-[13px] font-semibold text-ink-muted">
+              {t('createChannelHandleLabel')}
+              <input
+                value={handle}
+                onChange={(e) => setHandle(e.target.value.replace(/[^a-z0-9_]/gi, ''))}
+                disabled={!isAdmin}
+                maxLength={32}
+                className="mt-2 w-full rounded-xl border border-line/60 bg-surface-muted/30 px-3 py-2 font-mono text-[15px] text-ink outline-none focus:border-accent disabled:opacity-60 dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-white"
+                placeholder="my_channel"
+              />
+              <span className="mt-2 block text-[12px] text-ink-muted dark:text-white/55">
+                {t('createChannelHandleHint')}
+              </span>
+            </label>
+            {isAdmin && (
+              <button
+                type="button"
+                disabled={!flagsDirty || saveChannelFlags.isPending}
+                onClick={() => saveChannelFlags.mutate()}
+                className="mt-4 w-full rounded-xl border border-accent/35 bg-accent/10 py-2.5 text-[15px] font-semibold text-accent disabled:opacity-45"
+              >
+                {saveChannelFlags.isPending ? t('commonLoading') : t('channelSettingsSaveHandle')}
+              </button>
+            )}
+            {publicJoinUrl ? (
+              <div className="mt-4 space-y-2">
+                <p className="text-[13px] font-semibold text-ink-muted">
+                  {t('channelSettingsPublicLinkSection')}
+                </p>
+                <p className="break-all rounded-xl bg-surface-muted/35 px-3 py-2 font-mono text-[12px] text-ink dark:bg-white/[0.06] dark:text-white">
+                  {publicJoinUrl}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void copyText(publicJoinUrl)}
+                  className="w-full rounded-xl bg-accent py-2.5 text-[15px] font-semibold text-white"
+                >
+                  {t('channelSettingsCopyPublicLink')}
+                </button>
+              </div>
+            ) : (
+              <p className="mt-3 text-[13px] text-ink-muted dark:text-white/60">
+                {t('channelSettingsNoHandleHint')}
+              </p>
+            )}
+            {saveChannelFlags.isError && (
+              <p className="mt-2 text-center text-xs text-red-500">
+                {t('channelSettingsSaveFailed')}
+              </p>
+            )}
+          </div>
+        </TgCard>
+      ) : (
+        <TgCard title={t('channelSettingsInviteSection')} className="mt-6">
+          <div className="px-4 pb-4">
+            <label
+              className={cn(
+                'flex items-start gap-3 rounded-xl border border-line/60 bg-surface-muted/30 p-3 dark:border-white/[0.10] dark:bg-white/[0.06]',
+                !isAdmin && 'opacity-60',
+              )}
+            >
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={inviteOn}
+                disabled={!isAdmin}
+                onChange={(e) => setInviteOn(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold text-ink dark:text-white">
+                  {t('channelSettingsInviteLinkEnabled')}
+                </span>
+                <span className="mt-0.5 block text-[13px] text-ink-muted dark:text-white/55">
+                  {t('channelSettingsInviteLinkEnabledHint')}
+                </span>
+              </span>
+            </label>
+
+            {isAdmin && (
+              <button
+                type="button"
+                disabled={!flagsDirty || saveChannelFlags.isPending}
+                onClick={() => saveChannelFlags.mutate()}
+                className="mt-4 w-full rounded-xl border border-accent/35 bg-accent/10 py-2.5 text-[15px] font-semibold text-accent disabled:opacity-45"
+              >
+                {saveChannelFlags.isPending
+                  ? t('commonLoading')
+                  : t('channelSettingsSaveInviteToggle')}
+              </button>
+            )}
+
+            {chat.channel?.inviteSlug ? (
+              <>
+                <p className="mt-4 break-all rounded-xl bg-surface-muted/35 px-3 py-2 font-mono text-[12px] text-ink dark:bg-white/[0.06] dark:text-white">
+                  {privateInviteUrl || `…/join/c/${chat.channel.inviteSlug}`}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={rotateInvite.isPending}
-                    onClick={() => {
-                      if (!window.confirm(t('channelSettingsRotateInviteConfirm'))) return;
-                      rotateInvite.mutate();
-                    }}
-                    className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/90 md:border-line md:text-ink dark:md:border-line/45"
+                    onClick={() => void copyText(privateInviteUrl)}
+                    className="rounded-xl bg-accent px-4 py-2 text-[15px] font-semibold text-white"
                   >
-                    {rotateInvite.isPending ? t('commonLoading') : t('channelSettingsRotateInvite')}
+                    {t('channelSettingsCopyInvite')}
                   </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      disabled={rotateInvite.isPending}
+                      onClick={() => {
+                        if (!window.confirm(t('channelSettingsRotateInviteConfirm'))) return;
+                        rotateInvite.mutate();
+                      }}
+                      className="rounded-xl border border-line/60 px-4 py-2 text-[15px] font-semibold text-ink dark:border-white/[0.10] dark:text-white"
+                    >
+                      {rotateInvite.isPending
+                        ? t('commonLoading')
+                        : t('channelSettingsRotateInvite')}
+                    </button>
+                  )}
+                </div>
+                {!inviteOn && (
+                  <p className="mt-2 text-[13px] text-amber-700 dark:text-amber-200/90">
+                    {t('channelSettingsInviteDisabledWarning')}
+                  </p>
                 )}
-              </div>
-              {!inviteOn && (
-                <p className="text-xs text-amber-200/90 md:text-amber-700 dark:md:text-amber-200/90">
-                  {t('channelSettingsInviteDisabledWarning')}
-                </p>
-              )}
-              {rotateInvite.isError && (
-                <p className="text-xs text-red-400 md:text-red-500">
-                  {t('channelSettingsRotateFailed')}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-white/55 md:text-ink-muted">
-              {t('channelSettingsNoInviteSlug')}
-            </p>
-          )}
-          {saveChannelFlags.isError && (
-            <p className="text-center text-xs text-red-400 md:text-red-500">
-              {t('channelSettingsSaveFailed')}
-            </p>
-          )}
-        </section>
+                {rotateInvite.isError && (
+                  <p className="mt-2 text-[13px] text-red-500">
+                    {t('channelSettingsRotateFailed')}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="mt-3 text-[13px] text-ink-muted dark:text-white/60">
+                {t('channelSettingsNoInviteSlug')}
+              </p>
+            )}
+            {saveChannelFlags.isError && (
+              <p className="mt-2 text-center text-xs text-red-500">
+                {t('channelSettingsSaveFailed')}
+              </p>
+            )}
+          </div>
+        </TgCard>
       )}
 
-      <section className="mt-8 rounded-2xl border border-red-500/35 bg-red-500/5 p-4 md:border-red-500/30 md:bg-red-500/[0.06]">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-red-200/90 md:text-red-700">
-          {t('channelSettingsLeaveSection')}
-        </h2>
-        <button
-          type="button"
-          disabled={leaveChat.isPending}
+      <TgCard className="mt-6">
+        <TgRow
           onClick={() => {
             if (!window.confirm(t('channelSettingsLeaveConfirm'))) return;
             leaveChat.mutate(undefined, {
               onError: () => window.alert(t('channelSettingsLeaveError')),
             });
           }}
-          className="mt-4 w-full rounded-xl border border-red-400/50 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-500/15 disabled:opacity-50 md:text-red-700"
+          className="text-red-600 dark:text-red-400"
         >
-          {leaveChat.isPending ? t('commonLoading') : t('channelSettingsLeaveButton')}
-        </button>
-      </section>
-    </div>
+          <div className="min-w-0 flex-1 text-center text-[15px] font-semibold">
+            {leaveChat.isPending ? t('commonLoading') : t('channelSettingsLeaveButton')}
+          </div>
+        </TgRow>
+      </TgCard>
+    </TgPage>
   );
 }
