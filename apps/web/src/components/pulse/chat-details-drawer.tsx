@@ -12,6 +12,8 @@ import { useLanguageStore } from '@/stores/language-store';
 import { apiFetch, toPublicUrl } from '@/lib/api';
 import { AddMemberModal } from '@/components/pulse/add-member-modal';
 
+type InfoTab = 'members' | 'media' | 'files' | 'links';
+
 type SharedMediaItem = {
   id: string;
   kind: string;
@@ -98,6 +100,58 @@ function PlaceholderSection({ title, hint }: { title: string; hint: string }) {
   );
 }
 
+function Segmented({
+  tab,
+  setTab,
+  t,
+  membersCount,
+}: {
+  tab: InfoTab;
+  setTab: (t: InfoTab) => void;
+  t: (k: I18nKey) => string;
+  membersCount: number;
+}) {
+  const items: { id: InfoTab; label: string }[] = [
+    { id: 'members', label: `${t('drawerMembers')}${membersCount ? ` (${membersCount})` : ''}` },
+    { id: 'media', label: t('drawerMedia') },
+    { id: 'files', label: t('drawerFiles') },
+    { id: 'links', label: t('drawerLinks') },
+  ];
+  return (
+    <div className="mt-5 flex justify-center">
+      <div className="relative flex w-full max-w-[26rem] items-center rounded-xl bg-surface-muted/70 p-1 ring-1 ring-line/60 dark:bg-white/[0.08] dark:ring-white/[0.10]">
+        <div
+          aria-hidden
+          className={cn(
+            'absolute bottom-1 top-1 rounded-[0.65rem] bg-surface-elevated shadow-sm transition-[left,width] duration-200 ease-out dark:bg-white/15',
+            tab === 'members'
+              ? 'left-1 w-[calc(25%-0.5rem)]'
+              : tab === 'media'
+                ? 'left-[calc(25%+0.25rem)] w-[calc(25%-0.5rem)]'
+                : tab === 'files'
+                  ? 'left-[calc(50%+0.25rem)] w-[calc(25%-0.5rem)]'
+                  : 'left-[calc(75%+0.25rem)] w-[calc(25%-0.5rem)]',
+          )}
+        />
+        {items.map((it) => (
+          <button
+            key={it.id}
+            type="button"
+            onClick={() => setTab(it.id)}
+            className={cn(
+              'relative z-[1] flex-1 rounded-[0.65rem] px-2 py-2 text-[13px] font-semibold transition',
+              tab === it.id ? 'text-ink dark:text-white' : 'text-ink-muted dark:text-white/70',
+            )}
+            aria-pressed={tab === it.id}
+          >
+            <span className="block truncate">{it.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ChatDetailsDrawer({
   open,
   onClose,
@@ -172,6 +226,7 @@ export function ChatDetailsDrawer({
 
   const groupDesc = chat?.type === 'GROUP' ? chat.group?.description : null;
   const channelMeta = chat?.type === 'CHANNEL' ? chat.channel : null;
+  const [tab, setTab] = useState<InfoTab>('members');
 
   return createPortal(
     <>
@@ -183,8 +238,11 @@ export function ChatDetailsDrawer({
       />
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-[101] flex h-[100svh] max-h-[100svh] w-full max-w-[22rem] flex-col border-l border-line/80 bg-surface-elevated shadow-[0_0_40px_rgba(0,0,0,0.12)]',
-          'max-md:max-w-none dark:border-line/50 dark:bg-surface-elevated/98 dark:shadow-[0_0_48px_rgba(0,0,0,0.45)]',
+          // Desktop: right drawer. Mobile: full-screen info screen (Telegram iOS-like).
+          'fixed z-[101] flex w-full flex-col bg-surface-elevated shadow-[0_0_40px_rgba(0,0,0,0.12)]',
+          'max-md:inset-0 max-md:h-[100svh] max-md:max-h-[100svh]',
+          'md:inset-y-0 md:right-0 md:h-[100svh] md:max-h-[100svh] md:max-w-[22rem] md:border-l md:border-line/80',
+          'dark:bg-surface-elevated/98 dark:shadow-[0_0_48px_rgba(0,0,0,0.45)] dark:md:border-line/50',
         )}
         role="dialog"
         aria-modal="true"
@@ -192,7 +250,10 @@ export function ChatDetailsDrawer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line/70 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] dark:border-line/45">
-          <h2 id="chat-details-title" className="font-display text-lg font-semibold text-ink">
+          <h2
+            id="chat-details-title"
+            className="font-display text-lg font-semibold text-ink dark:text-white"
+          >
             {t('drawerChatInfo')}
           </h2>
           <button
@@ -212,7 +273,7 @@ export function ChatDetailsDrawer({
           </button>
         </div>
 
-        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-[max(1.25rem,calc(1rem+env(safe-area-inset-bottom)))]">
+        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-[max(1.25rem,calc(5rem+env(safe-area-inset-bottom)))]">
           {isDirect ? (
             <div className="flex flex-col items-center text-center">
               <Link
@@ -298,43 +359,130 @@ export function ChatDetailsDrawer({
             </div>
           )}
 
-          {!isDirect && chat?.members && chat.members.length > 0 && (
-            <div className="mt-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                {t('drawerMembers')} ({chat.members.length})
-              </p>
-              <ul className="mt-2 space-y-2">
-                {chat.members.map((m) => {
-                  const uid = m.user.id ?? m.userId;
-                  const inner = (
-                    <>
-                      <span className="min-w-0 flex-1 truncate font-medium text-ink">
-                        {m.user.displayName ?? m.user.username}
-                      </span>
-                      <span className="shrink-0 text-2xs uppercase text-ink-muted">{m.role}</span>
-                    </>
-                  );
-                  return (
-                    <li key={m.userId}>
-                      {uid ? (
-                        <Link
-                          href={`/users/${uid}`}
-                          onClick={onClose}
-                          className="flex items-center gap-2 rounded-lg border border-line/60 px-2 py-2 text-sm transition hover:bg-surface-muted/50 dark:border-line/45"
-                        >
-                          {inner}
-                        </Link>
-                      ) : (
-                        <div className="flex items-center gap-2 rounded-lg border border-line/60 px-2 py-2 text-sm dark:border-line/45">
-                          {inner}
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+          {!isDirect ? (
+            <>
+              <Segmented
+                tab={tab}
+                setTab={setTab}
+                t={t}
+                membersCount={chat?.members?.length ?? 0}
+              />
+
+              {tab === 'members' ? (
+                <div className="mt-6">
+                  {(chat?.members ?? []).length > 0 ? (
+                    <ul className="divide-y divide-line/50 overflow-hidden rounded-2xl border border-line/60 bg-surface-elevated/70 dark:divide-white/[0.10] dark:border-white/[0.10] dark:bg-[rgb(var(--tg-panel))]/55">
+                      {(chat?.members ?? []).map((m) => {
+                        const uid = m.user.id ?? m.userId;
+                        const label = m.user.displayName ?? m.user.username;
+                        return (
+                          <li key={m.userId}>
+                            {uid ? (
+                              <Link
+                                href={`/users/${uid}`}
+                                onClick={onClose}
+                                className="flex items-center gap-3 px-4 py-3 text-[15px] text-ink transition hover:bg-surface-muted/60 dark:text-white dark:hover:bg-white/[0.06]"
+                              >
+                                <span className="min-w-0 flex-1 truncate font-semibold">
+                                  {label}
+                                </span>
+                                <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted dark:text-white/45">
+                                  {m.role}
+                                </span>
+                              </Link>
+                            ) : (
+                              <div className="flex items-center gap-3 px-4 py-3 text-[15px] text-ink dark:text-white">
+                                <span className="min-w-0 flex-1 truncate font-semibold">
+                                  {label}
+                                </span>
+                                <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted dark:text-white/45">
+                                  {m.role}
+                                </span>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <PlaceholderSection title={t('drawerMembers')} hint={t('drawerMembersHint')} />
+                  )}
+                </div>
+              ) : tab === 'media' ? (
+                <div className="mt-6">
+                  {showSharedMediaLoading ? (
+                    <PlaceholderSection title={t('drawerMedia')} hint={t('commonLoading')} />
+                  ) : showSharedMediaGrid ? (
+                    <section className="overflow-hidden rounded-2xl border border-line/60 bg-surface-elevated/70 p-3 dark:border-white/[0.10] dark:bg-[rgb(var(--tg-panel))]/55">
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {sharedMediaItems
+                          .filter(
+                            (x) =>
+                              x.kind === 'image' ||
+                              x.kind === 'video' ||
+                              x.mimeType.startsWith('image/') ||
+                              x.mimeType.startsWith('video/'),
+                          )
+                          .map((it) => {
+                            const pub = toPublicUrl(it.url) ?? it.url;
+                            const isVideo = it.kind === 'video' || it.mimeType.startsWith('video/');
+                            return (
+                              <div
+                                key={it.id}
+                                className="relative aspect-square overflow-hidden rounded-lg bg-black/5 ring-1 ring-line/30 dark:bg-black/25 dark:ring-white/10"
+                              >
+                                {isVideo ? (
+                                  <>
+                                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                                    <video
+                                      src={pub}
+                                      className="h-full w-full object-cover"
+                                      muted
+                                      playsInline
+                                      preload="metadata"
+                                    />
+                                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
+                                      <svg
+                                        width="22"
+                                        height="22"
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        className="text-white/95 drop-shadow"
+                                        aria-hidden
+                                      >
+                                        <path d="M8 5v14l11-7z" />
+                                      </svg>
+                                    </span>
+                                  </>
+                                ) : (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={pub}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </section>
+                  ) : (
+                    <PlaceholderSection title={t('drawerMedia')} hint={t('drawerMediaHint')} />
+                  )}
+                </div>
+              ) : tab === 'files' ? (
+                <div className="mt-6">
+                  <PlaceholderSection title={t('drawerFiles')} hint={t('drawerFilesHint')} />
+                </div>
+              ) : (
+                <div className="mt-6">
+                  <PlaceholderSection title={t('drawerLinks')} hint={t('drawerLinksHint')} />
+                </div>
+              )}
+            </>
+          ) : null}
 
           {isDirect && chat?.role && (
             <p className="mt-8 text-center text-sm text-ink-muted">
@@ -342,74 +490,7 @@ export function ChatDetailsDrawer({
             </p>
           )}
 
-          <div className="mt-8 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-              {t('drawerShared')}
-            </p>
-            {showSharedMediaLoading ? (
-              <section className="rounded-xl border border-line/55 bg-surface-muted/25 px-3 py-3 dark:border-line/40 dark:bg-surface-muted/15">
-                <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
-                  {t('drawerMedia')}
-                </h3>
-                <p className="mt-1.5 text-[13px] text-ink-muted/90">{t('commonLoading')}</p>
-              </section>
-            ) : showSharedMediaGrid ? (
-              <section className="rounded-xl border border-line/55 bg-surface-muted/25 px-3 py-3 dark:border-line/40 dark:bg-surface-muted/15">
-                <h3 className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-ink-muted">
-                  {t('drawerMedia')}
-                </h3>
-                <div className="mt-2 grid grid-cols-3 gap-1.5">
-                  {sharedMediaItems.map((it) => {
-                    const pub = toPublicUrl(it.url) ?? it.url;
-                    const isVideo = it.kind === 'video' || it.mimeType.startsWith('video/');
-                    return (
-                      <div
-                        key={it.id}
-                        className="relative aspect-square overflow-hidden rounded-lg bg-black/25 ring-1 ring-line/40 dark:ring-line/35"
-                      >
-                        {isVideo ? (
-                          <>
-                            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                            <video
-                              src={pub}
-                              className="h-full w-full object-cover"
-                              muted
-                              playsInline
-                              preload="metadata"
-                            />
-                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
-                              <svg
-                                width="22"
-                                height="22"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                className="text-white/95 drop-shadow"
-                                aria-hidden
-                              >
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </span>
-                          </>
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={pub}
-                            alt=""
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ) : (
-              <PlaceholderSection title={t('drawerMedia')} hint={t('drawerMediaHint')} />
-            )}
-            <PlaceholderSection title={t('drawerFiles')} hint={t('drawerFilesHint')} />
-            <PlaceholderSection title={t('drawerLinks')} hint={t('drawerLinksHint')} />
-          </div>
+          {/* Shared content moved into segmented tabs above (Telegram iOS-like). */}
         </div>
       </aside>
       {chat?.id ? (

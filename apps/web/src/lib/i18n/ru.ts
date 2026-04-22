@@ -284,6 +284,7 @@ export const ru = {
   drawerCloseInfo: 'Закрыть информацию о чате',
   drawerViewProfile: 'Открыть профиль',
   drawerMembers: 'Участники',
+  drawerMembersHint: 'Здесь появятся участники этого чата.',
   drawerYourRole: 'Ваша роль:',
   drawerChannelPrivate: 'Закрытый канал',
   drawerChannelPublic: 'Открытый канал',

@@ -296,6 +296,7 @@ export const en = {
   drawerCloseInfo: 'Close chat info',
   drawerViewProfile: 'View profile',
   drawerMembers: 'Members',
+  drawerMembersHint: 'Members of this chat will appear here.',
   drawerYourRole: 'Your role:',
   drawerChannelPrivate: 'Private channel',
   drawerChannelPublic: 'Public channel',

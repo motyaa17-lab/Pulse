@@ -10,6 +10,14 @@ import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 import type { MeUserDto } from '@/lib/types';
+import {
+  TgCard,
+  TgChevron,
+  TgIconBadge,
+  TgNav,
+  TgPage,
+  TgRow,
+} from '@/components/telegram/telegram-ui';
 
 function memberRoleLabel(role: string, t: (k: I18nKey) => string) {
   switch (role) {
@@ -179,110 +187,46 @@ export default function GroupSettingsPage() {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const SectionCard = ({
-    id,
-    title,
-    children,
-  }: {
-    id: string;
-    title: string;
-    children: React.ReactNode;
-  }) => (
-    <section
-      id={id}
-      className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45"
-    >
-      <div className="px-4 pb-2 pt-3">
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45 md:text-ink-muted">
-          {title}
-        </h2>
-      </div>
-      <div className="px-4 pb-4">{children}</div>
-    </section>
-  );
-
-  const Row = ({
-    icon,
-    label,
-    value,
-    onClick,
-    danger,
-  }: {
-    icon: React.ReactNode;
-    label: string;
-    value?: string;
-    onClick?: () => void;
-    danger?: boolean;
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.06] active:bg-white/[0.08]',
-        'border-t border-white/10 first:border-t-0 md:border-line/50 dark:md:border-line/40',
-      )}
-    >
-      <span
-        className={cn(
-          'grid h-9 w-9 place-items-center rounded-xl bg-white/8 text-white/85',
-          danger && 'bg-red-500/10 text-red-200',
-        )}
-      >
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={cn('block truncate text-[15px] font-medium', danger && 'text-red-200')}>
-          {label}
-        </span>
-        {value ? (
-          <span className="mt-0.5 block truncate text-[12px] text-white/45">{value}</span>
-        ) : null}
-      </span>
-      <span className="shrink-0 text-white/35">›</span>
-    </button>
-  );
-
   return (
-    <div className="mx-auto max-h-full min-h-0 w-full max-w-lg flex-1 overflow-y-auto px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-white md:max-h-none md:flex-none md:py-8 md:text-ink">
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/chats/${chatId}`}
-          className="inline-flex min-h-[44px] items-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white/90 transition hover:bg-white/10 md:border-line/70 md:bg-transparent md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45"
-        >
-          ← {t('groupSettingsBack')}
-        </Link>
-        <button
-          type="button"
-          onClick={() => scrollToId('tg-profile')}
-          className="inline-flex min-h-[44px] items-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white/90 transition hover:bg-white/10 md:border-line/70 md:bg-transparent md:text-ink-muted md:hover:bg-surface-muted/60 dark:md:border-line/45"
-        >
-          {t('editMessage')}
-        </button>
-      </div>
+    <TgPage className="max-w-lg">
+      <TgNav
+        title={t('groupSettingsTitle')}
+        backHref={`/chats/${chatId}`}
+        backLabel={t('backToChatsLink')}
+        right={
+          <button
+            type="button"
+            className="min-h-[44px] px-2 text-[15px] font-semibold text-accent"
+            onClick={() => scrollToId('tg-profile')}
+          >
+            {t('editMessage')}
+          </button>
+        }
+      />
 
-      <div className="mt-6 flex flex-col items-center text-center">
+      <div className="mt-4 flex flex-col items-center text-center">
         <SafeAvatar
           url={chat.avatarUrl ?? null}
           label={(chat.title ?? '?').slice(0, 1)}
-          className="h-24 w-24 rounded-full ring-2 ring-white/10"
-          fallbackClassName="text-2xl font-semibold text-white/85"
+          className="h-24 w-24 rounded-full ring-1 ring-line/60 dark:ring-white/10"
+          fallbackClassName="text-2xl font-semibold text-ink"
         />
-        <h1 className="mt-4 font-display text-2xl font-semibold text-white md:text-ink">
+        <h1 className="mt-4 font-display text-[1.55rem] font-semibold leading-tight text-ink dark:text-white">
           {chat.title ?? t('group')}
         </h1>
-        <p className="mt-1 text-sm text-white/55 md:text-ink-muted">
+        <p className="mt-1 text-[13px] text-ink-muted dark:text-white/55">
           {membersSorted.length} {t('groupSettingsMembersTitle').toLowerCase()}
         </p>
         {(chat.group?.description ?? '').trim() ? (
-          <p className="mt-3 max-w-[28rem] rounded-2xl bg-white/5 px-4 py-3 text-sm leading-relaxed text-white/70 md:bg-surface-muted/40 md:text-ink-muted">
+          <p className="mt-3 max-w-[28rem] rounded-2xl bg-surface-muted/35 px-4 py-3 text-[14px] leading-relaxed text-ink-muted dark:bg-white/[0.06] dark:text-white/60">
             {(chat.group?.description ?? '').trim()}
           </p>
         ) : null}
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#17212b]/85 md:border-line/70 md:bg-surface-elevated/80 dark:md:border-line/45">
-        <Row
-          icon={
+      <TgCard className="mt-6">
+        <TgRow onClick={() => scrollToId('tg-members')}>
+          <TgIconBadge>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
                 d="M12 5v14M5 12h14"
@@ -291,13 +235,18 @@ export default function GroupSettingsPage() {
                 strokeLinecap="round"
               />
             </svg>
-          }
-          label={t('groupSettingsMembersTitle')}
-          value={`${membersSorted.length}`}
-          onClick={() => scrollToId('tg-members')}
-        />
-        <Row
-          icon={
+          </TgIconBadge>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold">
+              {t('groupSettingsMembersTitle')}
+            </div>
+            <div className="mt-0.5 text-[13px] text-ink-muted">{membersSorted.length}</div>
+          </div>
+          <TgChevron />
+        </TgRow>
+
+        <TgRow href={`/chats/${chatId}/group/admins`}>
+          <TgIconBadge>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
                 d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
@@ -318,302 +267,280 @@ export default function GroupSettingsPage() {
                 strokeLinecap="round"
               />
             </svg>
-          }
-          label={t('groupSettingsAdminsTitle')}
-          value={t('groupSettingsOpenAdmins')}
-          onClick={() => router.push(`/chats/${chatId}/group/admins`)}
-        />
-        <Row
-          icon={
+          </TgIconBadge>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold">
+              {t('groupSettingsAdminsTitle')}
+            </div>
+            <div className="mt-0.5 text-[13px] text-ink-muted">{t('groupSettingsOpenAdmins')}</div>
+          </div>
+          <TgChevron />
+        </TgRow>
+
+        <TgRow href={`/chats/${chatId}/group/bans`}>
+          <TgIconBadge>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <path d="M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
             </svg>
-          }
-          label={t('groupSettingsBansTitle')}
-          value={t('groupSettingsOpenBans')}
-          onClick={() => router.push(`/chats/${chatId}/group/bans`)}
-        />
-        <Row
-          icon={
+          </TgIconBadge>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold">{t('groupSettingsBansTitle')}</div>
+            <div className="mt-0.5 text-[13px] text-ink-muted">{t('groupSettingsOpenBans')}</div>
+          </div>
+          <TgChevron />
+        </TgRow>
+
+        <TgRow href={`/chats/${chatId}/group/recent-actions`}>
+          <TgIconBadge>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
             </svg>
-          }
-          label={t('groupSettingsRecentActionsTitle')}
-          value={t('groupSettingsOpenActions')}
-          onClick={() => router.push(`/chats/${chatId}/group/recent-actions`)}
-        />
-        <Row
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path
-                d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinejoin="round"
+          </TgIconBadge>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold">
+              {t('groupSettingsRecentActionsTitle')}
+            </div>
+            <div className="mt-0.5 text-[13px] text-ink-muted">{t('groupSettingsOpenActions')}</div>
+          </div>
+          <TgChevron />
+        </TgRow>
+      </TgCard>
+
+      <div id="tg-profile" className="mt-6">
+        <TgCard title={t('groupSettingsProfileSection')}>
+          <div className="px-4 pb-4">
+            <label className="block text-[13px] font-semibold text-ink-muted">
+              {t('createGroupNameLabel')}
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={!isAdmin}
+                className="mt-2 w-full rounded-xl border border-line/60 bg-surface-muted/30 px-3 py-2 text-[15px] text-ink outline-none focus:border-accent disabled:opacity-60 dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-white"
+                maxLength={120}
               />
-            </svg>
-          }
-          label={t('groupSettingsProfileSection')}
-          value={isAdmin ? t('groupSettingsSaveProfile') : t('drawerYourRole')}
-          onClick={() => scrollToId('tg-profile')}
-        />
-        <Row
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M12 1l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1 3-5z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinejoin="round"
+            </label>
+            <label className="mt-4 block text-[13px] font-semibold text-ink-muted">
+              {t('createGroupDescLabel')}
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={!isAdmin}
+                rows={3}
+                maxLength={500}
+                className="mt-2 w-full resize-none rounded-xl border border-line/60 bg-surface-muted/30 px-3 py-2 text-[15px] text-ink outline-none focus:border-accent disabled:opacity-60 dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-white"
               />
-            </svg>
-          }
-          label={t('groupSettingsPermissionsSection')}
-          value={onlyAdminsAdd ? t('memberRoleAdmin') : t('memberRoleMember')}
-          onClick={() => scrollToId('tg-perms')}
-        />
-        <Row
-          icon={
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1-7.07 7.07L10 20"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 18"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          }
-          label={t('groupSettingsInviteSection')}
-          value={inviteOn ? t('createGroupInviteLinkOn') : t('groupSettingsInviteDisabledWarning')}
-          onClick={() => scrollToId('tg-invite')}
-        />
+            </label>
+            {isAdmin && (
+              <button
+                type="button"
+                disabled={!profileDirty || saveProfile.isPending}
+                onClick={() => saveProfile.mutate()}
+                className="mt-4 w-full rounded-xl bg-accent py-2.5 text-[15px] font-semibold text-white disabled:opacity-45"
+              >
+                {saveProfile.isPending ? t('commonLoading') : t('groupSettingsSaveProfile')}
+              </button>
+            )}
+            {saveProfile.isError && (
+              <p className="mt-2 text-center text-xs text-red-500">
+                {t('groupSettingsSaveFailed')}
+              </p>
+            )}
+          </div>
+        </TgCard>
       </div>
 
-      <SectionCard id="tg-profile" title={t('groupSettingsProfileSection')}>
-        <label className="block text-sm font-medium md:text-ink">
-          {t('createGroupNameLabel')}
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={!isAdmin}
-            className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50 disabled:opacity-60 md:border-line md:bg-surface-muted/30 md:text-ink md:focus:border-accent dark:md:border-line/45"
-            maxLength={120}
-          />
-        </label>
-        <label className="block text-sm font-medium md:text-ink">
-          {t('createGroupDescLabel')}
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={!isAdmin}
-            rows={3}
-            maxLength={500}
-            className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50 disabled:opacity-60 md:border-line md:bg-surface-muted/30 md:text-ink md:focus:border-accent dark:md:border-line/45"
-          />
-        </label>
-        {isAdmin && (
-          <button
-            type="button"
-            disabled={!profileDirty || saveProfile.isPending}
-            onClick={() => saveProfile.mutate()}
-            className="w-full rounded-xl bg-sky-500 py-2.5 text-sm font-semibold text-white disabled:opacity-45 md:bg-accent"
-          >
-            {saveProfile.isPending ? t('commonLoading') : t('groupSettingsSaveProfile')}
-          </button>
-        )}
-        {saveProfile.isError && (
-          <p className="text-center text-xs text-red-400 md:text-red-500">
-            {t('groupSettingsSaveFailed')}
-          </p>
-        )}
-      </SectionCard>
-
-      <SectionCard
-        id="tg-members"
-        title={`${t('groupSettingsMembersTitle')} (${membersSorted.length})`}
-      >
-        <ul className="space-y-2">
+      <div id="tg-members" className="mt-6">
+        <TgCard title={`${t('groupSettingsMembersTitle')} (${membersSorted.length})`}>
           {membersSorted.map((m) => {
             const uid = m.user.id ?? m.userId;
             const canRemove = isAdmin && uid !== me?.id && m.role !== 'OWNER';
             return (
-              <li
+              <TgRow
                 key={m.userId}
-                className="flex items-center gap-3 rounded-xl border border-white/10 px-3 py-2 md:border-line/50 dark:md:border-line/40"
+                href={uid ? `/users/${uid}` : undefined}
+                className={cn(!uid && 'cursor-default')}
+                onClick={
+                  uid
+                    ? undefined
+                    : () => {
+                        // no-op
+                      }
+                }
               >
                 <SafeAvatar
                   url={m.user.avatarUrl ?? null}
                   label={(m.user.displayName ?? m.user.username).slice(0, 1).toUpperCase()}
-                  className="h-10 w-10 shrink-0 rounded-full ring-1 ring-white/15"
-                  fallbackClassName="text-sm font-semibold text-sky-200"
+                  className="h-10 w-10 shrink-0 rounded-full ring-1 ring-line/50 dark:ring-white/10"
+                  fallbackClassName="text-sm font-semibold text-ink"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium md:text-ink">
+                  <div className="truncate text-[15px] font-semibold text-ink dark:text-white">
                     {m.user.displayName ?? m.user.username}
-                  </p>
-                  <p className="truncate text-xs text-white/50 md:text-ink-muted">
+                  </div>
+                  <div className="truncate text-[13px] text-ink-muted dark:text-white/55">
                     @{m.user.username}
-                  </p>
+                  </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/70 md:bg-surface-muted md:text-ink-muted">
+                <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-semibold text-ink-muted dark:bg-white/[0.08] dark:text-white/65">
                   {memberRoleLabel(m.role, t)}
                 </span>
                 {canRemove ? (
                   <button
                     type="button"
                     disabled={removeMember.isPending}
-                    className="shrink-0 rounded-lg border border-red-400/40 px-2.5 py-1 text-xs font-semibold text-red-300 transition hover:bg-red-500/15 disabled:opacity-50 md:text-red-600"
-                    onClick={() => {
+                    className="ml-1 shrink-0 rounded-lg px-2.5 py-1 text-[13px] font-semibold text-red-500 disabled:opacity-50"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       if (!window.confirm(t('groupSettingsRemoveMemberConfirm'))) return;
                       removeMember.mutate(uid);
                     }}
                   >
                     {t('groupSettingsRemoveMember')}
                   </button>
-                ) : null}
-              </li>
+                ) : (
+                  <TgChevron />
+                )}
+              </TgRow>
             );
           })}
-        </ul>
-      </SectionCard>
+        </TgCard>
+      </div>
 
-      <SectionCard id="tg-perms" title={t('groupSettingsPermissionsSection')}>
-        <label
-          className={cn(
-            'flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50 dark:md:border-line/40',
-            !isAdmin && 'cursor-not-allowed opacity-60',
-          )}
-        >
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={onlyAdminsAdd}
-            disabled={!isAdmin}
-            onChange={(e) => setOnlyAdminsAdd(e.target.checked)}
-          />
-          <span>
-            <span className="font-medium md:text-ink">
-              {t('groupSettingsOnlyAdminsAddMembers')}
-            </span>
-            <span className="mt-0.5 block text-xs text-white/55 md:text-ink-muted">
-              {t('groupSettingsOnlyAdminsAddMembersHint')}
-            </span>
-          </span>
-        </label>
-        <label
-          className={cn(
-            'flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3 md:border-line/50 dark:md:border-line/40',
-            !isAdmin && 'cursor-not-allowed opacity-60',
-          )}
-        >
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={inviteOn}
-            disabled={!isAdmin}
-            onChange={(e) => setInviteOn(e.target.checked)}
-          />
-          <span>
-            <span className="font-medium md:text-ink">{t('groupSettingsInviteLinkEnabled')}</span>
-            <span className="mt-0.5 block text-xs text-white/55 md:text-ink-muted">
-              {t('groupSettingsInviteLinkEnabledHint')}
-            </span>
-          </span>
-        </label>
-        {isAdmin && (
-          <button
-            type="button"
-            disabled={!flagsDirty || saveGroupFlags.isPending}
-            onClick={() => saveGroupFlags.mutate()}
-            className="w-full rounded-xl border border-sky-400/40 bg-sky-500/15 py-2.5 text-sm font-semibold text-sky-200 disabled:opacity-45 md:border-accent/50 md:bg-accent/10 md:text-accent"
-          >
-            {saveGroupFlags.isPending ? t('commonLoading') : t('groupSettingsSavePermissions')}
-          </button>
-        )}
-        {saveGroupFlags.isError && (
-          <p className="text-center text-xs text-red-400 md:text-red-500">
-            {t('groupSettingsSaveFailed')}
-          </p>
-        )}
-      </SectionCard>
+      <div id="tg-perms" className="mt-6">
+        <TgCard title={t('groupSettingsPermissionsSection')}>
+          <div className="px-4 pb-4">
+            <label
+              className={cn(
+                'flex items-start gap-3 rounded-xl border border-line/60 bg-surface-muted/30 p-3 dark:border-white/[0.10] dark:bg-white/[0.06]',
+                !isAdmin && 'opacity-60',
+              )}
+            >
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={onlyAdminsAdd}
+                disabled={!isAdmin}
+                onChange={(e) => setOnlyAdminsAdd(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold text-ink dark:text-white">
+                  {t('groupSettingsOnlyAdminsAddMembers')}
+                </span>
+                <span className="mt-0.5 block text-[13px] text-ink-muted dark:text-white/55">
+                  {t('groupSettingsOnlyAdminsAddMembersHint')}
+                </span>
+              </span>
+            </label>
 
-      <SectionCard id="tg-invite" title={t('groupSettingsInviteSection')}>
-        {chat.group?.inviteSlug ? (
-          <>
-            <p className="break-all rounded-xl bg-white/5 px-3 py-2 font-mono text-[12px] text-white/90 md:bg-surface-muted/40 md:text-ink">
-              {inviteUrl || `…/join/g/${chat.group.inviteSlug}`}
-            </p>
-            <div className="flex flex-wrap gap-2">
+            <label
+              className={cn(
+                'mt-3 flex items-start gap-3 rounded-xl border border-line/60 bg-surface-muted/30 p-3 dark:border-white/[0.10] dark:bg-white/[0.06]',
+                !isAdmin && 'opacity-60',
+              )}
+            >
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={inviteOn}
+                disabled={!isAdmin}
+                onChange={(e) => setInviteOn(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold text-ink dark:text-white">
+                  {t('groupSettingsInviteLinkEnabled')}
+                </span>
+                <span className="mt-0.5 block text-[13px] text-ink-muted dark:text-white/55">
+                  {t('groupSettingsInviteLinkEnabledHint')}
+                </span>
+              </span>
+            </label>
+
+            {isAdmin && (
               <button
                 type="button"
-                onClick={() => void copyInvite()}
-                className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white md:bg-accent"
+                disabled={!flagsDirty || saveGroupFlags.isPending}
+                onClick={() => saveGroupFlags.mutate()}
+                className="mt-4 w-full rounded-xl border border-accent/35 bg-accent/10 py-2.5 text-[15px] font-semibold text-accent disabled:opacity-45"
               >
-                {t('groupSettingsCopyInvite')}
+                {saveGroupFlags.isPending ? t('commonLoading') : t('groupSettingsSavePermissions')}
               </button>
-              {isAdmin && (
-                <button
-                  type="button"
-                  disabled={rotateInvite.isPending}
-                  onClick={() => {
-                    if (!window.confirm(t('groupSettingsRotateInviteConfirm'))) return;
-                    rotateInvite.mutate();
-                  }}
-                  className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/90 md:border-line md:text-ink dark:md:border-line/45"
-                >
-                  {rotateInvite.isPending ? t('commonLoading') : t('groupSettingsRotateInvite')}
-                </button>
-              )}
-            </div>
-            {!inviteOn && (
-              <p className="text-xs text-amber-200/90 md:text-amber-700 dark:md:text-amber-200/90">
-                {t('groupSettingsInviteDisabledWarning')}
+            )}
+            {saveGroupFlags.isError && (
+              <p className="mt-2 text-center text-xs text-red-500">
+                {t('groupSettingsSaveFailed')}
               </p>
             )}
-            {rotateInvite.isError && (
-              <p className="text-xs text-red-400 md:text-red-500">
-                {t('groupSettingsRotateFailed')}
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-white/55 md:text-ink-muted">
-            {t('groupSettingsNoInviteSlug')}
-          </p>
-        )}
-      </SectionCard>
+          </div>
+        </TgCard>
+      </div>
 
-      <section className="mt-8 rounded-2xl border border-red-500/35 bg-red-500/5 p-4 md:border-red-500/30 md:bg-red-500/[0.06]">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-red-200/90 md:text-red-700">
-          {t('groupSettingsLeaveSection')}
-        </h2>
-        <button
-          type="button"
-          disabled={leaveChat.isPending}
+      <div id="tg-invite" className="mt-6">
+        <TgCard title={t('groupSettingsInviteSection')}>
+          <div className="px-4 pb-4">
+            {chat.group?.inviteSlug ? (
+              <>
+                <p className="break-all rounded-xl bg-surface-muted/35 px-3 py-2 font-mono text-[12px] text-ink dark:bg-white/[0.06] dark:text-white">
+                  {inviteUrl || `…/join/g/${chat.group.inviteSlug}`}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void copyInvite()}
+                    className="rounded-xl bg-accent px-4 py-2 text-[15px] font-semibold text-white"
+                  >
+                    {t('groupSettingsCopyInvite')}
+                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      disabled={rotateInvite.isPending}
+                      onClick={() => {
+                        if (!window.confirm(t('groupSettingsRotateInviteConfirm'))) return;
+                        rotateInvite.mutate();
+                      }}
+                      className="rounded-xl border border-line/60 px-4 py-2 text-[15px] font-semibold text-ink dark:border-white/[0.10] dark:text-white"
+                    >
+                      {rotateInvite.isPending ? t('commonLoading') : t('groupSettingsRotateInvite')}
+                    </button>
+                  )}
+                </div>
+                {!inviteOn && (
+                  <p className="mt-2 text-[13px] text-amber-700 dark:text-amber-200/90">
+                    {t('groupSettingsInviteDisabledWarning')}
+                  </p>
+                )}
+                {rotateInvite.isError && (
+                  <p className="mt-2 text-[13px] text-red-500">{t('groupSettingsRotateFailed')}</p>
+                )}
+              </>
+            ) : (
+              <p className="text-[13px] text-ink-muted dark:text-white/60">
+                {t('groupSettingsNoInviteSlug')}
+              </p>
+            )}
+          </div>
+        </TgCard>
+      </div>
+
+      <TgCard className="mt-6">
+        <TgRow
           onClick={() => {
             if (!window.confirm(t('groupSettingsLeaveConfirm'))) return;
             leaveChat.mutate(undefined, {
               onError: () => window.alert(t('groupSettingsLeaveError')),
             });
           }}
-          className="mt-4 w-full rounded-xl border border-red-400/50 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-500/15 disabled:opacity-50 md:text-red-700"
+          className="text-red-600 dark:text-red-400"
         >
-          {leaveChat.isPending ? t('commonLoading') : t('groupSettingsLeaveButton')}
-        </button>
-      </section>
-    </div>
+          <div className="min-w-0 flex-1 text-center text-[15px] font-semibold">
+            {leaveChat.isPending ? t('commonLoading') : t('groupSettingsLeaveButton')}
+          </div>
+        </TgRow>
+      </TgCard>
+    </TgPage>
   );
 }
