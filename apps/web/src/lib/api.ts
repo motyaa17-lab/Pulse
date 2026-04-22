@@ -71,7 +71,11 @@ async function refreshAccess(): Promise<string | null> {
     body: JSON.stringify({ refreshToken: rt }),
   });
   if (!res.ok) {
-    useAuthStore.getState().clear();
+    // Only clear auth state if the refresh token itself is invalid/expired.
+    // Network errors, misconfigured API base, or transient server issues should not log the user out.
+    if (res.status === 401 || res.status === 403) {
+      useAuthStore.getState().clear();
+    }
     return null;
   }
   const data = (await res.json()) as {
