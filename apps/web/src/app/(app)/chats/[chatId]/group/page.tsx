@@ -10,6 +10,8 @@ import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 import type { MeUserDto } from '@/lib/types';
+import { uploadMedia } from '@/lib/upload-media';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   TgCard,
   TgChevron,
@@ -38,6 +40,8 @@ export default function GroupSettingsPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const t = useT();
+  const token = useAuthStore((s) => s.accessToken);
+  const sessionId = useAuthStore((s) => s.sessionId);
 
   const {
     data: chat,
@@ -55,6 +59,8 @@ export default function GroupSettingsPage() {
   const [description, setDescription] = useState('');
   const [onlyAdminsAdd, setOnlyAdminsAdd] = useState(false);
   const [inviteOn, setInviteOn] = useState(true);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!chat) return;
@@ -91,6 +97,42 @@ export default function GroupSettingsPage() {
       void qc.invalidateQueries({ queryKey: ['chats'] });
     },
   });
+
+  const patchChat = useMutation({
+    mutationFn: (body: { avatarUrl?: string | null }) =>
+      apiFetch<ChatDetailForDrawer>(`/chats/${chatId}`, { method: 'PATCH', body }),
+    onSuccess: (next) => {
+      qc.setQueryData(['chat', chatId], next);
+      void qc.invalidateQueries({ queryKey: ['chats'] });
+    },
+  });
+
+  const onPickAvatar = async (file: File | null) => {
+    if (!file) return;
+    if (!token) {
+      setAvatarError(t('errNotAuthenticated'));
+      return;
+    }
+    setAvatarError(null);
+    const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+    if (!file.type.startsWith('image/')) {
+      setAvatarError(t('errAvatarNotImage'));
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      setAvatarError(t('errAvatarTooLarge'));
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const meta = await uploadMedia(file, 'image', token, sessionId ?? null);
+      await patchChat.mutateAsync({ avatarUrl: meta.url });
+    } catch {
+      setAvatarError(t('errAvatarUploadFailed'));
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const saveGroupFlags = useMutation({
     mutationFn: () =>
@@ -205,12 +247,40 @@ export default function GroupSettingsPage() {
       />
 
       <div className="mt-4 flex flex-col items-center text-center">
-        <SafeAvatar
-          url={chat.avatarUrl ?? null}
-          label={(chat.title ?? '?').slice(0, 1)}
-          className="h-24 w-24 rounded-full ring-1 ring-line/60 dark:ring-white/10"
-          fallbackClassName="text-2xl font-semibold text-ink"
-        />
+        <label className={cn('relative block', isAdmin && 'cursor-pointer')}>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={!isAdmin || avatarUploading}
+            onChange={(e) => void onPickAvatar(e.target.files?.[0] ?? null)}
+          />
+          <SafeAvatar
+            url={chat.avatarUrl ?? null}
+            label={(chat.title ?? '?').slice(0, 1)}
+            className={cn(
+              'h-24 w-24 rounded-full ring-1 ring-line/60 dark:ring-white/10',
+              isAdmin && 'transition hover:ring-accent/35',
+            )}
+            fallbackClassName="text-2xl font-semibold text-ink"
+          />
+          {isAdmin ? (
+            <span className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full bg-accent text-white shadow-sm ring-2 ring-surface">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M12 5v14M5 12h14"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+          ) : null}
+        </label>
+        {avatarUploading ? (
+          <p className="mt-2 text-[13px] text-ink-muted dark:text-white/55">{t('commonLoading')}</p>
+        ) : null}
+        {avatarError ? <p className="mt-2 text-[13px] text-red-500">{avatarError}</p> : null}
         <h1 className="mt-4 font-display text-[1.55rem] font-semibold leading-tight text-ink dark:text-white">
           {chat.title ?? t('group')}
         </h1>

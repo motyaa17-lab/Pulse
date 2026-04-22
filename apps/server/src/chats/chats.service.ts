@@ -732,6 +732,7 @@ export class ChatsService {
       where: { id: chatId },
       data: {
         title: dto.title,
+        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
         groupMeta:
           chat.type === ChatType.GROUP && dto.description !== undefined
             ? { update: { description: dto.description } }
