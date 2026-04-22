@@ -345,14 +345,14 @@ function MobileMessageActionSheet({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.04, type: 'spring', stiffness: 460, damping: 32 }}
-          className="pointer-events-auto fixed z-[120] flex items-center gap-0.5 rounded-full border border-white/14 bg-[#1c2834]/95 px-2 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          className="pointer-events-auto fixed z-[120] flex items-center gap-0.5 rounded-full border border-line/70 bg-surface-elevated/95 px-2 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:border-white/14 dark:bg-[#1c2834]/95 dark:shadow-[0_12px_36px_rgba(0,0,0,0.55)]"
           style={{ top: emojiBar.top, left: emojiBar.left, width: barW }}
         >
           {QUICK_REACTION_EMOJIS.map((emoji) => (
             <button
               key={emoji}
               type="button"
-              className="flex h-11 min-w-[2.75rem] flex-1 touch-manipulation items-center justify-center rounded-full text-[1.35rem] transition active:scale-[0.92] hover:bg-white/10"
+              className="flex h-11 min-w-[2.75rem] flex-1 touch-manipulation items-center justify-center rounded-full text-[1.35rem] transition active:scale-[0.92] hover:bg-surface-muted/70 dark:hover:bg-white/10"
               onClick={() => void onPick(emoji)}
             >
               {emoji}
@@ -365,7 +365,7 @@ function MobileMessageActionSheet({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06, type: 'spring', stiffness: 420, damping: 34 }}
-          className="pointer-events-auto fixed z-[120] overflow-y-auto overflow-x-hidden rounded-2xl border border-white/12 bg-[#1c2834]/98 py-1 shadow-[0_14px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl scrollbar-thin"
+          className="pointer-events-auto fixed z-[120] overflow-y-auto overflow-x-hidden rounded-2xl border border-line/70 bg-surface-elevated/95 py-1 shadow-[0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl scrollbar-thin dark:border-white/12 dark:bg-[#1c2834]/98 dark:shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
           style={{
             top: actionsBox.top,
             left: actionsBox.left,
@@ -379,7 +379,9 @@ function MobileMessageActionSheet({
               type="button"
               className={cn(
                 'flex w-full touch-manipulation items-center px-3.5 py-3 text-left text-[15px] font-medium transition active:bg-white/10',
-                a.danger ? 'text-red-300 hover:bg-red-500/15' : 'text-white/95 hover:bg-white/8',
+                a.danger
+                  ? 'text-red-600 hover:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/15'
+                  : 'text-ink hover:bg-surface-muted/80 dark:text-white/95 dark:hover:bg-white/8',
               )}
               onClick={() => {
                 a.onSelect();
@@ -945,7 +947,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 6 }}
             transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
-            className="pointer-events-auto absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#17212b]/95 text-white shadow-lg backdrop-blur-md transition hover:bg-[#1c2a38] active:scale-[0.97] md:bottom-[4.5rem] md:right-5"
+            className="pointer-events-auto absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-line/70 bg-surface-elevated/95 text-ink shadow-lg backdrop-blur-md transition hover:bg-surface-elevated active:scale-[0.97] dark:border-white/15 dark:bg-[rgb(var(--tg-panel))]/95 dark:text-white dark:hover:bg-[rgb(var(--tg-panel))]/90 md:bottom-[4.5rem] md:right-5"
             onClick={() => {
               const el = parentRef.current;
               if (!el) return;
@@ -1498,10 +1500,8 @@ function MessageBubble({
               return;
             if (menuOpen) return;
             if (e.button !== 0) return;
-            // Let native scrolling win. Capturing the pointer on touch devices can cause
-            // delayed / misrouted taps (e.g. opening a different tab) when the page shifts
-            // between pointerdown and click.
-            if (e.pointerType === 'touch') return;
+            // iOS: allow touch gestures (long-press + swipe-to-reply).
+            // Avoid pointer-capture for touch to keep scrolling/taps reliable.
             clearLongPressTimer();
             setSwipePx(0);
             setSwipeDragging(false);
@@ -1512,10 +1512,12 @@ function MessageBubble({
               pointerId: e.pointerId,
             };
             setBubblePressing(true);
-            try {
-              (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-            } catch {
-              /* ignore */
+            if (e.pointerType !== 'touch') {
+              try {
+                (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
             }
             longPressTimer.current = window.setTimeout(() => {
               longPressTimer.current = null;
@@ -1573,10 +1575,12 @@ function MessageBubble({
               const dx = e.clientX - g.startX;
               if (dx > 48) onReply();
             }
-            try {
-              (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-            } catch {
-              /* ignore */
+            if (e.pointerType !== 'touch') {
+              try {
+                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
             }
             gestureRef.current = null;
             setSwipePx(0);
@@ -1584,10 +1588,12 @@ function MessageBubble({
             clearLongPressTimer();
           }}
           onPointerCancel={(e) => {
-            try {
-              (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-            } catch {
-              /* ignore */
+            if (e.pointerType !== 'touch') {
+              try {
+                (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
             }
             gestureRef.current = null;
             setSwipePx(0);

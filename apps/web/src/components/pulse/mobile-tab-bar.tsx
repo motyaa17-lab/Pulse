@@ -35,14 +35,17 @@ function TabItem({
       href={href}
       className={cn(
         'flex min-w-0 flex-1 touch-manipulation select-none flex-col items-center gap-0.5 py-1.5 transition active:scale-[0.98]',
-        active ? 'text-[#3390ec]' : 'text-white/65 hover:text-white/85',
+        active
+          ? 'text-accent dark:text-[#3390ec]'
+          : 'text-ink-muted hover:text-ink dark:text-white/65 dark:hover:text-white/85',
       )}
       aria-current={active ? 'page' : undefined}
     >
       <span
         className={cn(
           'relative grid h-10 w-[2.75rem] place-items-center rounded-2xl transition',
-          active && 'bg-[#3390ec]/18 ring-1 ring-[#3390ec]/35',
+          active &&
+            'bg-accent/10 ring-1 ring-accent/25 dark:bg-[#3390ec]/18 dark:ring-1 dark:ring-[#3390ec]/35',
         )}
       >
         {children}
@@ -146,7 +149,7 @@ export function MobileTabBar() {
       <div className="pointer-events-auto flex w-full max-w-[420px] items-end gap-2">
         <nav
           role="navigation"
-          className="flex min-w-0 flex-1 items-stretch justify-around rounded-[26px] border border-white/[0.12] bg-[#1a242e]/98 px-1 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.62)] backdrop-blur-2xl"
+          className="flex min-w-0 flex-1 items-stretch justify-around rounded-[26px] border border-line/70 bg-surface-elevated/95 px-1 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl dark:border-white/[0.12] dark:bg-[#1a242e]/98 dark:shadow-[0_12px_40px_rgba(0,0,0,0.62)]"
           aria-label={t('tabBarNavAria')}
         >
           <TabItem href="/contacts" active={contactsActive} label={t('tabBarContacts')}>
@@ -167,15 +170,15 @@ export function MobileTabBar() {
             <SafeAvatar
               url={me?.avatarUrl ?? null}
               label={initial}
-              className="h-[1.35rem] w-[1.35rem] rounded-full ring-1 ring-white/25"
-              fallbackClassName="text-[10px] font-bold text-white/90"
+              className="h-[1.35rem] w-[1.35rem] rounded-full ring-1 ring-line/45 dark:ring-white/25"
+              fallbackClassName="text-[10px] font-bold text-ink/85 dark:text-white/90"
             />
           </TabItem>
         </nav>
         <button
           type="button"
           onClick={onSearchTap}
-          className="pointer-events-auto grid h-12 w-12 shrink-0 touch-manipulation place-items-center rounded-full border border-white/[0.12] bg-[#1a242e]/98 text-white/90 shadow-[0_12px_40px_rgba(0,0,0,0.62)] backdrop-blur-2xl transition hover:bg-white/[0.08] active:scale-[0.97]"
+          className="pointer-events-auto grid h-12 w-12 shrink-0 touch-manipulation place-items-center rounded-full border border-line/70 bg-surface-elevated/95 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition hover:bg-surface-elevated active:scale-[0.97] dark:border-white/[0.12] dark:bg-[#1a242e]/98 dark:text-white/90 dark:shadow-[0_12px_40px_rgba(0,0,0,0.62)] dark:hover:bg-white/[0.08]"
           aria-label={t('search')}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
