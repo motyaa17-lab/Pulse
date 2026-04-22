@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { SafeAvatar } from '@/components/pulse/safe-avatar';
@@ -39,6 +39,7 @@ export default function ChatPage() {
   const params = useParams<{ chatId: string }>();
   const chatId = params.chatId;
   const router = useRouter();
+  const sp = useSearchParams();
   const qc = useQueryClient();
   const detailsOpen = useUiStore((s) => s.detailsOpen);
   const setDetailsOpen = useUiStore((s) => s.setDetailsOpen);
@@ -51,6 +52,11 @@ export default function ChatPage() {
   useEffect(() => {
     setDetailsOpen(false);
   }, [chatId, setDetailsOpen]);
+
+  useEffect(() => {
+    // Allow deep-linking into in-chat search (used from profile screen).
+    if (sp?.get('search') === '1') setInChatSearchOpen(true);
+  }, [sp]);
 
   useEffect(() => {
     const s = connectSocket();
