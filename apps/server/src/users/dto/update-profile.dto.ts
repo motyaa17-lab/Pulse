@@ -26,7 +26,8 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({ description: 'Public avatar URL (from /media/upload)' })
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
+  // Allow data: URLs for environments without persistent object storage.
+  @MaxLength(350000)
   avatarUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'Whether other users can see your last seen time' })

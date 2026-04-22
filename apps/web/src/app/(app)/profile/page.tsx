@@ -7,6 +7,7 @@ import type { MeUserDto } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { useAuthStore } from '@/stores/auth-store';
 import { useT } from '@/lib/i18n';
+import { fileToAvatarDataUrl } from '@/lib/avatar-dataurl';
 
 export default function MyProfilePage() {
   const t = useT();
@@ -81,18 +82,31 @@ export default function MyProfilePage() {
     fd.append('kind', 'image');
     const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
     if (sessionId) headers['x-session-fingerprint'] = sessionId;
-    const res = await fetch(`${effectiveApiBase()}/media/upload`, {
-      method: 'POST',
-      headers,
-      body: fd,
-    });
     try {
-      if (!res.ok) throw new Error('upload failed');
-      const meta = (await res.json()) as { url: string };
-      setAvatarUrl(meta.url);
-      await patchMe.mutateAsync({ avatarUrl: meta.url });
+      // Prefer object upload when available, but fall back to a compressed data: URL
+      // so avatars survive deploys without persistent storage.
+      const res = await fetch(`${effectiveApiBase()}/media/upload`, {
+        method: 'POST',
+        headers,
+        body: fd,
+      });
+      if (res.ok) {
+        const meta = (await res.json()) as { url: string };
+        setAvatarUrl(meta.url);
+        await patchMe.mutateAsync({ avatarUrl: meta.url });
+      } else {
+        const dataUrl = await fileToAvatarDataUrl(file);
+        setAvatarUrl(dataUrl);
+        await patchMe.mutateAsync({ avatarUrl: dataUrl });
+      }
     } catch {
-      setAvatarError(t('errAvatarUploadFailed'));
+      try {
+        const dataUrl = await fileToAvatarDataUrl(file);
+        setAvatarUrl(dataUrl);
+        await patchMe.mutateAsync({ avatarUrl: dataUrl });
+      } catch {
+        setAvatarError(t('errAvatarUploadFailed'));
+      }
     } finally {
       setAvatarUploading(false);
     }

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUrl, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class UpdateChatDto {
   @ApiPropertyOptional()
@@ -17,6 +17,8 @@ export class UpdateChatDto {
 
   @ApiPropertyOptional({ description: 'Public avatar URL (from /media/upload)' })
   @IsOptional()
-  @IsUrl({ require_protocol: false }, { message: 'avatarUrl must be a valid URL or path' })
+  @IsString()
+  // Allow data: URLs for environments without persistent object storage.
+  @MaxLength(350000)
   avatarUrl?: string | null;
 }

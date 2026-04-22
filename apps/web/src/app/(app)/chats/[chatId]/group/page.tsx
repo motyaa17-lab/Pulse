@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import type { MeUserDto } from '@/lib/types';
 import { uploadMedia } from '@/lib/upload-media';
 import { useAuthStore } from '@/stores/auth-store';
+import { fileToAvatarDataUrl } from '@/lib/avatar-dataurl';
 import {
   TgCard,
   TgChevron,
@@ -125,8 +126,13 @@ export default function GroupSettingsPage() {
     }
     setAvatarUploading(true);
     try {
-      const meta = await uploadMedia(file, 'image', token, sessionId ?? null);
-      await patchChat.mutateAsync({ avatarUrl: meta.url });
+      try {
+        const meta = await uploadMedia(file, 'image', token, sessionId ?? null);
+        await patchChat.mutateAsync({ avatarUrl: meta.url });
+      } catch {
+        const dataUrl = await fileToAvatarDataUrl(file);
+        await patchChat.mutateAsync({ avatarUrl: dataUrl });
+      }
     } catch {
       setAvatarError(t('errAvatarUploadFailed'));
     } finally {

@@ -62,29 +62,42 @@ export class ApiError extends Error {
   }
 }
 
+let refreshInFlight: Promise<string | null> | null = null;
+
 async function refreshAccess(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
   const rt = useAuthStore.getState().refreshToken;
   if (!rt) return null;
-  const res = await fetch(`${effectiveApiBase()}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken: rt }),
-  });
-  if (!res.ok) {
-    // Only clear auth state if the refresh token itself is invalid/expired.
-    // Network errors, misconfigured API base, or transient server issues should not log the user out.
-    if (res.status === 401 || res.status === 403) {
-      useAuthStore.getState().clear();
+
+  refreshInFlight = (async () => {
+    const res = await fetch(`${effectiveApiBase()}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+    if (!res.ok) {
+      // Only clear auth state if the refresh token itself is invalid/expired.
+      // Network errors, misconfigured API base, or transient server issues should not log the user out.
+      if (res.status === 401 || res.status === 403) {
+        useAuthStore.getState().clear();
+      }
+      return null;
     }
-    return null;
+    const data = (await res.json()) as {
+      accessToken: string;
+      refreshToken: string;
+      sessionId?: string;
+    };
+    useAuthStore.getState().setTokens(data);
+    return data.accessToken;
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
   }
-  const data = (await res.json()) as {
-    accessToken: string;
-    refreshToken: string;
-    sessionId?: string;
-  };
-  useAuthStore.getState().setTokens(data);
-  return data.accessToken;
 }
 
 type ApiInit = Omit<RequestInit, 'body'> & {
