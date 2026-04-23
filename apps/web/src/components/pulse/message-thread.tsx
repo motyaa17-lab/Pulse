@@ -820,6 +820,12 @@ export function MessageThread({ chatId }: { chatId: string }) {
   });
   const myId = myIdFromToken ?? meUser?.id ?? null;
 
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    const uid = myId;
+    if (!uid) return;
+    await commitMessageReactionToggle(qc, chatId, messageId, emoji, uid);
+  };
+
   const { data: chatMeta } = useQuery({
     queryKey: ['chat', chatId],
     queryFn: () => apiFetch<ChatDetailForDrawer>(`/chats/${chatId}`),
@@ -1438,6 +1444,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   highlighted={highlighted === m.id}
                   onReply={() => setReplyTo(m)}
                   onForward={() => setForwarding(m)}
+                  onToggleReaction={toggleReaction}
                   onEdit={() => {
                     setReplyTo(null);
                     setEditing(m);
@@ -1628,6 +1635,7 @@ function MessageBubble({
   highlighted,
   onReply,
   onForward,
+  onToggleReaction,
   onEdit,
   onDelete,
   menuOpen,
@@ -1654,6 +1662,7 @@ function MessageBubble({
   highlighted: boolean;
   onReply: () => void;
   onForward: () => void;
+  onToggleReaction: (messageId: string, emoji: string) => void | Promise<void>;
   onEdit: () => void;
   onDelete: () => void;
   menuOpen: boolean;
@@ -1725,12 +1734,6 @@ function MessageBubble({
         <span key={i}>{p}</span>
       ),
     );
-  };
-
-  const toggleReaction = async (messageId: string, emoji: string) => {
-    const uid = myId ?? qc.getQueryData<{ id: string }>(['me'])?.id;
-    if (!uid) return;
-    await commitMessageReactionToggle(qc, chatId, messageId, emoji, uid);
   };
 
   const softDelete = async () => {
@@ -2266,7 +2269,7 @@ function MessageBubble({
                     key={emoji}
                     type="button"
                     className="pointer-events-auto rounded-md px-1 text-[0.95rem] leading-none text-ink transition hover:bg-surface-muted/90 dark:hover:bg-surface-muted/50"
-                    onClick={() => void toggleReaction(m.id, emoji)}
+                    onClick={() => void onToggleReaction(m.id, emoji)}
                   >
                     {emoji}
                   </button>
@@ -2306,7 +2309,7 @@ function MessageBubble({
               onClose={() => setMenuOpen(false)}
               actions={actions}
               showReactions={!isDeleted}
-              onReact={(emoji) => toggleReaction(m.id, emoji)}
+              onReact={(emoji) => void onToggleReaction(m.id, emoji)}
               closeOnScrollEl={closeOnScrollEl}
             />
             <div
@@ -2333,7 +2336,7 @@ function MessageBubble({
               }}
               onDoubleClick={() => {
                 if (isSystem || isDeleted) return;
-                void toggleReaction(m.id, '❤️');
+                void onToggleReaction(m.id, '❤️');
               }}
             >
               {showSenderHeader && (
@@ -2514,7 +2517,7 @@ function MessageBubble({
                           ? 'border-white/30 bg-black/12 hover:bg-black/18'
                           : 'border-line/55 bg-surface-elevated/50 hover:bg-surface-elevated/80 dark:border-line/45',
                       )}
-                      onClick={() => toggleReaction(m.id, r.emoji)}
+                      onClick={() => void onToggleReaction(m.id, r.emoji)}
                       onPointerDown={(e) => {
                         // Prevent bubbling into bubble long-press logic.
                         e.stopPropagation();
