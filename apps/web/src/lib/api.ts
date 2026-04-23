@@ -1,6 +1,9 @@
 import { useAuthStore } from '@/stores/auth-store';
 
-const DEFAULT_API_URL = 'http://localhost:4000';
+const DEFAULT_API_URL =
+  process.env.NODE_ENV === 'development'
+    ? 'http://localhost:4000'
+    : 'https://pulse-production-b6ff.up.railway.app';
 
 /** Build-time API base (no browser heuristics). */
 export function getApiUrl(): string {

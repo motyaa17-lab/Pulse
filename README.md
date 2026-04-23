@@ -103,3 +103,37 @@ Pulse is an **independent** product. Do not use Telegram trademarks, logos, or p
 - Push notifications (FCM/Web Push) and granular notification rules.
 - Invite links, mentions, polls, scheduled messages (schemas stubbed in backlog only).
 - Mobile native shells (Capacitor/React Native) reusing the API.
+
+## Android APK wrapper (Android Studio)
+
+This repo includes a minimal Android app in `/app` that wraps the deployed web UI in a WebView.
+
+### 1) Prereqs
+
+- Android Studio (latest stable)
+- JDK 17+ (Android Studio bundles one)
+
+### 2) Configure target URL
+
+The wrapper points to Vercel by default via `BuildConfig.PULSE_WEB_URL` in:
+
+- `app/build.gradle.kts`
+
+Update it to your production web URL if needed.
+
+### 3) Open in Android Studio
+
+- **File → Open…** → select the repo root (`telegram-clone`)
+- Wait for Gradle sync
+
+### 4) Build APK
+
+- Debug APK: **Build → Build Bundle(s) / APK(s) → Build APK(s)**
+- Release APK (signed):
+  - **Build → Generate Signed Bundle / APK…**
+  - Choose **APK**
+  - Create/select a keystore
+
+Notes:
+- The Android manifest enables `INTERNET`.
+- External links (different host) open in the system browser.

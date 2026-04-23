@@ -8,7 +8,9 @@ function effectiveWsUrl(): string {
   const configured = (
     process.env.NEXT_PUBLIC_WS_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
-    'http://localhost:4000'
+    (process.env.NODE_ENV === 'development'
+      ? 'http://localhost:4000'
+      : 'https://pulse-production-b6ff.up.railway.app')
   ).replace(/\/$/, '');
   if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configured)) {
