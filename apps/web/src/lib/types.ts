@@ -63,6 +63,16 @@ export interface MessageDto {
   deliveryStatus?: string;
 }
 
+export type ResolvedUserLite = {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+  lastSeenVisible: boolean;
+};
+
 export interface StoryFeedItem {
   id: string;
   userId: string;

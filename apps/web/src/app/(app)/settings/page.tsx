@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUiStore, type VisualPreset } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -10,7 +10,8 @@ import { disconnectSocket } from '@/lib/socket';
 import { useLanguageStore } from '@/stores/language-store';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
-import type { MeUserDto } from '@/lib/types';
+import type { MeUserDto, ResolvedUserLite } from '@/lib/types';
+import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import {
   TgCard,
   TgChevron,
@@ -30,6 +31,10 @@ export default function SettingsPage() {
   const hideChatListPreviews = useUiStore((s) => s.hideChatListPreviews);
   const setHideChatListPreviews = useUiStore((s) => s.setHideChatListPreviews);
   const clear = useAuthStore((s) => s.clear);
+  const accounts = useAuthStore((s) => s.accounts);
+  const activeAccountId = useAuthStore((s) => s.activeAccountId);
+  const switchAccount = useAuthStore((s) => s.switchAccount);
+  const removeAccount = useAuthStore((s) => s.removeAccount);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
@@ -40,6 +45,17 @@ export default function SettingsPage() {
   const { data: me } = useQuery({
     queryKey: ['me'],
     queryFn: () => apiFetch<MeUserDto>('/users/me'),
+  });
+
+  const accountIds = useMemo(() => Object.keys(accounts ?? {}), [accounts]);
+  const { data: resolvedAccounts } = useQuery({
+    queryKey: ['users', 'resolve', 'accounts', accountIds.join(',')],
+    queryFn: () =>
+      apiFetch<{ items: ResolvedUserLite[] }>('/users/resolve', {
+        method: 'POST',
+        body: { ids: accountIds },
+      }),
+    enabled: accountIds.length > 0,
   });
 
   const patchShareLastSeen = useMutation({
@@ -115,6 +131,65 @@ export default function SettingsPage() {
             <TgChevron />
           </TgRow>
         </TgCard>
+
+        {accountIds.length > 1 && (
+          <TgCard title={t('accounts')}>
+            {(resolvedAccounts?.items ?? []).map((u) => {
+              const id = u.id;
+              const label = u.displayName?.trim() || u.username || t('publicUserFallback');
+              const isActive = activeAccountId === id;
+              return (
+                <TgRow
+                  key={id}
+                  onClick={() => {
+                    if (!isActive) switchAccount(id);
+                  }}
+                >
+                  <TgIconBadge>
+                    <SafeAvatar
+                      url={u.avatarUrl}
+                      label={label.slice(0, 1).toUpperCase()}
+                      className="h-6 w-6 rounded-full"
+                      fallbackClassName="text-[11px] font-bold"
+                    />
+                  </TgIconBadge>
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{label}</span>
+                  {isActive ? (
+                    <span className="text-[12px] font-semibold text-accent">{t('active')}</span>
+                  ) : (
+                    <span className="text-[12px] text-ink-muted dark:text-white/45">
+                      {t('switch')}
+                    </span>
+                  )}
+                  {!isActive ? (
+                    <button
+                      type="button"
+                      className="ml-1 rounded-full px-2 py-1 text-[12px] font-semibold text-red-600 transition hover:bg-red-500/10 dark:text-red-300"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeAccount(id);
+                      }}
+                    >
+                      {t('remove')}
+                    </button>
+                  ) : null}
+                </TgRow>
+              );
+            })}
+            <TgRow
+              onClick={() => {
+                // Add account = go to login without wiping saved accounts.
+                router.push('/login');
+              }}
+            >
+              <TgIconBadge>➕</TgIconBadge>
+              <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+                {t('addAccount')}
+              </span>
+              <TgChevron />
+            </TgRow>
+          </TgCard>
+        )}
 
         <TgCard>
           <TgRow onClick={() => router.push('/saved')}>

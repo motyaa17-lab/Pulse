@@ -566,8 +566,9 @@ export function Composer({
 
   const onVoiceMicPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
     if (voiceRecorderRef.current?.state !== 'recording') return;
-    const dy = e.clientY - voiceStartCoordsRef.current.y;
-    const cancelZone = dy < -52;
+    const dx = e.clientX - voiceStartCoordsRef.current.x;
+    // Telegram-like: slide left to cancel.
+    const cancelZone = dx < -68;
     voiceCancelledRef.current = cancelZone;
     setVoiceSlideCancel(cancelZone);
   }, []);

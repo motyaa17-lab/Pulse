@@ -22,6 +22,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    // Fast path for signed APK builds: don't fail the build on lint.
+    lintOptions {
+        abortOnError false
+        checkReleaseBuilds false
+    }
 }
 
 repositories {

@@ -43,7 +43,7 @@ export default function ChatPage() {
   const qc = useQueryClient();
   const detailsOpen = useUiStore((s) => s.detailsOpen);
   const setDetailsOpen = useUiStore((s) => s.setDetailsOpen);
-  const typing = useUiStore((s) => s.typingByChat?.[chatId] ?? false);
+  const typingIds = useUiStore((s) => s.typingByChat?.[chatId] ?? []);
   const setTyping = useUiStore((s) => s.setTypingForChat);
   const t = useT();
   const language = useLanguageStore((s) => s.language);
@@ -68,7 +68,7 @@ export default function ChatPage() {
       if (!p?.chatId || p.chatId !== chatId) return;
       const myId = qc.getQueryData<MeUserDto>(['me'])?.id;
       const ids = (p.userIds ?? []).filter((id) => id && id !== myId);
-      setTyping(chatId, ids.length > 0);
+      setTyping(chatId, ids);
     };
     const onPresence = (payload: unknown) => {
       const p = payload as { userId?: string; online?: boolean };
@@ -98,7 +98,7 @@ export default function ChatPage() {
       s.emit('chat:leave', { chatId });
       s.off('typing:update', onTyping);
       s.off('presence:update', onPresence);
-      setTyping(chatId, false);
+      setTyping(chatId, []);
     };
   }, [chatId, qc, setTyping]);
 
@@ -149,7 +149,7 @@ export default function ChatPage() {
     chat?.type === 'DIRECT' && chat?.peer
       ? directChatPresenceSubtitle(chat.peer, t, language)
       : typeLabel(t as any, chat?.type);
-  const statusText = typing && chat?.type === 'DIRECT' ? t('typing') : status;
+  const statusText = typingIds.length > 0 ? t('typing') : status;
   const initial = title.slice(0, 1).toUpperCase() || '?';
   const pinned = chat?.pinnedMessage ?? null;
 

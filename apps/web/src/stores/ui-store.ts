@@ -18,7 +18,7 @@ type UiState = {
   pendingSidebarSearchFocus: boolean;
   detailsOpen: boolean;
   searchOpen: boolean;
-  typingByChat: Record<string, boolean>;
+  typingByChat: Record<string, string[]>;
   /** null = no active socket session; true/false from socket connect/disconnect. */
   wsConnected: boolean | null;
   setTheme: (t: 'light' | 'dark' | 'system') => void;
@@ -31,7 +31,7 @@ type UiState = {
   setPendingSidebarSearchFocus: (v: boolean) => void;
   setDetailsOpen: (v: boolean) => void;
   setSearchOpen: (v: boolean) => void;
-  setTypingForChat: (chatId: string, typing: boolean) => void;
+  setTypingForChat: (chatId: string, userIds: string[]) => void;
   setWsConnected: (v: boolean | null) => void;
 };
 
@@ -60,12 +60,18 @@ export const useUiStore = create<UiState>()(
         set({ pendingSidebarSearchFocus }),
       setDetailsOpen: (detailsOpen) => set({ detailsOpen }),
       setSearchOpen: (searchOpen) => set({ searchOpen }),
-      setTypingForChat: (chatId, typing) =>
-        set((s) => ({
-          typingByChat: typing
-            ? { ...s.typingByChat, [chatId]: true }
-            : Object.fromEntries(Object.entries(s.typingByChat).filter(([k]) => k !== chatId)),
-        })),
+      setTypingForChat: (chatId, userIds) =>
+        set((s) => {
+          const ids = (userIds ?? []).filter(Boolean).slice(0, 6);
+          if (ids.length === 0) {
+            return {
+              typingByChat: Object.fromEntries(
+                Object.entries(s.typingByChat).filter(([k]) => k !== chatId),
+              ),
+            };
+          }
+          return { typingByChat: { ...s.typingByChat, [chatId]: ids } };
+        }),
       setWsConnected: (wsConnected) => set({ wsConnected }),
     }),
     {

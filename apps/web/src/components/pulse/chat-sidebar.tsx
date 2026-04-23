@@ -1195,7 +1195,8 @@ function ChatRow({
   const timeLabel = formatListTime(chat.lastMessageAt, t, locale);
   const rawAvatar = avatarSrc(chat);
   const label = chatLabel(chat, t);
-  const isTyping = useUiStore((s) => s.typingByChat?.[chat.id] ?? false);
+  const typingIds = useUiStore((s) => s.typingByChat?.[chat.id] ?? []);
+  const isTyping = typingIds.length > 0;
   const hideListPreviews = useUiStore((s) => s.hideChatListPreviews);
   const preview = isTyping
     ? t('typing')

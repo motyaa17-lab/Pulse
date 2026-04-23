@@ -9,9 +9,10 @@ import { ApiError, apiFetch, toPublicUrl } from '@/lib/api';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 import { bumpMetaFromMessage } from '@/lib/chat-preview-meta';
 import { applyOptimisticReaction } from '@/lib/reaction-optimistic';
-import type { ChatListItem, MessageDto, MeUserDto } from '@/lib/types';
+import type { ChatListItem, MessageDto, MeUserDto, ResolvedUserLite } from '@/lib/types';
 import { connectSocket, getSocket } from '@/lib/socket';
 import { useAuthStore } from '@/stores/auth-store';
+import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
@@ -197,6 +198,372 @@ type MobileReactionPick = {
   actions: MessageMenuAction[];
 };
 
+const FULL_REACTION_EMOJIS = [
+  '👍',
+  '👎',
+  '❤️',
+  '🔥',
+  '😂',
+  '🥰',
+  '😮',
+  '😢',
+  '😡',
+  '🎉',
+  '🙏',
+  '👏',
+  '🤝',
+  '💯',
+  '🤔',
+  '👀',
+  '😎',
+  '🥳',
+  '🤯',
+  '😴',
+  '🤮',
+  '🤡',
+  '💔',
+  '💙',
+  '💚',
+  '💛',
+  '💜',
+  '🖤',
+  '🤍',
+  '⭐',
+  '✅',
+  '❌',
+  '⚡',
+  '💸',
+  '🎁',
+  '🍾',
+  '🍿',
+  '☕',
+  '🍻',
+  '🏆',
+  '🎧',
+  '📌',
+  '🫡',
+] as const;
+
+function ReactionPickerModal({
+  open,
+  onClose,
+  onPick,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onPick: (emoji: string) => void;
+}) {
+  const t = useT();
+  const reduceMotion = useUiStore((s) => s.reduceMotion);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open || typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/35 p-4 backdrop-blur-[1px] md:items-center">
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label={t('close')}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={
+          reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 36 }
+        }
+        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-line/70 bg-surface-elevated/95 shadow-lift backdrop-blur-xl dark:border-white/12 dark:bg-[#1c2834]/96"
+      >
+        <div className="flex items-center gap-2 border-b border-line/60 px-4 py-3 dark:border-white/10">
+          <div className="font-display text-[15px] font-semibold text-ink dark:text-white">
+            {t('react')}
+          </div>
+          <button
+            type="button"
+            className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-muted/80 hover:text-ink dark:hover:bg-white/10 dark:hover:text-white"
+            onClick={onClose}
+            aria-label={t('close')}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div className="grid grid-cols-8 gap-1 p-3">
+          {FULL_REACTION_EMOJIS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              className="flex h-10 items-center justify-center rounded-xl text-[1.35rem] transition hover:bg-surface-muted/80 active:scale-[0.98] dark:hover:bg-white/10"
+              onClick={() => {
+                onPick(e);
+                onClose();
+              }}
+              aria-label={`${t('react')} ${e}`}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </div>,
+    document.body,
+  );
+}
+
+function ReactionDetailsSheet({
+  open,
+  onClose,
+  emoji,
+  userIds,
+}: {
+  open: boolean;
+  onClose: () => void;
+  emoji: string;
+  userIds: string[];
+}) {
+  const t = useT();
+  const reduceMotion = useUiStore((s) => s.reduceMotion);
+  const { data } = useQuery({
+    queryKey: ['users', 'resolve', emoji, userIds.join(',')],
+    queryFn: () =>
+      apiFetch<{ items: ResolvedUserLite[] }>('/users/resolve', {
+        method: 'POST',
+        body: { ids: userIds },
+      }),
+    enabled: open && userIds.length > 0,
+  });
+
+  if (!open || typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/35 p-4 backdrop-blur-[1px] md:items-center">
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label={t('close')}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={
+          reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 36 }
+        }
+        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-line/70 bg-surface-elevated/95 shadow-lift backdrop-blur-xl dark:border-white/12 dark:bg-[#1c2834]/96"
+      >
+        <div className="flex items-center gap-2 border-b border-line/60 px-4 py-3 dark:border-white/10">
+          <div className="font-display text-[15px] font-semibold text-ink dark:text-white">
+            {emoji} {t('reactions')}
+          </div>
+          <button
+            type="button"
+            className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-muted/80 hover:text-ink dark:hover:bg-white/10 dark:hover:text-white"
+            onClick={onClose}
+            aria-label={t('close')}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto p-2">
+          {(data?.items ?? []).map((u) => {
+            const label = u.displayName?.trim() || u.username || t('publicUserFallback');
+            return (
+              <div
+                key={u.id}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-muted/70 dark:hover:bg-white/8"
+              >
+                <SafeAvatar
+                  url={u.avatarUrl}
+                  label={label.slice(0, 1).toUpperCase()}
+                  className="h-9 w-9 rounded-full"
+                  fallbackClassName="text-sm font-bold"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-semibold text-ink dark:text-white">
+                    {label}
+                  </div>
+                  <div className="truncate text-[12px] text-ink-muted dark:text-white/55">
+                    {u.isOnline ? t('online') : t('offline')}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {(data?.items ?? []).length === 0 && (
+            <div className="px-3 py-6 text-center text-sm text-ink-muted">{t('commonLoading')}</div>
+          )}
+        </div>
+      </motion.div>
+    </div>,
+    document.body,
+  );
+}
+
+function MediaViewerModal({
+  open,
+  onClose,
+  items,
+  index,
+  onIndex,
+}: {
+  open: boolean;
+  onClose: () => void;
+  items: { url: string; mimeType: string; fileName: string }[];
+  index: number;
+  onIndex: (i: number) => void;
+}) {
+  const t = useT();
+  const reduceMotion = useUiStore((s) => s.reduceMotion);
+  const item = items[index];
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') onIndex(Math.max(0, index - 1));
+      if (e.key === 'ArrowRight') onIndex(Math.min(items.length - 1, index + 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose, index, items.length, onIndex]);
+
+  if (!open || typeof document === 'undefined' || !item) return null;
+  const src = toPublicUrl(item.url) ?? item.url;
+  const isVideo = item.mimeType.startsWith('video/');
+  return createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+      className="fixed inset-0 z-[150] bg-black/95"
+    >
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label={t('close')}
+        onClick={onClose}
+      />
+      <div className="absolute left-0 right-0 top-0 z-[2] flex items-center gap-2 px-3 py-[max(0.75rem,env(safe-area-inset-top))]">
+        <button
+          type="button"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15 active:scale-[0.98]"
+          onClick={onClose}
+          aria-label={t('close')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M18 6L6 18M6 6l12 12"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+        <div className="min-w-0 flex-1 truncate text-[13px] font-medium text-white/85">
+          {item.fileName}
+        </div>
+        <a
+          href={src}
+          download
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15 active:scale-[0.98]"
+          aria-label={t('download')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M12 3v10m0 0l4-4m-4 4l-4-4M5 17v3h14v-3"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </a>
+      </div>
+      {items.length > 1 && (
+        <>
+          <button
+            type="button"
+            className="absolute left-2 top-1/2 z-[2] hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15 active:scale-[0.98] md:flex"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndex(Math.max(0, index - 1));
+            }}
+            aria-label={t('prev')}
+            disabled={index === 0}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M15 18l-6-6 6-6"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 z-[2] hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15 active:scale-[0.98] md:flex"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndex(Math.min(items.length - 1, index + 1));
+            }}
+            aria-label={t('next')}
+            disabled={index === items.length - 1}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </>
+      )}
+      <div className="absolute inset-0 flex items-center justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(4rem,env(safe-area-inset-top)+3.5rem)]">
+        {isVideo ? (
+          <video
+            src={src}
+            className="max-h-[82vh] w-auto max-w-full rounded-2xl"
+            controls
+            playsInline
+            preload="metadata"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={item.fileName}
+            className="max-h-[82vh] w-auto max-w-full rounded-2xl object-contain"
+          />
+        )}
+      </div>
+    </motion.div>,
+    document.body,
+  );
+}
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -208,6 +575,7 @@ function MobileMessageActionSheet({
   chatId,
   myId,
   onClose,
+  onOpenFullPicker,
 }: {
   pick: MobileReactionPick;
   message: MessageDto | undefined;
@@ -215,6 +583,7 @@ function MobileMessageActionSheet({
   chatId: string;
   myId: string | null;
   onClose: () => void;
+  onOpenFullPicker: () => void;
 }) {
   const t = useT();
   const [emojiBar, setEmojiBar] = useState({ top: 0, left: 0 });
@@ -358,6 +727,17 @@ function MobileMessageActionSheet({
               {emoji}
             </button>
           ))}
+          <button
+            type="button"
+            className="flex h-11 min-w-[2.75rem] flex-1 touch-manipulation items-center justify-center rounded-full text-[1.15rem] font-bold transition active:scale-[0.92] hover:bg-surface-muted/70 dark:hover:bg-white/10"
+            onClick={() => {
+              onClose();
+              onOpenFullPicker();
+            }}
+            aria-label={t('react')}
+          >
+            +
+          </button>
         </motion.div>
         <motion.div
           role="menu"
@@ -414,8 +794,19 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const hoverLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
   const [editing, setEditing] = useState<MessageDto | null>(null);
-  const [forwarding, setForwarding] = useState<MessageDto | null>(null);
+  const [forwarding, setForwarding] = useState<MessageDto | MessageDto[] | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [fullReactionFor, setFullReactionFor] = useState<string | null>(null);
+  const [reactionDetails, setReactionDetails] = useState<null | {
+    emoji: string;
+    userIds: string[];
+  }>(null);
+  const [mediaViewer, setMediaViewer] = useState<null | {
+    items: { url: string; mimeType: string; fileName: string }[];
+    index: number;
+  }>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [mobileReactionPick, setMobileReactionPick] = useState<MobileReactionPick | null>(null);
   const params = useSearchParams();
@@ -452,6 +843,12 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const lastId = messages[messages.length - 1]?.id;
 
   useEffect(() => {
+    // Reset transient chat-local UI when switching chats.
+    setSelectMode(false);
+    setSelectedIds([]);
+  }, [chatId]);
+
+  useEffect(() => {
     return () => {
       if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current);
     };
@@ -478,6 +875,28 @@ export function MessageThread({ chatId }: { chatId: string }) {
       hoverLeaveTimer.current = null;
     }
   };
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedMessages = useMemo(
+    () => messages.filter((m) => selectedSet.has(m.id)),
+    [messages, selectedSet],
+  );
+
+  const enterSelectWith = (id: string) => {
+    setSelectMode(true);
+    setSelectedIds((cur) => (cur.includes(id) ? cur : [...cur, id]));
+    setMenuFor(null);
+    setMobileReactionPick(null);
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  };
+
+  useEffect(() => {
+    if (!selectMode) return;
+    if (selectedIds.length === 0) setSelectMode(false);
+  }, [selectMode, selectedIds.length]);
 
   const onMessageRowEnter = (id: string) => {
     cancelHoverLeaveTimer();
@@ -674,32 +1093,40 @@ export function MessageThread({ chatId }: { chatId: string }) {
   }, [chatId]);
 
   const doForwardTo = async (targetChatId: string) => {
-    const src = forwarding;
-    if (!src) return;
-    if (src.deletedAt) return;
-    const hasBody = Boolean(src.text?.trim()) || Boolean(src.attachments?.length);
-    if (!hasBody) {
-      window.alert(t('forwardNothingToSend'));
-      return;
-    }
     try {
-      const created = await apiFetch<MessageDto>(`/chats/${targetChatId}/messages`, {
-        method: 'POST',
-        body: {
-          forwardedFromMessageId: src.id,
-        },
-      });
-      const meta = bumpMetaFromMessage(created);
-      bumpChatListPreview(
-        qc,
-        targetChatId,
-        created.text?.trim() ? created.text.slice(0, 160) : meta.preview || t('previewForwarded'),
-        created.createdAt,
-        {
-          lastMessageType: meta.lastMessageType,
-          lastAttachmentKind: meta.lastAttachmentKind,
-        },
+      const src = forwarding;
+      const batch = (Array.isArray(src) ? src : src ? [src] : []).filter(Boolean);
+      if (batch.length === 0) return;
+      const usable = batch.filter(
+        (m) => !m.deletedAt && (Boolean(m.text?.trim()) || Boolean(m.attachments?.length)),
       );
+      if (usable.length === 0) {
+        window.alert(t('forwardNothingToSend'));
+        return;
+      }
+
+      let lastCreated: MessageDto | null = null;
+      for (const m of usable) {
+        lastCreated = await apiFetch<MessageDto>(`/chats/${targetChatId}/messages`, {
+          method: 'POST',
+          body: { forwardedFromMessageId: m.id },
+        });
+      }
+      if (lastCreated) {
+        const meta = bumpMetaFromMessage(lastCreated);
+        bumpChatListPreview(
+          qc,
+          targetChatId,
+          lastCreated.text?.trim()
+            ? lastCreated.text.slice(0, 160)
+            : meta.preview || t('previewForwarded'),
+          lastCreated.createdAt,
+          {
+            lastMessageType: meta.lastMessageType,
+            lastAttachmentKind: meta.lastAttachmentKind,
+          },
+        );
+      }
       setForwarding(null);
     } catch {
       window.alert(t('forwardFailedAlert'));
@@ -832,6 +1259,112 @@ export function MessageThread({ chatId }: { chatId: string }) {
           }
         }}
       >
+        {selectMode && (
+          <div className="sticky top-0 z-[60] -mx-3 mb-2 border-b border-line/60 bg-surface-elevated/92 px-3 py-2 backdrop-blur-xl dark:border-white/12 dark:bg-[rgb(var(--tg-panel))]/92 md:-mx-5 md:px-5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-full px-2 py-1 text-[13px] font-semibold text-accent transition hover:bg-surface-muted/75 dark:hover:bg-white/10"
+                onClick={() => {
+                  setSelectMode(false);
+                  setSelectedIds([]);
+                }}
+              >
+                {t('cancel')}
+              </button>
+              <div className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink dark:text-white">
+                {selectedIds.length} {t('selected')}
+              </div>
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-ink transition hover:bg-surface-muted/75 active:scale-[0.98] dark:text-white dark:hover:bg-white/10"
+                aria-label={t('msgCopyText')}
+                disabled={selectedMessages.every((m) => !m.text?.trim())}
+                onClick={async () => {
+                  const text = selectedMessages
+                    .map((m) => (m.text ?? '').trim())
+                    .filter(Boolean)
+                    .join('\n\n');
+                  if (!text) return;
+                  try {
+                    await navigator.clipboard.writeText(text);
+                  } catch {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                  }
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M8 8h12v12H8V8zM4 4h12v4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-ink transition hover:bg-surface-muted/75 active:scale-[0.98] dark:text-white dark:hover:bg-white/10"
+                aria-label={t('msgForward')}
+                onClick={() => {
+                  const sorted = [...selectedMessages].sort(
+                    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+                  );
+                  if (sorted.length) setForwarding(sorted);
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M14 9l7-7v20l-7-7H4V9h10z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-red-600 transition hover:bg-red-500/10 active:scale-[0.98] dark:text-red-300 dark:hover:bg-red-500/15"
+                aria-label={t('deleteForMe')}
+                onClick={async () => {
+                  if (selectedIds.length === 0) return;
+                  const ok = window.confirm(t('confirmDeleteForMe'));
+                  if (!ok) return;
+                  const ids = [...selectedIds];
+                  setSelectMode(false);
+                  setSelectedIds([]);
+                  for (const id of ids) {
+                    try {
+                      await apiFetch(`/chats/${chatId}/messages/${id}?forMe=1`, {
+                        method: 'DELETE',
+                      });
+                    } catch {
+                      /* ignore */
+                    }
+                  }
+                  void qc.invalidateQueries({ queryKey: ['messages', chatId] });
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M4 7h16M10 11v7M14 11v7M6 7l1 14h10l1-14M9 7V4h6v3"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
         {dragActive && (
           <div className="pointer-events-none absolute inset-0 z-[50] flex items-center justify-center">
             <div className="rounded-2xl border border-line/70 bg-surface-elevated/85 px-4 py-3 text-sm font-semibold text-ink shadow-lg backdrop-blur dark:border-line/45 dark:bg-surface-elevated/65">
@@ -914,12 +1447,18 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   }}
                   menuOpen={menuFor === m.id}
                   setMenuOpen={(open) => setMenuFor(open ? m.id : null)}
+                  selectMode={selectMode}
+                  selected={selectedSet.has(m.id)}
+                  onToggleSelected={() => toggleSelected(m.id)}
+                  onEnterSelectMode={() => enterSelectWith(m.id)}
+                  onOpenMedia={(items, index) => setMediaViewer({ items, index })}
                   chatId={chatId}
                   onMessageRowEnter={onMessageRowEnter}
                   onMessageRowLeave={onMessageRowLeave}
                   closeOnScrollEl={parentRef}
                   mobileReactionPickId={mobileReactionPick?.messageId ?? null}
                   onRequestMobileReactionPicker={(messageId, rect, isOutgoing, sheetActions) => {
+                    if (selectMode) return;
                     setMenuFor(null);
                     setMobileReactionPick({
                       messageId,
@@ -975,8 +1514,35 @@ export function MessageThread({ chatId }: { chatId: string }) {
           chatId={chatId}
           myId={myId}
           onClose={() => setMobileReactionPick(null)}
+          onOpenFullPicker={() => setFullReactionFor(mobileReactionPick.messageId)}
         />
       ) : null}
+      <ReactionPickerModal
+        open={Boolean(fullReactionFor)}
+        onClose={() => setFullReactionFor(null)}
+        onPick={(emoji) => {
+          const id = fullReactionFor;
+          if (!id) return;
+          void toggleReaction(id, emoji);
+        }}
+      />
+      <ReactionDetailsSheet
+        open={Boolean(reactionDetails)}
+        onClose={() => setReactionDetails(null)}
+        emoji={reactionDetails?.emoji ?? '👍'}
+        userIds={reactionDetails?.userIds ?? []}
+      />
+      <MediaViewerModal
+        open={Boolean(mediaViewer)}
+        onClose={() => setMediaViewer(null)}
+        items={mediaViewer?.items ?? []}
+        index={mediaViewer?.index ?? 0}
+        onIndex={(i) =>
+          setMediaViewer((cur) =>
+            cur ? { ...cur, index: Math.max(0, Math.min(cur.items.length - 1, i)) } : cur,
+          )
+        }
+      />
       <Composer
         chatId={chatId}
         replyTo={replyTo}
@@ -1065,6 +1631,11 @@ function MessageBubble({
   onDelete,
   menuOpen,
   setMenuOpen,
+  selectMode,
+  selected,
+  onToggleSelected,
+  onEnterSelectMode,
+  onOpenMedia,
   chatId,
   onMessageRowEnter,
   onMessageRowLeave,
@@ -1086,6 +1657,14 @@ function MessageBubble({
   onDelete: () => void;
   menuOpen: boolean;
   setMenuOpen: (open: boolean) => void;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelected: () => void;
+  onEnterSelectMode: () => void;
+  onOpenMedia: (
+    items: { url: string; mimeType: string; fileName: string }[],
+    index: number,
+  ) => void;
   chatId: string;
   onMessageRowEnter: (id: string) => void;
   onMessageRowLeave: () => void;
@@ -1279,6 +1858,15 @@ function MessageBubble({
         onSelect: onReply,
       },
       {
+        id: 'select',
+        label: t('select'),
+        disabled: isDeleted,
+        onSelect: () => {
+          setMenuOpen(false);
+          onEnterSelectMode();
+        },
+      },
+      {
         id: 'copy-link',
         label: t('msgCopyLink'),
         disabled: isDeleted,
@@ -1395,6 +1983,7 @@ function MessageBubble({
       m.id,
       m.text,
       onEdit,
+      onEnterSelectMode,
       onForward,
       onReply,
       pinOrUnpin,
@@ -1495,6 +2084,11 @@ function MessageBubble({
           onMouseEnter={() => onMessageRowEnter(m.id)}
           onMouseLeave={onMessageRowLeave}
           onPointerDown={(e) => {
+            if (selectMode) {
+              if (e.button !== 0) return;
+              onToggleSelected();
+              return;
+            }
             if (!onRequestMobileReactionPicker || isDeleted) return;
             if (typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches)
               return;
@@ -1633,6 +2227,32 @@ function MessageBubble({
               transform: swipePx ? `translateX(${swipePx}px)` : undefined,
             }}
           >
+            {selectMode && (
+              <button
+                type="button"
+                className={cn(
+                  'absolute -left-10 top-1/2 z-[70] flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border bg-surface-elevated/95 backdrop-blur',
+                  selected
+                    ? 'border-[#3390ec] text-white bg-[#3390ec]'
+                    : 'border-line/70 text-transparent dark:border-white/20',
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelected();
+                }}
+                aria-label={t('select')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M5 13l4 4L19 7"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            )}
             {!isDeleted && (
               <div
                 className={cn(
@@ -1779,14 +2399,31 @@ function MessageBubble({
               )}
               {m.attachments?.length > 0 && (
                 <div className={cn('space-y-2', !isRoundVideoNoteLayout && 'mt-2')}>
-                  {m.attachments.map((a) =>
+                  {m.attachments.map((a, ai) =>
                     a.kind === 'image' ? (
-                      <ThreadInlineImage
+                      <button
                         key={a.id}
-                        src={a.url}
-                        alt={a.fileName}
-                        className="max-h-56 w-full rounded-xl object-cover"
-                      />
+                        type="button"
+                        className="block w-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenMedia(
+                            m.attachments.map((x) => ({
+                              url: x.url,
+                              mimeType: x.mimeType,
+                              fileName: x.fileName,
+                            })),
+                            ai,
+                          );
+                        }}
+                        aria-label={t('openMedia')}
+                      >
+                        <ThreadInlineImage
+                          src={a.url}
+                          alt={a.fileName}
+                          className="max-h-56 w-full rounded-xl object-cover"
+                        />
+                      </button>
                     ) : a.kind === 'voice' ? (
                       <VoiceMessageBubble
                         key={a.id}
@@ -1808,14 +2445,32 @@ function MessageBubble({
                           )}
                         </div>
                       ) : (
-                        <video
+                        <button
                           key={a.id}
-                          src={toPublicUrl(a.url) ?? a.url}
-                          className="max-h-72 w-full max-w-[min(100%,20rem)] rounded-2xl object-cover shadow-md ring-1 ring-black/15 dark:ring-white/15"
-                          controls
-                          playsInline
-                          preload="metadata"
-                        />
+                          type="button"
+                          className="block w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenMedia(
+                              m.attachments.map((x) => ({
+                                url: x.url,
+                                mimeType: x.mimeType,
+                                fileName: x.fileName,
+                              })),
+                              ai,
+                            );
+                          }}
+                          aria-label={t('openMedia')}
+                        >
+                          <video
+                            src={toPublicUrl(a.url) ?? a.url}
+                            className="max-h-72 w-full max-w-[min(100%,20rem)] rounded-2xl object-cover shadow-md ring-1 ring-black/15 dark:ring-white/15"
+                            controls={false}
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
+                        </button>
                       )
                     ) : (
                       <a
@@ -1859,6 +2514,15 @@ function MessageBubble({
                           : 'border-line/55 bg-surface-elevated/50 hover:bg-surface-elevated/80 dark:border-line/45',
                       )}
                       onClick={() => toggleReaction(m.id, r.emoji)}
+                      onPointerDown={(e) => {
+                        // Prevent bubbling into bubble long-press logic.
+                        e.stopPropagation();
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setReactionDetails({ emoji: r.emoji, userIds: r.userIds });
+                      }}
                     >
                       {r.emoji} {r.count}
                     </button>

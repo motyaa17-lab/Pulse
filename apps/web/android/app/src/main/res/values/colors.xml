@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2AABEE</color>
+    <color name="colorPrimaryDark">#1B90C8</color>
+    <color name="colorAccent">#2AABEE</color>
+
+    <color name="pulseSplash">#2AABEE</color>
+    <color name="pulseStatusBar">#00000000</color>
+    <color name="pulseNavBar">#00000000</color>
+</resources>
+

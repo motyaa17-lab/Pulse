@@ -175,4 +175,32 @@ export class UsersService {
       data: { lastSeenAt: new Date() },
     });
   }
+
+  async resolveMany(ids: string[], viewerId: string) {
+    const uniq = [...new Set((ids ?? []).filter(Boolean))].slice(0, 80);
+    if (uniq.length === 0) return { items: [] };
+    const rows = await this.prisma.user.findMany({
+      where: { id: { in: uniq } },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        lastSeenAt: true,
+        shareLastSeen: true,
+      },
+    });
+    const online = await this.presence.areUsersOnline(rows.map((r) => r.id));
+    return {
+      items: rows.map((u) => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.displayName,
+        avatarUrl: u.avatarUrl,
+        isOnline: online[u.id] ?? false,
+        lastSeenAt: u.shareLastSeen || u.id === viewerId ? u.lastSeenAt : null,
+        lastSeenVisible: u.shareLastSeen || u.id === viewerId,
+      })),
+    };
+  }
 }
