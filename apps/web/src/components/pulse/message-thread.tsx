@@ -12,7 +12,6 @@ import { applyOptimisticReaction } from '@/lib/reaction-optimistic';
 import type { ChatListItem, MessageDto, MeUserDto, ResolvedUserLite } from '@/lib/types';
 import { connectSocket, getSocket } from '@/lib/socket';
 import { useAuthStore } from '@/stores/auth-store';
-import { useUiStore } from '@/stores/ui-store';
 import { cn } from '@/lib/cn';
 import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
@@ -30,6 +29,7 @@ import type { ChatDetailForDrawer } from '@/components/pulse/chat-details-drawer
 import { AnimatePresence, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
+import { tgEase, tgFadeIn, tgSheetPop, useReduceMotion } from '@/lib/motion';
 
 /** Messages from the same sender within this window visually stack as one group. */
 const GROUP_GAP_MS = 5 * 60 * 1000;
@@ -254,7 +254,7 @@ function ReactionPickerModal({
   onPick: (emoji: string) => void;
 }) {
   const t = useT();
-  const reduceMotion = useUiStore((s) => s.reduceMotion);
+  const reduceMotion = useReduceMotion();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -335,7 +335,7 @@ function ReactionDetailsSheet({
   userIds: string[];
 }) {
   const t = useT();
-  const reduceMotion = useUiStore((s) => s.reduceMotion);
+  const reduceMotion = useReduceMotion();
   const { data } = useQuery({
     queryKey: ['users', 'resolve', emoji, userIds.join(',')],
     queryFn: () =>
@@ -432,7 +432,7 @@ function MediaViewerModal({
   onIndex: (i: number) => void;
 }) {
   const t = useT();
-  const reduceMotion = useUiStore((s) => s.reduceMotion);
+  const reduceMotion = useReduceMotion();
   const item = items[index];
   useEffect(() => {
     if (!open) return;
@@ -452,7 +452,7 @@ function MediaViewerModal({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: tgEase() }}
       className="fixed inset-0 z-[150] bg-black/95"
     >
       <button
@@ -782,6 +782,7 @@ function MobileMessageActionSheet({
 export function MessageThread({ chatId }: { chatId: string }) {
   const qc = useQueryClient();
   const t = useT();
+  const reduceMotion = useReduceMotion();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const accessToken = useAuthStore((s) => s.accessToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
@@ -1485,7 +1486,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
             initial={{ opacity: 0, scale: 0.9, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 6 }}
-            transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: tgEase() }}
             className="pointer-events-auto absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-line/70 bg-surface-elevated/95 text-ink shadow-lg backdrop-blur-md transition hover:bg-surface-elevated active:scale-[0.97] dark:border-white/15 dark:bg-[rgb(var(--tg-panel))]/95 dark:text-white dark:hover:bg-[rgb(var(--tg-panel))]/90 md:bottom-[4.5rem] md:right-5"
             onClick={() => {
               const el = parentRef.current;
@@ -2064,7 +2065,7 @@ function MessageBubble({
       layout="position"
       initial={isNew ? { opacity: 0, y: 6, scale: 0.992 } : false}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.16, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: tgEase() }}
       className={rowTopSpace}
     >
       {showDate && (

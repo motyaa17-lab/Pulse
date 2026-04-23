@@ -17,6 +17,8 @@ import { decodeJwtSub } from '@/lib/jwt';
 import { uploadMedia } from '@/lib/upload-media';
 import { usePendingAttachmentsStore } from '@/stores/pending-attachments-store';
 import { useT } from '@/lib/i18n';
+import { AnimatePresence, motion } from 'framer-motion';
+import { tgEase, tgSheetPop, useReduceMotion } from '@/lib/motion';
 
 type MessagesQueryData = { items: MessageDto[]; nextCursor: string | null };
 const EMPTY_PENDING: never[] = [];
@@ -113,6 +115,7 @@ export function Composer({
   canPost?: boolean;
 }) {
   const t = useT();
+  const reduceMotion = useReduceMotion();
   const [text, setText] = useState('');
   const [uiSending, setUiSending] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -605,63 +608,74 @@ export function Composer({
         'md:border-t md:border-line/75 md:bg-surface-elevated/98 md:backdrop-blur-md dark:md:border-line/45 dark:md:bg-surface-elevated/98',
       )}
     >
-      {editing && (
-        <div className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35">
-          <div className="min-w-0 flex-1 border-l-2 border-amber-500/60 pl-2">
-            <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-400">
-              {t('composerEditing')}
-            </p>
-            <p className="truncate text-[12.5px] leading-snug text-ink">
-              {editing.text || t('message')}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-elevated hover:text-ink"
-            onClick={() => {
-              setText('');
-              onCancelEdit();
-            }}
-            aria-label={t('cancelEditAria')}
+      <AnimatePresence initial={false}>
+        {editing && (
+          <motion.div
+            {...tgSheetPop(reduceMotion)}
+            className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M18 6L6 18M6 6l12 12"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
-      {replyTo && (
-        <div className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35">
-          <div className="min-w-0 flex-1 border-l-2 border-accent/55 pl-2">
-            <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-accent">
-              {t('msgReply')}
-            </p>
-            <p className="truncate text-[12.5px] leading-snug text-ink">
-              {replyTo.text || t('composerAttachment')}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-elevated hover:text-ink"
-            onClick={onCancelReply}
-            aria-label={t('cancelReplyAria')}
+            <div className="min-w-0 flex-1 border-l-2 border-amber-500/60 pl-2">
+              <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-400">
+                {t('composerEditing')}
+              </p>
+              <p className="truncate text-[12.5px] leading-snug text-ink">
+                {editing.text || t('message')}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-elevated hover:text-ink"
+              onClick={() => {
+                setText('');
+                onCancelEdit();
+              }}
+              aria-label={t('cancelEditAria')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M18 6L6 18M6 6l12 12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
+        {replyTo && (
+          <motion.div
+            {...tgSheetPop(reduceMotion)}
+            className="mb-1.5 flex items-start gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M18 6L6 18M6 6l12 12"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
+            <div className="min-w-0 flex-1 border-l-2 border-accent/55 pl-2">
+              <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-accent">
+                {t('msgReply')}
+              </p>
+              <p className="truncate text-[12.5px] leading-snug text-ink">
+                {replyTo.text || t('composerAttachment')}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-elevated hover:text-ink"
+              onClick={onCancelReply}
+              aria-label={t('cancelReplyAria')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M18 6L6 18M6 6l12 12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {pending.length > 0 && (
         <div className="mb-1.5 flex flex-wrap gap-1.5">
           {pending.map((p) => (
@@ -722,7 +736,122 @@ export function Composer({
           ))}
         </div>
       )}
-      {(voiceUi === 'recording' || voiceUi === 'arming') && (
+      <AnimatePresence initial={false}>
+        {(voiceUi === 'recording' || voiceUi === 'arming') && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.99 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.99 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: tgEase() }}
+            className={cn(
+              'mb-2 flex items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 text-[13px] font-medium shadow-lg',
+              voiceSlideCancel
+                ? 'border-red-500/45 bg-red-950/35 text-red-100'
+                : 'border-[#3390ec]/35 bg-[#17212b]/95 text-white',
+            )}
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] opacity-80">
+                {voiceUi === 'arming' ? t('commonLoading') : t('voiceRecording')}
+              </span>
+              <span className="truncate">
+                {voiceUi === 'recording'
+                  ? voiceSlideCancel
+                    ? t('voiceSlideToCancel')
+                    : `${t('voiceReleaseToSend')} · ${voiceSec}s`
+                  : t('voiceHoldToRecord')}
+              </span>
+            </div>
+            <div className="flex h-10 w-10 shrink-0 items-end justify-center gap-0.5 rounded-xl bg-black/20 px-1 py-1">
+              {[5, 9, 6, 11, 7, 10, 6, 9, 5].map((h, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    'w-0.5 shrink-0 rounded-full bg-white/85',
+                    voiceUi === 'recording' && !voiceSlideCancel && 'animate-pulse',
+                  )}
+                  style={{ height: `${h}px`, animationDelay: `${i * 60}ms` }}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pending attachments: keep layout stable with a gentle pop */}
+      <AnimatePresence initial={false}>
+        {pending.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: tgEase() }}
+            className="mb-1.5 flex flex-wrap gap-1.5"
+          >
+            {pending.map((p) => (
+              <div
+                key={p.localId}
+                className="group flex max-w-full items-center gap-2 rounded-xl border border-line/75 bg-surface-muted/55 px-2.5 py-1.5 dark:border-line/45 dark:bg-surface-muted/35"
+              >
+                {p.kind === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={toPublicUrl(p.url) ?? p.url}
+                    alt=""
+                    className="h-9 w-9 rounded-lg object-cover ring-1 ring-line/45 dark:ring-line/35"
+                  />
+                ) : p.kind === 'voice' ? (
+                  <div className="flex h-9 w-12 items-end justify-center gap-0.5 rounded-lg bg-surface-elevated/70 px-1 ring-1 ring-line/45 dark:bg-surface-elevated/40 dark:ring-line/35">
+                    {[4, 7, 5, 9, 6, 8, 5, 7, 4].map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-0.5 shrink-0 rounded-full bg-accent/80"
+                        style={{ height: `${h}px` }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-elevated/70 text-xs font-semibold text-ink-muted ring-1 ring-line/45 dark:bg-surface-elevated/40 dark:ring-line/35">
+                    {p.kind === 'video' ? t('videoKind') : t('fileKind')}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12.5px] font-medium text-ink">
+                    {p.kind === 'voice' ? t('voiceNote') : p.fileName}
+                  </p>
+                  <p className="text-[11px] text-ink-muted">
+                    {p.kind === 'voice'
+                      ? p.durationSec != null
+                        ? `${p.durationSec}s · ${t('voiceHoldToRecord')}`
+                        : t('voiceRecordingHint')
+                      : `${Math.max(1, Math.round(p.sizeBytes / 1024))} KB`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-surface-elevated hover:text-ink"
+                  onClick={() => removePending(chatId, p.localId)}
+                  aria-label={t('removeAttachmentAria')}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M18 6L6 18M6 6l12 12"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* existing pending rendering below stays, but will never show now */}
+      {false && pending.length > 0 && (
         <div
           className={cn(
             'mb-2 flex items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 text-[13px] font-medium shadow-lg',
