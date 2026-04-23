@@ -7,6 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useT } from '@/lib/i18n';
+import { motion } from 'framer-motion';
+import { tgFadeIn, tgSheetPop, useReduceMotion } from '@/lib/motion';
 
 type SearchHit = { id: string; createdAt: string; snippet: string };
 
@@ -21,6 +23,7 @@ export function ChatSearchOverlay({
 }) {
   const t = useT();
   const router = useRouter();
+  const reduceMotion = useReduceMotion();
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
 
@@ -49,13 +52,14 @@ export function ChatSearchOverlay({
 
   return createPortal(
     <>
-      <button
+      <motion.button
         type="button"
         className="fixed inset-0 z-[140] bg-black/50 backdrop-blur-[2px] md:bg-black/50"
         aria-label={t('close')}
         onClick={onClose}
+        {...tgFadeIn(reduceMotion)}
       />
-      <div
+      <motion.div
         className={cn(
           'fixed z-[141] flex flex-col border border-line/80 bg-surface-elevated shadow-2xl dark:border-line/50 dark:bg-[#17212b]',
           'max-md:inset-0 max-md:h-[100svh] max-md:w-full max-md:max-w-none max-md:rounded-none max-md:border-0',
@@ -64,6 +68,7 @@ export function ChatSearchOverlay({
         role="dialog"
         aria-label={t('chatSearchTitle')}
         onClick={(e) => e.stopPropagation()}
+        {...tgSheetPop(reduceMotion)}
       >
         <div className="flex shrink-0 items-center gap-2 border-b border-line/70 px-3 py-2.5 dark:border-white/[0.08] md:hidden">
           <button
@@ -139,7 +144,7 @@ export function ChatSearchOverlay({
               ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </>,
     document.body,
   );

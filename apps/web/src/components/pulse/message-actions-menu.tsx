@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { useT } from '@/lib/i18n';
+import { motion } from 'framer-motion';
+import { tgSheetPop, useReduceMotion } from '@/lib/motion';
 
 export type MessageMenuAction = {
   id: string;
@@ -40,6 +42,7 @@ export function MessageActionsMenu({
   closeOnScrollEl?: React.RefObject<HTMLElement | null>;
 }) {
   const t = useT();
+  const reduceMotion = useReduceMotion();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number; origin: 'top' | 'bottom' }>({
     top: 0,
@@ -100,7 +103,7 @@ export function MessageActionsMenu({
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div
+    <motion.div
       ref={menuRef}
       className={cn(
         'fixed z-[120] w-[248px] overflow-hidden rounded-2xl border border-line/80 bg-surface-elevated shadow-lift backdrop-blur',
@@ -109,6 +112,7 @@ export function MessageActionsMenu({
       style={{ top: pos.top, left: pos.left }}
       role="menu"
       aria-label="Message actions"
+      {...tgSheetPop(reduceMotion)}
     >
       {showReactions && (
         <div className="flex items-center justify-between gap-1 border-b border-line/70 px-2.5 py-2 dark:border-line/45">
@@ -152,7 +156,7 @@ export function MessageActionsMenu({
           </button>
         ))}
       </div>
-    </div>,
+    </motion.div>,
     document.body,
   );
 }

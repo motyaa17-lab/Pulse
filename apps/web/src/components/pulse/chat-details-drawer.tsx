@@ -5,12 +5,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
+import { motion } from 'framer-motion';
 import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
 import { useLanguageStore } from '@/stores/language-store';
 import { apiFetch, toPublicUrl } from '@/lib/api';
 import { AddMemberModal } from '@/components/pulse/add-member-modal';
+import { tgFadeIn, tgSheetPop, useReduceMotion } from '@/lib/motion';
 
 type InfoTab = 'members' | 'media' | 'files' | 'links';
 
@@ -164,6 +166,7 @@ export function ChatDetailsDrawer({
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [tab, setTab] = useState<InfoTab>('members');
   const t = useT();
+  const reduceMotion = useReduceMotion();
   const language = useLanguageStore((s) => s.language);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -230,13 +233,14 @@ export function ChatDetailsDrawer({
 
   return createPortal(
     <>
-      <button
+      <motion.button
         type="button"
         className="fixed inset-0 z-[100] bg-ink/25 backdrop-blur-[2px] dark:bg-black/45"
         aria-label={t('drawerCloseInfo')}
         onClick={onClose}
+        {...tgFadeIn(reduceMotion)}
       />
-      <aside
+      <motion.aside
         className={cn(
           // Desktop: right drawer. Mobile: full-screen info screen (Telegram iOS-like).
           'fixed z-[101] flex w-full flex-col bg-surface-elevated shadow-[0_0_40px_rgba(0,0,0,0.12)]',
@@ -248,6 +252,7 @@ export function ChatDetailsDrawer({
         aria-modal="true"
         aria-labelledby="chat-details-title"
         onClick={(e) => e.stopPropagation()}
+        {...tgSheetPop(reduceMotion)}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line/70 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] dark:border-line/45">
           <h2
@@ -492,7 +497,7 @@ export function ChatDetailsDrawer({
 
           {/* Shared content moved into segmented tabs above (Telegram iOS-like). */}
         </div>
-      </aside>
+      </motion.aside>
       {chat?.id ? (
         <AddMemberModal
           open={addMemberOpen}
