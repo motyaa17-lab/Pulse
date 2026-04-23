@@ -1689,6 +1689,7 @@ function MessageBubble({
 }) {
   const qc = useQueryClient();
   const t = useT();
+  const reduceMotion = useReduceMotion();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const isDeleted = Boolean(m.deletedAt);
   const isSystem = m.type === 'SYSTEM';
