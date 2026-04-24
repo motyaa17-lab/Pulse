@@ -1445,6 +1445,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
                   onReply={() => setReplyTo(m)}
                   onForward={() => setForwarding(m)}
                   onToggleReaction={toggleReaction}
+                  onShowReactionDetails={(emoji, userIds) => setReactionDetails({ emoji, userIds })}
                   onEdit={() => {
                     setReplyTo(null);
                     setEditing(m);
@@ -1636,6 +1637,7 @@ function MessageBubble({
   onReply,
   onForward,
   onToggleReaction,
+  onShowReactionDetails,
   onEdit,
   onDelete,
   menuOpen,
@@ -1663,6 +1665,7 @@ function MessageBubble({
   onReply: () => void;
   onForward: () => void;
   onToggleReaction: (messageId: string, emoji: string) => void | Promise<void>;
+  onShowReactionDetails: (emoji: string, userIds: string[]) => void;
   onEdit: () => void;
   onDelete: () => void;
   menuOpen: boolean;
@@ -2526,7 +2529,7 @@ function MessageBubble({
                       onContextMenu={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setReactionDetails({ emoji: r.emoji, userIds: r.userIds });
+                        onShowReactionDetails(r.emoji, r.userIds);
                       }}
                     >
                       {r.emoji} {r.count}
