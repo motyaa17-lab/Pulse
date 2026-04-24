@@ -22,12 +22,23 @@ function effectiveWsUrl(): string {
 
 let socket: Socket | null = null;
 let presenceTimer: ReturnType<typeof setInterval> | null = null;
+const lifecycleWired = new WeakMap<Socket, () => void>();
 
 export function getSocket(): Socket | null {
   return socket;
 }
 
 function wireSocketLifecycle(s: Socket) {
+  if (lifecycleWired.has(s)) {
+    // Ensure store reflects current state without re-wiring handlers.
+    try {
+      useUiStore.getState().setWsConnected(s.connected);
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+
   const sync = () => {
     try {
       useUiStore.getState().setWsConnected(s.connected);
@@ -35,10 +46,10 @@ function wireSocketLifecycle(s: Socket) {
       /* ignore */
     }
   };
-  s.off('connect', sync);
-  s.off('disconnect', sync);
+
   s.on('connect', sync);
   s.on('disconnect', sync);
+  lifecycleWired.set(s, sync);
   sync();
 }
 
@@ -85,6 +96,14 @@ export function disconnectSocket() {
     useUiStore.getState().setWsConnected(null);
   } catch {
     /* ignore */
+  }
+  if (socket) {
+    const sync = lifecycleWired.get(socket);
+    if (sync) {
+      socket.off('connect', sync);
+      socket.off('disconnect', sync);
+      lifecycleWired.delete(socket);
+    }
   }
   socket?.disconnect();
   socket = null;

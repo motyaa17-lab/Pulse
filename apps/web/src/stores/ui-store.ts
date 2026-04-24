@@ -72,7 +72,8 @@ export const useUiStore = create<UiState>()(
           }
           return { typingByChat: { ...s.typingByChat, [chatId]: ids } };
         }),
-      setWsConnected: (wsConnected) => set({ wsConnected }),
+      setWsConnected: (wsConnected) =>
+        set((s) => (s.wsConnected === wsConnected ? s : { ...s, wsConnected })),
     }),
     {
       name: 'pulse-ui',
