@@ -124,8 +124,10 @@ export const useAuthStore = create<AuthState>()(
         // Rehydration can finish synchronously inside `create()` while `useAuthStore` is still in the
         // temporal dead zone — calling useAuthStore.setState immediately throws and never sets hasHydrated.
         queueMicrotask(() => {
-          console.log('[pulse-bootstrap] persist microtask: set hasHydrated true');
-          useAuthStore.setState({ hasHydrated: true });
+          if (!useAuthStore.getState().hasHydrated) {
+            console.log('[pulse-bootstrap] persist microtask: set hasHydrated true');
+            useAuthStore.setState({ hasHydrated: true });
+          }
           const t = useAuthStore.getState().accessToken;
           if (t) void syncAccessTokenCookie(t);
         });

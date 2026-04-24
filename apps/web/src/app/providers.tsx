@@ -37,7 +37,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const p = useAuthStore.persist;
     if (p == null) {
       logBootstrapState('no persist API — forcing hasHydrated');
-      useAuthStore.setState({ hasHydrated: true });
+      if (!useAuthStore.getState().hasHydrated) {
+        useAuthStore.setState({ hasHydrated: true });
+      }
       return;
     }
 
