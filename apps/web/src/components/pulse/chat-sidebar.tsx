@@ -60,22 +60,8 @@ function SegmentedPill({
     update();
     const onResize = () => update();
     window.addEventListener('resize', onResize, { passive: true });
-    // ResizeObserver can cause feedback loops if layout changes trigger more observations.
-    // Use rAF to coalesce and avoid synchronous setState inside observer microtasks.
-    let raf: number | null = null;
-    const scheduleUpdate = () => {
-      if (raf != null) return;
-      raf = window.requestAnimationFrame(() => {
-        raf = null;
-        update();
-      });
-    };
-    const ro = 'ResizeObserver' in window ? new ResizeObserver(() => scheduleUpdate()) : null;
-    if (ro && wrapRef.current) ro.observe(wrapRef.current);
     return () => {
       window.removeEventListener('resize', onResize);
-      if (raf != null) window.cancelAnimationFrame(raf);
-      ro?.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
