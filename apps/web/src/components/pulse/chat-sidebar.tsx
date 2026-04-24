@@ -42,7 +42,13 @@ function SegmentedPill({
     if (!wrap || !btn) return;
     const wr = wrap.getBoundingClientRect();
     const br = btn.getBoundingClientRect();
-    setPill({ left: br.left - wr.left, width: br.width });
+    const left = br.left - wr.left;
+    const width = br.width;
+    // Guard against ResizeObserver feedback loops: only update state if the numbers actually changed.
+    setPill((cur) => {
+      if (cur && Math.abs(cur.left - left) < 0.5 && Math.abs(cur.width - width) < 0.5) return cur;
+      return { left, width };
+    });
   };
 
   useEffect(() => {
