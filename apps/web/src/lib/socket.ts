@@ -43,8 +43,22 @@ function wireSocketLifecycle(s: Socket) {
 }
 
 export function connectSocket(): Socket {
-  if (socket?.connected) return socket;
   const token = useAuthStore.getState().accessToken;
+  // Important: keep a single Socket instance.
+  // Multiple components call connectSocket() on mount; if we recreate the socket while it's still
+  // connecting, we can end up with a storm of connect/disconnect events and state updates.
+  if (socket) {
+    try {
+      // Keep auth token in sync for reconnects.
+      socket.auth = { token };
+      if (token && !socket.connected) socket.connect();
+    } catch {
+      /* ignore */
+    }
+    wireSocketLifecycle(socket);
+    return socket;
+  }
+
   socket = io(effectiveWsUrl(), {
     transports: ['websocket', 'polling'],
     auth: { token },
