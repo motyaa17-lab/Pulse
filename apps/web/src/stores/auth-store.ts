@@ -93,16 +93,34 @@ export const useAuthStore = create<AuthState>()(
         });
       },
       setSessionStatus: (sessionStatus, err) => {
-        set({ sessionStatus, sessionError: err ?? null });
+        const nextErr = err ?? null;
+        set((s) => {
+          if (s.sessionStatus === sessionStatus && s.sessionError === nextErr) return s;
+          return { ...s, sessionStatus, sessionError: nextErr };
+        });
       },
       clear: () => {
-        set({
-          accessToken: null,
-          refreshToken: null,
-          sessionId: null,
-          activeAccountId: null,
-          sessionStatus: 'idle',
-          sessionError: null,
+        set((s) => {
+          // Avoid re-setting the same cleared state (can cause update storms if multiple callers clear).
+          if (
+            s.accessToken === null &&
+            s.refreshToken === null &&
+            s.sessionId === null &&
+            s.activeAccountId === null &&
+            s.sessionStatus === 'idle' &&
+            s.sessionError === null
+          ) {
+            return s;
+          }
+          return {
+            ...s,
+            accessToken: null,
+            refreshToken: null,
+            sessionId: null,
+            activeAccountId: null,
+            sessionStatus: 'idle',
+            sessionError: null,
+          };
         });
         void syncAccessTokenCookie(null);
       },

@@ -13,6 +13,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionCheckDone = useRef(false);
+
+  // If auth tokens change (login/logout/switch), allow session check to run again.
+  useEffect(() => {
+    sessionCheckDone.current = false;
+  }, [token, refreshToken]);
+
   useEffect(() => {
     if (!hasHydrated) return;
     const publicPaths = ['/login', '/signup', '/onboarding'];
@@ -59,7 +65,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             return;
           }
 
+          // For local/dev ergonomics: if backend is down, don't keep the UI in an infinite
+          // "checking" state; surface an error and allow navigation to login.
           const backoff = Math.min(6000, 450 * Math.pow(1.7, attempt - 1));
+          if (attempt >= 3) {
+            useAuthStore
+              .getState()
+              .setSessionStatus(
+                'error',
+                'Сервер недоступен. Запустите бэкенд и обновите страницу.',
+              );
+            return;
+          }
           useAuthStore
             .getState()
             .setSessionStatus('checking', 'Сервер просыпается… пытаемся подключиться снова.');
