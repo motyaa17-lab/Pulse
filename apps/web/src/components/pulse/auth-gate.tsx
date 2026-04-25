@@ -12,6 +12,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.accessToken);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionCheckDone = useRef(false);
 
   // If auth tokens change (login/logout/switch), allow session check to run again.
@@ -94,5 +95,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     };
   }, [hasHydrated, token, refreshToken, router]);
 
-  return <>{children}</>;
+  // Critical: avoid mounting the full app while we are still validating session.
+  // Otherwise, many screens mount and fire React Query subscriptions in parallel,
+  // which can devolve into an update storm and trigger React #185.
+  const isPublicPath =
+    pathname === '/login' || pathname === '/signup' || pathname === '/onboarding';
+  const hasAnyToken = Boolean(token || refreshToken);
+  const blockAppMount = hasHydrated && hasAnyToken && sessionStatus === 'checking' && !isPublicPath;
+
+  return blockAppMount ? null : <>{children}</>;
 }
