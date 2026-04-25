@@ -40,6 +40,7 @@ export default function ChatPage() {
   const chatId = params.chatId;
   const router = useRouter();
   const sp = useSearchParams();
+  const searchFlag = sp?.get('search');
   const qc = useQueryClient();
   const detailsOpen = useUiStore((s) => s.detailsOpen);
   const setDetailsOpen = useUiStore((s) => s.setDetailsOpen);
@@ -55,8 +56,8 @@ export default function ChatPage() {
 
   useEffect(() => {
     // Allow deep-linking into in-chat search (used from profile screen).
-    if (sp?.get('search') === '1') setInChatSearchOpen(true);
-  }, [sp]);
+    if (searchFlag === '1') setInChatSearchOpen(true);
+  }, [searchFlag]);
 
   useEffect(() => {
     const s = connectSocket();
