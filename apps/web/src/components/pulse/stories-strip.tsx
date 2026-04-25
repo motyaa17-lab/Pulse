@@ -114,19 +114,23 @@ export function StoriesStrip({
   const t = useT();
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionId = useAuthStore((s) => s.sessionId);
   const fileRef = useRef<HTMLInputElement>(null);
   const [viewer, setViewer] = useState<StoryFeedItem | null>(null);
+  const canQuery = hasHydrated && Boolean(token) && sessionStatus === 'ok';
 
   const { data: me } = useQuery({
     queryKey: ['me'],
     queryFn: () => apiFetch<MeUserDto>('/users/me'),
+    enabled: canQuery,
   });
 
   const feedQuery = useQuery({
     queryKey: ['stories', 'feed'],
     queryFn: () => apiFetch<{ items: StoryFeedItem[] }>('/stories/feed'),
-    enabled: Boolean(token),
+    enabled: canQuery,
   });
 
   const createStory = useMutation({

@@ -363,6 +363,9 @@ export function ChatSidebar() {
   const router = useRouter();
   const qc = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
+  const canQuery = hasHydrated && Boolean(accessToken) && sessionStatus === 'ok';
   const t = useT();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const [search, setSearch] = useState('');
@@ -390,6 +393,7 @@ export function ChatSidebar() {
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
+    enabled: canQuery,
   });
 
   const { data: globalSearch, isFetching: globalSearchFetching } = useQuery<SearchResult>({
@@ -403,6 +407,7 @@ export function ChatSidebar() {
     {
       queryKey: ['folders'],
       queryFn: () => apiFetch(`/folders`),
+      enabled: canQuery,
     },
   );
 

@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui-store';
+import { useAuthStore } from '@/stores/auth-store';
 
 function hideMobileTabBar(pathname: string | null): boolean {
   const bare = pathname?.split('?')[0] ?? '';
@@ -104,16 +105,22 @@ export function MobileTabBar() {
   const t = useT();
   const setPending = useUiStore((s) => s.setPendingSidebarSearchFocus);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const token = useAuthStore((s) => s.accessToken);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
+  const canQuery = hasHydrated && Boolean(token) && sessionStatus === 'ok';
 
   const { data: me } = useQuery({
     queryKey: ['me'],
     queryFn: () => apiFetch<MeUserDto>('/users/me'),
+    enabled: canQuery,
   });
 
   const { data: chats } = useQuery({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
     staleTime: 20_000,
+    enabled: canQuery,
   });
 
   if (hideMobileTabBar(pathname)) return null;

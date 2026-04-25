@@ -9,6 +9,7 @@ import type { ChatListItem } from '@/lib/types';
 import { ChatsOpeningFallback } from '@/components/pulse/chats-opening-fallback';
 import { useT } from '@/lib/i18n';
 import { chatHref } from '@/lib/chat-route';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function ChatsIndexPage() {
   return (
@@ -26,14 +27,20 @@ function ChatsIndexContent() {
   const qc = useQueryClient();
   const t = useT();
   const didAutoOpenDesktop = useRef(false);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const token = useAuthStore((s) => s.accessToken);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
+  const canQuery = hasHydrated && Boolean(token) && sessionStatus === 'ok';
 
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
+    enabled: canQuery,
   });
 
   useEffect(() => {
     const run = async () => {
+      if (!canQuery) return;
       if (start) {
         try {
           const chat = await getOrCreateDirectChat(start);
@@ -46,10 +53,11 @@ function ChatsIndexContent() {
       }
     };
     void run();
-  }, [qc, router, start]);
+  }, [canQuery, qc, router, start]);
 
   // Desktop split-view UX: auto-open the first chat once (never on mobile).
   useEffect(() => {
+    if (!canQuery) return;
     if (start) return;
     if (isLoading) return;
     if (didAutoOpenDesktop.current) return;
@@ -73,7 +81,7 @@ function ChatsIndexContent() {
 
     didAutoOpenDesktop.current = true;
     router.replace(chatHref(first));
-  }, [data, isLoading, pathname, router, start]);
+  }, [canQuery, data, isLoading, pathname, router, start]);
 
   if (isLoading) {
     return (
