@@ -11,25 +11,58 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
+    // Keep this endpoint non-fatal for the app shell.
+    const res = NextResponse.json({ ok: false, error: 'invalid_json' });
+    res.cookies.set(PULSE_ACCESS_COOKIE, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    });
+    return res;
   }
   const accessToken =
     typeof body === 'object' && body !== null && 'accessToken' in body
       ? (body as { accessToken: unknown }).accessToken
       : undefined;
   if (typeof accessToken !== 'string' || !accessToken) {
-    return NextResponse.json({ error: 'missing_token' }, { status: 400 });
+    const res = NextResponse.json({ ok: false, error: 'missing_token' });
+    res.cookies.set(PULSE_ACCESS_COOKIE, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    });
+    return res;
   }
 
   const payload = await verifyHs256JwtPayload(accessToken, accessSecret());
   if (!payload?.sub) {
-    return NextResponse.json({ error: 'invalid_token' }, { status: 401 });
+    const res = NextResponse.json({ ok: false, error: 'invalid_token' });
+    res.cookies.set(PULSE_ACCESS_COOKIE, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    });
+    return res;
   }
 
   const now = Math.floor(Date.now() / 1000);
   const exp = typeof payload.exp === 'number' ? payload.exp : now + 900;
   if (exp <= now) {
-    return NextResponse.json({ error: 'expired_token' }, { status: 401 });
+    const res = NextResponse.json({ ok: false, error: 'expired_token' });
+    res.cookies.set(PULSE_ACCESS_COOKIE, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    });
+    return res;
   }
   const maxAge = Math.max(60, exp - now);
 
