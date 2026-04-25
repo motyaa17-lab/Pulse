@@ -6,7 +6,7 @@ import { BootstrapSplash } from '@/components/pulse/bootstrap-splash';
 import { ConnectionBanner } from '@/components/pulse/connection-banner';
 import { useAuthStore } from '@/stores/auth-store';
 import { useUiStore } from '@/stores/ui-store';
-import { queryClient } from '@/lib/query-client';
+import { getQueryClient } from '@/lib/query-client';
 
 function applyVisualPreset(preset: string) {
   if (typeof document === 'undefined') return;
@@ -29,6 +29,7 @@ function logBootstrapState(reason: string) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const qc = getQueryClient();
   const theme = useUiStore((s) => s.theme);
   const visualPreset = useUiStore((s) => s.visualPreset);
 
@@ -99,7 +100,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [visualPreset]);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={qc}>
       <ConnectionBanner />
       {children}
       <BootstrapSplash />
