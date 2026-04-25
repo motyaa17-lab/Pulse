@@ -786,6 +786,8 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const accessToken = useAuthStore((s) => s.accessToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const sessionStatus = useAuthStore((s) => s.sessionStatus);
+  const canQuery = hasHydrated && Boolean(accessToken) && sessionStatus === 'ok';
   const myIdFromToken = decodeJwtSub(accessToken);
   const sessionId = useAuthStore((s) => s.sessionId);
   const addPending = usePendingAttachmentsStore((s) => s.add);
@@ -817,6 +819,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const { data: meUser } = useQuery({
     queryKey: ['me'],
     queryFn: () => apiFetch<MeUserDto>('/users/me'),
+    enabled: canQuery,
   });
   const myId = myIdFromToken ?? meUser?.id ?? null;
 
@@ -829,13 +832,14 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const { data: chatMeta } = useQuery({
     queryKey: ['chat', chatId],
     queryFn: () => apiFetch<ChatDetailForDrawer>(`/chats/${chatId}`),
+    enabled: canQuery,
   });
   const canPost = !chatMeta?.role || chatMeta.type !== 'CHANNEL' || chatMeta.role !== 'SUBSCRIBER';
 
   const { data: chatsForForward } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
-    enabled: Boolean(forwarding),
+    enabled: canQuery && Boolean(forwarding),
   });
 
   const { data, isLoading } = useQuery({
@@ -844,6 +848,7 @@ export function MessageThread({ chatId }: { chatId: string }) {
       apiFetch<{ items: MessageDto[]; nextCursor: string | null }>(
         `/chats/${chatId}/messages?take=80`,
       ),
+    enabled: canQuery,
   });
 
   const messages = data?.items ?? [];
