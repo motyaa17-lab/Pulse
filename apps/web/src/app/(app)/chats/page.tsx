@@ -26,6 +26,8 @@ function ChatsIndexContent() {
   const t = useT();
   const didAutoOpenDesktop = useRef(false);
 
+  console.log('[render] /chats page', { start, didAutoOpenDesktop: didAutoOpenDesktop.current });
+
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),

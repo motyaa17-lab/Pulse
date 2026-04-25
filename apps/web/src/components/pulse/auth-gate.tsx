@@ -15,6 +15,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionCheckDone = useRef(false);
 
+  console.log('[render] AuthGate', {
+    pathname,
+    hasHydrated,
+    hasToken: Boolean(token || refreshToken),
+    sessionStatus,
+  });
+
   // If auth tokens change (login/logout/switch), allow session check to run again.
   useEffect(() => {
     sessionCheckDone.current = false;

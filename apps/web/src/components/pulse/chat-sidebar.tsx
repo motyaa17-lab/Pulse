@@ -373,6 +373,7 @@ export function ChatSidebar() {
   const pendingSidebarSearchFocus = useUiStore((s) => s.pendingSidebarSearchFocus);
   const setPendingSidebarSearchFocus = useUiStore((s) => s.setPendingSidebarSearchFocus);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const searchBlockRef = useRef<HTMLDivElement>(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
@@ -385,6 +386,14 @@ export function ChatSidebar() {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   // Reserved for future interactions (e.g., measuring story strip), currently unused.
   const listScrollRef = useRef<HTMLDivElement>(null);
+
+  console.log('[render] ChatSidebar', {
+    pathname,
+    hasToken: Boolean(accessToken),
+    sidebarOpen,
+    pendingSidebarSearchFocus,
+  });
+
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
