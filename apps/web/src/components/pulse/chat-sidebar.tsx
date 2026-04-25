@@ -387,13 +387,6 @@ export function ChatSidebar() {
   // Reserved for future interactions (e.g., measuring story strip), currently unused.
   const listScrollRef = useRef<HTMLDivElement>(null);
 
-  console.log('[render] ChatSidebar', {
-    pathname,
-    hasToken: Boolean(accessToken),
-    sidebarOpen,
-    pendingSidebarSearchFocus,
-  });
-
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
@@ -491,12 +484,19 @@ export function ChatSidebar() {
     if (!pendingSidebarSearchFocus) return;
     const bare = pathname?.split('?')[0] ?? '';
     if (bare !== '/chats' && bare !== '/chats/') return;
+    // Only update store if values actually change (avoids update loops).
     setPendingSidebarSearchFocus(false);
-    setSidebarOpen(true);
+    if (!sidebarOpen) setSidebarOpen(true);
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent('pulse:focus-sidebar-search'));
     });
-  }, [pendingSidebarSearchFocus, pathname, setPendingSidebarSearchFocus, setSidebarOpen]);
+  }, [
+    pendingSidebarSearchFocus,
+    pathname,
+    sidebarOpen,
+    setPendingSidebarSearchFocus,
+    setSidebarOpen,
+  ]);
 
   const hideChat = useMutation({
     mutationFn: (chatId: string) =>

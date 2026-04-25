@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { getOrCreateDirectChat } from '@/lib/direct-chat';
@@ -20,13 +20,12 @@ export default function ChatsIndexPage() {
 
 function ChatsIndexContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const params = useSearchParams();
   const start = params.get('start');
   const qc = useQueryClient();
   const t = useT();
   const didAutoOpenDesktop = useRef(false);
-
-  console.log('[render] /chats page', { start, didAutoOpenDesktop: didAutoOpenDesktop.current });
 
   const { data, isLoading } = useQuery<ChatListItem[]>({
     queryKey: ['chats'],
@@ -54,15 +53,27 @@ function ChatsIndexContent() {
     if (start) return;
     if (isLoading) return;
     if (didAutoOpenDesktop.current) return;
+    const bare = pathname?.split('?')[0] ?? '';
+    if (bare !== '/chats' && bare !== '/chats/') return;
     if (typeof window === 'undefined') return;
     if (!window.matchMedia('(min-width: 769px)').matches) return;
 
     const first = data?.[0];
     if (!first) return;
 
+    // In production we can occasionally bounce between routes during boot; ensure auto-open runs once
+    // per browser session to avoid navigation loops.
+    try {
+      const k = 'pulse:autoOpenDesktopChatsDone';
+      if (window.sessionStorage.getItem(k) === '1') return;
+      window.sessionStorage.setItem(k, '1');
+    } catch {
+      // ignore
+    }
+
     didAutoOpenDesktop.current = true;
     router.replace(chatHref(first));
-  }, [data, isLoading, router, start]);
+  }, [data, isLoading, pathname, router, start]);
 
   if (isLoading) {
     return (

@@ -33,8 +33,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const theme = useUiStore((s) => s.theme);
   const visualPreset = useUiStore((s) => s.visualPreset);
 
-  console.log('[render] Providers', { theme, visualPreset });
-
   useEffect(() => {
     console.log('[pulse-bootstrap] Providers mount: bootstrap effect start');
     const p = useAuthStore.persist;
