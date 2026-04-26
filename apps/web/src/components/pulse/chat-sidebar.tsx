@@ -650,6 +650,9 @@ export function ChatSidebar() {
       activeChatId,
       wired: didWireChatUpdatedRef.current,
     });
+    // TEMP DIAG: disable chat:updated listener entirely to confirm it triggers React #185.
+    // Do not remove connectSocket globally; only this subscription is disabled.
+    return;
     if (!canQuery) return;
     if (didWireChatUpdatedRef.current) {
       console.count('[SOCKET] skipped existing');
