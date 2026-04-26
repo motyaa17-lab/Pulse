@@ -13,10 +13,23 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionCheckDone = useRef(false);
+  const sessionStampRef = useRef<string | null>(null);
+
+  const sessionDoneKey = (() => {
+    // Stable key to survive component remounts across route transitions.
+    const stamp = token ? token.slice(0, 16) : refreshToken ? refreshToken.slice(0, 16) : 'anon';
+    sessionStampRef.current = stamp;
+    return `pulse:sessionChecked:${stamp}`;
+  })();
 
   // If auth tokens change (login/logout/switch), allow session check to run again.
   useEffect(() => {
     sessionCheckDone.current = false;
+    try {
+      if (typeof window !== 'undefined') window.sessionStorage.removeItem(sessionDoneKey);
+    } catch {
+      /* ignore */
+    }
   }, [token, refreshToken]);
 
   useEffect(() => {
@@ -34,6 +47,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (!token && !refreshToken) return;
     if (sessionCheckDone.current) return;
     if (sessionStatus === 'checking' || sessionStatus === 'ok') return;
+
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage.getItem(sessionDoneKey) === '1') {
+        sessionCheckDone.current = true;
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+
     sessionCheckDone.current = true;
     let cancelled = false;
 
@@ -45,6 +68,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         await apiFetch('/users/me');
         if (cancelled) return;
         useAuthStore.getState().setSessionStatus('ok', null);
+        try {
+          if (typeof window !== 'undefined') window.sessionStorage.setItem(sessionDoneKey, '1');
+        } catch {
+          /* ignore */
+        }
         console.log('[pulse-bootstrap] AuthGate: /users/me ok');
       } catch (e) {
         if (cancelled) return;
