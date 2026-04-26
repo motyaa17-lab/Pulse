@@ -14,6 +14,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionCheckDone = useRef(false);
   const sessionStampRef = useRef<string | null>(null);
+  const didRedirectLoginRef = useRef(false);
 
   const sessionDoneKey = (() => {
     // Stable key to survive component remounts across route transitions.
@@ -25,12 +26,25 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   // If auth tokens change (login/logout/switch), allow session check to run again.
   useEffect(() => {
     sessionCheckDone.current = false;
+    didRedirectLoginRef.current = false;
     try {
       if (typeof window !== 'undefined') window.sessionStorage.removeItem(sessionDoneKey);
     } catch {
       /* ignore */
     }
   }, [token, refreshToken]);
+
+  // Allow a user-driven retry: some UI can set sessionStatus back to 'idle'.
+  useEffect(() => {
+    if (sessionStatus !== 'idle') return;
+    sessionCheckDone.current = false;
+    didRedirectLoginRef.current = false;
+    try {
+      if (typeof window !== 'undefined') window.sessionStorage.removeItem(sessionDoneKey);
+    } catch {
+      /* ignore */
+    }
+  }, [sessionStatus, sessionDoneKey]);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -64,10 +78,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     console.log('[pulse-bootstrap] AuthGate: validating session (/users/me)');
 
     void (async () => {
+      let nextStatus: 'ok' | 'error' = 'error';
+      let nextError: string | null = null;
+
       try {
-        await apiFetch('/users/me');
+        const timeoutMs = 10_000;
+        const timeoutErr = new Error('AUTH_GATE_TIMEOUT');
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          const id = window.setTimeout(() => reject(timeoutErr), timeoutMs);
+          // best effort cleanup if the race resolves first
+          void id;
+        });
+
+        await Promise.race([apiFetch('/users/me'), timeoutPromise]);
         if (cancelled) return;
-        useAuthStore.getState().setSessionStatus('ok', null);
+        nextStatus = 'ok';
+        nextError = null;
         try {
           if (typeof window !== 'undefined') window.sessionStorage.setItem(sessionDoneKey, '1');
         } catch {
@@ -76,15 +102,31 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         console.log('[pulse-bootstrap] AuthGate: /users/me ok');
       } catch (e) {
         if (cancelled) return;
+        if (e instanceof Error && e.message === 'AUTH_GATE_TIMEOUT') {
+          nextStatus = 'error';
+          nextError = 'Таймаут проверки сессии. Проверьте соединение и попробуйте снова.';
+          console.warn('[pulse-bootstrap] AuthGate: /users/me timeout');
+          return;
+        }
+
         const err = e instanceof ApiError ? e : null;
         if (err && (err.status === 401 || err.status === 403)) {
           console.warn('[pulse-bootstrap] AuthGate: session invalid → clear + /login');
-          useAuthStore.getState().setSessionStatus('error', 'Сессия истекла. Войдите снова.');
+          nextStatus = 'error';
+          nextError = 'Сессия истекла. Войдите снова.';
           useAuthStore.getState().clear();
-          if (pathname !== '/login') router.replace('/login');
+          if (!didRedirectLoginRef.current && pathname !== '/login') {
+            didRedirectLoginRef.current = true;
+            router.replace('/login');
+          }
           return;
         }
-        useAuthStore.getState().setSessionStatus('error', 'Сервер недоступен. Обновите страницу.');
+        nextStatus = 'error';
+        nextError = 'Сервер недоступен. Обновите страницу.';
+      } finally {
+        if (cancelled) return;
+        // Never keep 'checking' forever: always settle to ok/error.
+        useAuthStore.getState().setSessionStatus(nextStatus, nextError);
       }
     })();
     return () => {
