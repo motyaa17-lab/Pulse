@@ -6,6 +6,16 @@ import { ApiError, apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (pathname === '/chats' || pathname.startsWith('/chats/')) {
+    console.log('[AUTHGATE] hard bypass /chats');
+    return <>{children}</>;
+  }
+
+  return <AuthGateInner>{children}</AuthGateInner>;
+}
+
+function AuthGateInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const token = useAuthStore((s) => s.accessToken);
