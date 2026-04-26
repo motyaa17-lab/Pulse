@@ -679,6 +679,10 @@ export function ChatSidebar() {
       pathnameBare: pathnameBare || null,
     });
 
+    // TEMP DIAG: disable all title/badge side effects.
+    // React #185 currently triggers immediately after setTitle/setUnreadBadge.
+    return;
+
     // Update title only if it actually changes (avoid storms).
     if (typeof document !== 'undefined' && lastTitleRef.current !== nextTitle) {
       console.count('[ACTION] setTitle');
