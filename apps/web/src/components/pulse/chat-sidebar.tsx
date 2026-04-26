@@ -360,6 +360,7 @@ function AppMenu({ pathname }: { pathname: string | null }) {
 
 export function ChatSidebar() {
   const pathname = usePathname();
+  const pathnameBare = pathname?.split('?')[0] ?? '';
   const router = useRouter();
   const qc = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -410,6 +411,27 @@ export function ChatSidebar() {
       enabled: canQuery,
     },
   );
+
+  const activeChatId = useMemo(() => {
+    const parts = pathnameBare.split('/').filter(Boolean);
+    return parts[0] === 'chats' && parts[1] ? parts[1] : null;
+  }, [pathnameBare]);
+
+  const unreadTotal = useMemo(() => {
+    const rows = data ?? [];
+    let sum = 0;
+    for (const c of rows) {
+      if (activeChatId && c.id === activeChatId) continue;
+      if (c.unreadCount > 0) sum += c.unreadCount;
+    }
+    return sum;
+  }, [activeChatId, data]);
+
+  const baseTitle = t('chats');
+  const nextTitle =
+    unreadTotal > 0 ? `(${unreadTotal}) ${baseTitle} · Pulse` : `${baseTitle} · Pulse`;
+  const lastTitleRef = useRef<string>('');
+  const lastBadgeRef = useRef<number | null>(null);
 
   const listFiltered = useMemo(() => {
     if (!data) return [];
@@ -649,41 +671,42 @@ export function ChatSidebar() {
   }, [accessToken, pathname, qc]);
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar title/badge');
+    console.count('[EFFECT] title/badge RUN');
     console.log('deps:', {
-      chatsLen: (data?.length ?? 0) as number,
-      pathnameBare: (pathname?.split('?')[0] ?? '') || null,
-      locale: locale ?? null,
+      chatsLen: data?.length ?? 0,
+      unreadTotal,
+      activeChatId,
+      pathnameBare: pathnameBare || null,
     });
-    const bare = pathname?.split('?')[0] ?? '';
-    const parts = bare.split('/').filter(Boolean);
-    const activeChatId = parts[0] === 'chats' && parts[1] ? parts[1] : null;
 
-    const prev = document.title;
-    const base = t('chats');
-    const n = (data ?? []).reduce((sum, c) => {
-      if (activeChatId && c.id === activeChatId) return sum;
-      return sum + (c.unreadCount > 0 ? c.unreadCount : 0);
-    }, 0);
-    document.title = n > 0 ? `(${n}) ${base} · Pulse` : `${base} · Pulse`;
-
-    if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
-      void (
-        n > 0
-          ? (navigator as Navigator & { setAppBadge: (n: number) => Promise<void> }).setAppBadge(n)
-          : (navigator as Navigator & { clearAppBadge: () => Promise<void> }).clearAppBadge()
-      ).catch(() => undefined);
+    // Update title only if it actually changes (avoid storms).
+    if (typeof document !== 'undefined' && lastTitleRef.current !== nextTitle) {
+      console.count('[ACTION] setTitle');
+      console.log('deps:', { from: lastTitleRef.current || null, to: nextTitle });
+      document.title = nextTitle;
+      lastTitleRef.current = nextTitle;
     }
 
-    return () => {
-      document.title = prev;
-      if (typeof navigator !== 'undefined' && 'clearAppBadge' in navigator) {
-        void (navigator as Navigator & { clearAppBadge: () => Promise<void> })
-          .clearAppBadge()
-          .catch(() => undefined);
+    // Update app badge only on primitive change.
+    if (
+      typeof navigator !== 'undefined' &&
+      ('setAppBadge' in navigator || 'clearAppBadge' in navigator)
+    ) {
+      const nextBadge = unreadTotal > 0 ? unreadTotal : 0;
+      if (lastBadgeRef.current !== nextBadge) {
+        console.count('[ACTION] setUnreadBadge');
+        console.log('deps:', { from: lastBadgeRef.current, to: nextBadge });
+        lastBadgeRef.current = nextBadge;
+        void (
+          nextBadge > 0
+            ? (navigator as Navigator & { setAppBadge: (n: number) => Promise<void> }).setAppBadge(
+                nextBadge,
+              )
+            : (navigator as Navigator & { clearAppBadge: () => Promise<void> }).clearAppBadge()
+        ).catch(() => undefined);
       }
-    };
-  }, [data, pathname, t]);
+    }
+  }, [activeChatId, data?.length, nextTitle, pathnameBare, unreadTotal]);
 
   const pinnedRaw = folderFiltered.filter((c: ChatListItem) => c.isPinned && !c.isArchived);
   const restRaw = folderFiltered.filter((c: ChatListItem) => !c.isPinned && !c.isArchived);
