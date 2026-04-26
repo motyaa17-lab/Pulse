@@ -14,13 +14,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionCheckDone = useRef(false);
+  const bypassForChats = pathname === '/chats' || pathname?.startsWith('/chats/');
 
   // If auth tokens change (login/logout/switch), allow session check to run again.
   useEffect(() => {
+    if (bypassForChats) return;
     sessionCheckDone.current = false;
-  }, [token, refreshToken]);
+  }, [bypassForChats, token, refreshToken]);
 
   useEffect(() => {
+    if (bypassForChats) return;
     if (!hasHydrated) return;
     const publicPaths = ['/login', '/signup', '/onboarding'];
     if (!token && !refreshToken && !publicPaths.includes(pathname)) {
@@ -33,9 +36,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     } else {
       disconnectSocket();
     }
-  }, [hasHydrated, token, refreshToken, pathname, router]);
+  }, [bypassForChats, hasHydrated, token, refreshToken, pathname, router]);
 
   useEffect(() => {
+    if (bypassForChats) return;
     if (!hasHydrated) return;
     if (!token && !refreshToken) return;
     if (sessionCheckDone.current) return;
@@ -93,7 +97,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [hasHydrated, token, refreshToken, router]);
+  }, [bypassForChats, hasHydrated, token, refreshToken, router]);
 
   // Critical: avoid mounting the full app while we are still validating session.
   // Otherwise, many screens mount and fire React Query subscriptions in parallel,
@@ -103,5 +107,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const hasAnyToken = Boolean(token || refreshToken);
   const blockAppMount = hasHydrated && hasAnyToken && sessionStatus === 'checking' && !isPublicPath;
 
+  if (bypassForChats) return <>{children}</>;
   return blockAppMount ? null : <>{children}</>;
 }
