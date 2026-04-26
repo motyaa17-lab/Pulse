@@ -62,12 +62,29 @@ export function connectSocket(): Socket {
     try {
       // Keep auth token in sync for reconnects.
       socket.auth = { token };
-      if (token && !socket.connected) socket.connect();
+      // Avoid spamming connect() while already active/connecting.
+      const active = Boolean((socket as any).active);
+      if (token && !socket.connected && !active) {
+        console.count('[SOCKET] connect attempt');
+        console.log('deps:', { hasToken: true, connected: false, active });
+        socket.connect();
+      } else {
+        console.count('[SOCKET] skipped existing');
+        console.log('deps:', {
+          hasToken: Boolean(token),
+          connected: Boolean(socket.connected),
+          active,
+        });
+      }
     } catch {
       /* ignore */
     }
     console.count('[SOCKET] connectSocket reuse');
-    console.log('deps:', { hasToken: Boolean(token), connected: Boolean(socket.connected) });
+    console.log('deps:', {
+      hasToken: Boolean(token),
+      connected: Boolean(socket.connected),
+      active: Boolean((socket as any).active),
+    });
     wireSocketLifecycle(socket);
     return socket;
   }

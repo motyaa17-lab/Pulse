@@ -427,6 +427,17 @@ export function ChatSidebar() {
     return sum;
   }, [activeChatId, data]);
 
+  const activeChatIdRef = useRef<string | null>(null);
+  const myIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
+  useEffect(() => {
+    myIdRef.current = decodeJwtSub(accessToken);
+  }, [accessToken]);
+
+  const didWireChatUpdatedRef = useRef(false);
+
   const baseTitle = t('chats');
   const nextTitle =
     unreadTotal > 0 ? `(${unreadTotal}) ${baseTitle} · Pulse` : `${baseTitle} · Pulse`;
@@ -634,9 +645,22 @@ export function ChatSidebar() {
   useEffect(() => {
     console.count('[EFFECT] chat-sidebar socket chat:updated');
     console.log('deps:', {
+      canQuery,
       hasToken: Boolean(accessToken),
-      pathnameBare: (pathname?.split('?')[0] ?? '') || null,
+      activeChatId,
+      wired: didWireChatUpdatedRef.current,
     });
+    if (!canQuery) return;
+    if (didWireChatUpdatedRef.current) {
+      console.count('[SOCKET] skipped existing');
+      console.log('deps:', { reason: 'listener already wired', event: 'chat:updated' });
+      return;
+    }
+    didWireChatUpdatedRef.current = true;
+
+    console.count('[SOCKET] listener add');
+    console.log('deps:', { event: 'chat:updated' });
+
     const s = connectSocket();
     const onChatUpdated = (payload: unknown) => {
       const p = payload as {
@@ -648,15 +672,10 @@ export function ChatSidebar() {
         lastMessageSenderId?: string | null;
       };
       if (!p?.chatId || !p.lastMessageAt) return;
-      const bare = pathname?.split('?')[0] ?? '';
-      const parts = bare.split('/').filter(Boolean);
-      const activeChatId = parts[0] === 'chats' && parts[1] ? parts[1] : null;
-      const myId = decodeJwtSub(accessToken);
+      const activeId = activeChatIdRef.current;
+      const myId = myIdRef.current;
       const bumpUnread = Boolean(
-        p.lastMessageSenderId &&
-        myId &&
-        p.lastMessageSenderId !== myId &&
-        p.chatId !== activeChatId,
+        p.lastMessageSenderId && myId && p.lastMessageSenderId !== myId && p.chatId !== activeId,
       );
       bumpChatListPreview(qc, p.chatId, p.preview ?? '', p.lastMessageAt, {
         lastMessageType: p.lastMessageType,
@@ -666,9 +685,12 @@ export function ChatSidebar() {
     };
     s.on('chat:updated', onChatUpdated);
     return () => {
+      console.count('[SOCKET] listener cleanup');
+      console.log('deps:', { event: 'chat:updated' });
       s.off('chat:updated', onChatUpdated);
+      didWireChatUpdatedRef.current = false;
     };
-  }, [accessToken, pathname, qc]);
+  }, [activeChatId, accessToken, canQuery, qc]);
 
   useEffect(() => {
     console.count('[EFFECT] title/badge RUN');
