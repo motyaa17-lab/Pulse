@@ -28,6 +28,12 @@ export function getSocket(): Socket | null {
   return socket;
 }
 
+function socketsDisabledOnRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const p = window.location?.pathname ?? '';
+  return p === '/chats' || p.startsWith('/chats/');
+}
+
 function wireSocketLifecycle(s: Socket) {
   if (lifecycleWired.has(s)) {
     // Ensure store reflects current state without re-wiring handlers.
@@ -54,6 +60,13 @@ function wireSocketLifecycle(s: Socket) {
 }
 
 export function connectSocket(): Socket {
+  // TEMP ISOLATION: disable socket auto-connect on /chats routes to verify
+  // whether realtime bootstrap is the remaining source of React #185.
+  if (socketsDisabledOnRoute()) {
+    console.count('[SOCKET] disabled on /chats');
+    return (socket ?? (null as any)) as Socket;
+  }
+
   const token = useAuthStore.getState().accessToken;
   // Important: keep a single Socket instance.
   // Multiple components call connectSocket() on mount; if we recreate the socket while it's still
