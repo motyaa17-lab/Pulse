@@ -38,6 +38,11 @@ function ChatsIndexContent() {
     enabled: canQuery,
   });
 
+  const chatsLen = data?.length ?? 0;
+  const firstChat = chatsLen > 0 ? data![0] : null;
+  const firstChatId = firstChat?.id ?? null;
+  const firstChatType = firstChat?.type ?? null;
+
   useEffect(() => {
     const run = async () => {
       if (!canQuery) return;
@@ -66,8 +71,7 @@ function ChatsIndexContent() {
     if (typeof window === 'undefined') return;
     if (!window.matchMedia('(min-width: 769px)').matches) return;
 
-    const first = data?.[0];
-    if (!first) return;
+    if (!firstChatId || !firstChatType) return;
 
     // In production we can occasionally bounce between routes during boot; ensure auto-open runs once
     // per browser session to avoid navigation loops.
@@ -80,8 +84,10 @@ function ChatsIndexContent() {
     }
 
     didAutoOpenDesktop.current = true;
-    router.replace(chatHref(first));
-  }, [canQuery, data, isLoading, pathname, router, start]);
+    const target = chatHref({ id: firstChatId, type: firstChatType } as any);
+    if (target === bare) return;
+    router.replace(target);
+  }, [canQuery, firstChatId, firstChatType, isLoading, pathname, router, start]);
 
   if (isLoading) {
     return (
