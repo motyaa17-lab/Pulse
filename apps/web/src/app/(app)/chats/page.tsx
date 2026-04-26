@@ -22,11 +22,13 @@ export default function ChatsIndexPage() {
 function ChatsIndexContent() {
   const router = useRouter();
   const pathname = usePathname();
+  const pathnameBare = pathname?.split('?')[0] ?? '';
   const params = useSearchParams();
   const start = params.get('start');
   const qc = useQueryClient();
   const t = useT();
   const didAutoOpenDesktop = useRef(false);
+  const didInitialAutoOpenRef = useRef(false);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const token = useAuthStore((s) => s.accessToken);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
@@ -76,38 +78,31 @@ function ChatsIndexContent() {
       start,
       isLoading,
       didAutoOpenDesktop: didAutoOpenDesktop.current,
-      pathnameBare: (pathname?.split('?')[0] ?? '') || null,
+      pathnameBare: pathnameBare || null,
       firstChatId,
       firstChatType,
+      didInitialAutoOpen: didInitialAutoOpenRef.current,
     });
     if (!canQuery) return;
-    if (start) return;
     if (isLoading) return;
-    if (didAutoOpenDesktop.current) return;
-    const bare = pathname?.split('?')[0] ?? '';
-    if (bare !== '/chats' && bare !== '/chats/') return;
+    if (start) return;
+    if (didInitialAutoOpenRef.current) return;
+    if (pathnameBare !== '/chats' && pathnameBare !== '/chats/') return;
     if (typeof window === 'undefined') return;
     if (!window.matchMedia('(min-width: 769px)').matches) return;
-
     if (!firstChatId || !firstChatType) return;
 
-    // In production we can occasionally bounce between routes during boot; ensure auto-open runs once
-    // per browser session to avoid navigation loops.
-    try {
-      const k = 'pulse:autoOpenDesktopChatsDone';
-      if (window.sessionStorage.getItem(k) === '1') return;
-      window.sessionStorage.setItem(k, '1');
-    } catch {
-      // ignore
-    }
-
-    didAutoOpenDesktop.current = true;
     const target = chatHref({ id: firstChatId, type: firstChatType } as any);
-    if (target === bare) return;
+    if (target === pathnameBare) return;
+
+    // Critical: run at most once per /chats page-load to avoid navigation loops.
+    didInitialAutoOpenRef.current = true;
+    didAutoOpenDesktop.current = true;
     console.count('[ACTION] chats/page router.replace auto-open-first');
-    console.log('deps:', { from: bare, to: target });
+    console.log('deps:', { from: pathnameBare, to: target });
     router.replace(target);
-  }, [canQuery, firstChatId, firstChatType, isLoading, pathname, router, start]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canQuery, isLoading, pathnameBare, firstChatId, firstChatType]);
 
   if (isLoading) {
     return (
