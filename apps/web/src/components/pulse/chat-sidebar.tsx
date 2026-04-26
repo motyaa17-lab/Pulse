@@ -475,8 +475,8 @@ export function ChatSidebar() {
   }, [chipFiltered, folderId, folders?.items]);
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar focus-event listener');
-    console.log('deps:', {});
+    // TEMP DIAG: disable focus-event listener
+    return;
     const onFocusEvt = () => {
       setSearchFocused(true);
       searchInputRef.current?.focus();
@@ -487,8 +487,8 @@ export function ChatSidebar() {
   }, []);
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar create-menu outside-click');
-    console.log('deps:', { createMenuPlacement });
+    // TEMP DIAG: disable create-menu outside-click
+    return;
     if (createMenuPlacement === 'closed') return;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -500,8 +500,8 @@ export function ChatSidebar() {
   }, [createMenuPlacement]);
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar search outside-click');
-    console.log('deps:', { searchFocused });
+    // TEMP DIAG: disable search outside-click
+    return;
     if (!searchFocused) return;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -513,8 +513,8 @@ export function ChatSidebar() {
   }, [searchFocused]);
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar search escape-key');
-    console.log('deps:', { searchFocused });
+    // TEMP DIAG: disable search escape-key handler
+    return;
     if (!searchFocused) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -527,12 +527,8 @@ export function ChatSidebar() {
   }, [searchFocused]);
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar pending focus');
-    console.log('deps:', {
-      pendingSidebarSearchFocus,
-      pathnameBare: (pathname?.split('?')[0] ?? '') || null,
-      sidebarOpen,
-    });
+    // TEMP DIAG: disable pending search focus logic
+    return;
     if (!pendingSidebarSearchFocus) return;
     const bare = pathname?.split('?')[0] ?? '';
     if (bare !== '/chats' && bare !== '/chats/') return;
@@ -631,8 +627,8 @@ export function ChatSidebar() {
   });
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar openMenu auto-close');
-    console.log('deps:', { openMenuId: openMenuId ?? null });
+    // TEMP DIAG: disable openMenu auto-close logic
+    return;
     if (!openMenuId) return;
     const close = () => setOpenMenuId(null);
     const t = window.setTimeout(() => window.addEventListener('click', close), 0);
