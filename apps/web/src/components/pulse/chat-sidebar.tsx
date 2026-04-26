@@ -688,22 +688,23 @@ export function ChatSidebar() {
     }
 
     // Update app badge only on primitive change.
-    if (
-      typeof navigator !== 'undefined' &&
-      ('setAppBadge' in navigator || 'clearAppBadge' in navigator)
-    ) {
+    // Use typeof checks (not `"in"`) to avoid odd browser implementations.
+    if (typeof navigator !== 'undefined') {
+      const setAppBadgeFn = (navigator as any).setAppBadge as
+        | undefined
+        | ((n: number) => Promise<void>);
+      const clearAppBadgeFn = (navigator as any).clearAppBadge as undefined | (() => Promise<void>);
       const nextBadge = unreadTotal > 0 ? unreadTotal : 0;
-      if (lastBadgeRef.current !== nextBadge) {
+      if (
+        lastBadgeRef.current !== nextBadge &&
+        (typeof setAppBadgeFn === 'function' || typeof clearAppBadgeFn === 'function')
+      ) {
         console.count('[ACTION] setUnreadBadge');
         console.log('deps:', { from: lastBadgeRef.current, to: nextBadge });
         lastBadgeRef.current = nextBadge;
-        void (
-          nextBadge > 0
-            ? (navigator as Navigator & { setAppBadge: (n: number) => Promise<void> }).setAppBadge(
-                nextBadge,
-              )
-            : (navigator as Navigator & { clearAppBadge: () => Promise<void> }).clearAppBadge()
-        ).catch(() => undefined);
+        const p: Promise<void> | undefined =
+          nextBadge > 0 ? setAppBadgeFn?.(nextBadge) : clearAppBadgeFn?.();
+        void p?.catch(() => undefined);
       }
     }
   }, [activeChatId, data?.length, nextTitle, pathnameBare, unreadTotal]);
