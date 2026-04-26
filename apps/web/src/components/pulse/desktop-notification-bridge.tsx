@@ -30,6 +30,7 @@ export function DesktopNotificationBridge() {
   useEffect(() => {
     if (!accessToken || !myId) return;
     const s = connectSocket();
+    if (!s) return;
 
     const onChatUpdated = (payload: unknown) => {
       const p = payload as {
@@ -93,7 +94,7 @@ export function DesktopNotificationBridge() {
 
     s.on('chat:updated', onChatUpdated);
     return () => {
-      s.off('chat:updated', onChatUpdated);
+      s?.off('chat:updated', onChatUpdated);
     };
   }, [accessToken, me?.notificationPrefs, myId, pathname, qc, t]);
 
