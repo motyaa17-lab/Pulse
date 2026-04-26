@@ -359,6 +359,9 @@ function AppMenu({ pathname }: { pathname: string | null }) {
 }
 
 export function ChatSidebar() {
+  const DEBUG_EFFECTS =
+    typeof window !== 'undefined' && window.localStorage?.getItem('pulse:debugEffects') === '1';
+
   const pathname = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
@@ -442,6 +445,10 @@ export function ChatSidebar() {
   }, [chipFiltered, folderId, folders?.items]);
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar focus-event listener');
+      console.log('deps:', {});
+    }
     const onFocusEvt = () => {
       setSearchFocused(true);
       searchInputRef.current?.focus();
@@ -452,6 +459,10 @@ export function ChatSidebar() {
   }, []);
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar create-menu outside-click');
+      console.log('deps:', { createMenuPlacement });
+    }
     if (createMenuPlacement === 'closed') return;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -463,6 +474,10 @@ export function ChatSidebar() {
   }, [createMenuPlacement]);
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar search outside-click');
+      console.log('deps:', { searchFocused });
+    }
     if (!searchFocused) return;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -474,6 +489,10 @@ export function ChatSidebar() {
   }, [searchFocused]);
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar search escape-key');
+      console.log('deps:', { searchFocused });
+    }
     if (!searchFocused) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -486,12 +505,30 @@ export function ChatSidebar() {
   }, [searchFocused]);
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar pending focus');
+      console.log('deps:', {
+        pendingSidebarSearchFocus,
+        pathnameBare: (pathname?.split('?')[0] ?? '') || null,
+        sidebarOpen,
+      });
+    }
     if (!pendingSidebarSearchFocus) return;
     const bare = pathname?.split('?')[0] ?? '';
     if (bare !== '/chats' && bare !== '/chats/') return;
     // Only update store if values actually change (avoids update loops).
+    if (DEBUG_EFFECTS) {
+      console.count('[ACTION] chat-sidebar setPendingSidebarSearchFocus(false)');
+      console.log('deps:', { from: true, to: false });
+    }
     setPendingSidebarSearchFocus(false);
-    if (!sidebarOpen) setSidebarOpen(true);
+    if (!sidebarOpen) {
+      if (DEBUG_EFFECTS) {
+        console.count('[ACTION] chat-sidebar setSidebarOpen(true)');
+        console.log('deps:', { from: sidebarOpen, to: true });
+      }
+      setSidebarOpen(true);
+    }
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent('pulse:focus-sidebar-search'));
     });
@@ -578,6 +615,10 @@ export function ChatSidebar() {
   });
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar openMenu auto-close');
+      console.log('deps:', { openMenuId: openMenuId ?? null });
+    }
     if (!openMenuId) return;
     const close = () => setOpenMenuId(null);
     const t = window.setTimeout(() => window.addEventListener('click', close), 0);
@@ -588,6 +629,13 @@ export function ChatSidebar() {
   }, [openMenuId]);
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar socket chat:updated');
+      console.log('deps:', {
+        hasToken: Boolean(accessToken),
+        pathnameBare: (pathname?.split('?')[0] ?? '') || null,
+      });
+    }
     const s = connectSocket();
     const onChatUpdated = (payload: unknown) => {
       const p = payload as {
@@ -622,6 +670,14 @@ export function ChatSidebar() {
   }, [accessToken, pathname, qc]);
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chat-sidebar title/badge');
+      console.log('deps:', {
+        chatsLen: (data?.length ?? 0) as number,
+        pathnameBare: (pathname?.split('?')[0] ?? '') || null,
+        locale: locale ?? null,
+      });
+    }
     const bare = pathname?.split('?')[0] ?? '';
     const parts = bare.split('/').filter(Boolean);
     const activeChatId = parts[0] === 'chats' && parts[1] ? parts[1] : null;

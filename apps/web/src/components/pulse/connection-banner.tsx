@@ -7,6 +7,9 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 
 export function ConnectionBanner() {
+  const DEBUG_EFFECTS =
+    typeof window !== 'undefined' && window.localStorage?.getItem('pulse:debugEffects') === '1';
+
   const t = useT();
   const token = useAuthStore((s) => s.accessToken);
   const wsConnected = useUiStore((s) => s.wsConnected);
@@ -25,7 +28,13 @@ export function ConnectionBanner() {
         <span className="min-w-0 flex-1">{t('wsOfflineBanner')}</span>
         <button
           type="button"
-          onClick={() => reconnectSocket()}
+          onClick={() => {
+            if (DEBUG_EFFECTS) {
+              console.count('[ACTION] connection-banner reconnectSocket()');
+              console.log('deps:', { hasToken: Boolean(token), wsConnected });
+            }
+            reconnectSocket();
+          }}
           className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-[12px] font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25"
         >
           {t('wsReconnect')}

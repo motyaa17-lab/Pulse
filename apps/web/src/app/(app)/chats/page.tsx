@@ -20,6 +20,9 @@ export default function ChatsIndexPage() {
 }
 
 function ChatsIndexContent() {
+  const DEBUG_EFFECTS =
+    typeof window !== 'undefined' && window.localStorage?.getItem('pulse:debugEffects') === '1';
+
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -44,24 +47,52 @@ function ChatsIndexContent() {
   const firstChatType = firstChat?.type ?? null;
 
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chats/page start-param');
+      console.log('deps:', { canQuery, start });
+    }
     const run = async () => {
       if (!canQuery) return;
       if (start) {
         try {
           const chat = await getOrCreateDirectChat(start);
+          if (DEBUG_EFFECTS) {
+            console.count('[ACTION] chats/page invalidate chats');
+            console.log('deps:', { chatId: chat?.id ?? null });
+          }
           void qc.invalidateQueries({ queryKey: ['chats'] });
+          if (DEBUG_EFFECTS) {
+            console.count('[ACTION] chats/page router.replace start');
+            console.log('deps:', { to: `/chats/${chat.id}` });
+          }
           router.replace(`/chats/${chat.id}`);
         } catch {
+          if (DEBUG_EFFECTS) {
+            console.count('[ACTION] chats/page router.replace fallback');
+            console.log('deps:', { to: '/chats' });
+          }
           router.replace('/chats');
         }
         return;
       }
     };
     void run();
-  }, [canQuery, qc, router, start]);
+  }, [DEBUG_EFFECTS, canQuery, qc, router, start]);
 
   // Desktop split-view UX: auto-open the first chat once (never on mobile).
   useEffect(() => {
+    if (DEBUG_EFFECTS) {
+      console.count('[EFFECT] chats/page auto-open-first');
+      console.log('deps:', {
+        canQuery,
+        start,
+        isLoading,
+        didAutoOpenDesktop: didAutoOpenDesktop.current,
+        pathnameBare: (pathname?.split('?')[0] ?? '') || null,
+        firstChatId,
+        firstChatType,
+      });
+    }
     if (!canQuery) return;
     if (start) return;
     if (isLoading) return;
@@ -86,8 +117,12 @@ function ChatsIndexContent() {
     didAutoOpenDesktop.current = true;
     const target = chatHref({ id: firstChatId, type: firstChatType } as any);
     if (target === bare) return;
+    if (DEBUG_EFFECTS) {
+      console.count('[ACTION] chats/page router.replace auto-open-first');
+      console.log('deps:', { from: bare, to: target });
+    }
     router.replace(target);
-  }, [canQuery, firstChatId, firstChatType, isLoading, pathname, router, start]);
+  }, [DEBUG_EFFECTS, canQuery, firstChatId, firstChatType, isLoading, pathname, router, start]);
 
   if (isLoading) {
     return (

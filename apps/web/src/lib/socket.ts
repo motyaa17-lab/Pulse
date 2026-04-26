@@ -54,6 +54,8 @@ function wireSocketLifecycle(s: Socket) {
 }
 
 export function connectSocket(): Socket {
+  const DEBUG =
+    typeof window !== 'undefined' && window.localStorage?.getItem('pulse:debugEffects') === '1';
   const token = useAuthStore.getState().accessToken;
   // Important: keep a single Socket instance.
   // Multiple components call connectSocket() on mount; if we recreate the socket while it's still
@@ -66,6 +68,10 @@ export function connectSocket(): Socket {
     } catch {
       /* ignore */
     }
+    if (DEBUG) {
+      console.count('[SOCKET] connectSocket reuse');
+      console.log('deps:', { hasToken: Boolean(token), connected: Boolean(socket.connected) });
+    }
     wireSocketLifecycle(socket);
     return socket;
   }
@@ -75,6 +81,10 @@ export function connectSocket(): Socket {
     auth: { token },
     autoConnect: Boolean(token),
   });
+  if (DEBUG) {
+    console.count('[SOCKET] connectSocket create');
+    console.log('deps:', { hasToken: Boolean(token), autoConnect: Boolean(token) });
+  }
   wireSocketLifecycle(socket);
   if (presenceTimer) {
     clearInterval(presenceTimer);
@@ -92,6 +102,12 @@ export function connectSocket(): Socket {
 }
 
 export function disconnectSocket() {
+  const DEBUG =
+    typeof window !== 'undefined' && window.localStorage?.getItem('pulse:debugEffects') === '1';
+  if (DEBUG) {
+    console.count('[SOCKET] disconnectSocket');
+    console.log('deps:', { hadSocket: Boolean(socket), connected: Boolean(socket?.connected) });
+  }
   try {
     useUiStore.getState().setWsConnected(null);
   } catch {
@@ -114,6 +130,12 @@ export function disconnectSocket() {
 }
 
 export function reconnectSocket() {
+  const DEBUG =
+    typeof window !== 'undefined' && window.localStorage?.getItem('pulse:debugEffects') === '1';
+  if (DEBUG) {
+    console.count('[SOCKET] reconnectSocket');
+    console.log('deps:', {});
+  }
   disconnectSocket();
   return connectSocket();
 }
