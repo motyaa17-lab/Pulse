@@ -688,16 +688,7 @@ export function ChatSidebar() {
   }, [activeChatId, accessToken, canQuery, qc]);
 
   useEffect(() => {
-    console.count('[EFFECT] title/badge RUN');
-    console.log('deps:', {
-      chatsLen: data?.length ?? 0,
-      unreadTotal,
-      activeChatId,
-      pathnameBare: pathnameBare || null,
-    });
-
-    // TEMP DIAG: disable all title/badge side effects.
-    // React #185 currently triggers immediately after setTitle/setUnreadBadge.
+    // TEMP DIAG: disable the entire title/badge effect (no side effects, no logs).
     return;
 
     // Update title only if it actually changes (avoid storms).
