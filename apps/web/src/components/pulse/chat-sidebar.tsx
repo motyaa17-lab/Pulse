@@ -16,7 +16,7 @@ import { CreateChannelModal } from '@/components/pulse/create-channel-modal';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
-import { connectSocket } from '@/lib/socket';
+// TEMP DIAG: sockets disabled on /chats (see effect below)
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 import { decodeJwtSub } from '@/lib/jwt';
 import { useAuthStore } from '@/stores/auth-store';
@@ -643,15 +643,7 @@ export function ChatSidebar() {
   }, [openMenuId]);
 
   useEffect(() => {
-    console.count('[EFFECT] chat-sidebar socket chat:updated');
-    console.log('deps:', {
-      canQuery,
-      hasToken: Boolean(accessToken),
-      activeChatId,
-      wired: didWireChatUpdatedRef.current,
-    });
-    // TEMP DIAG: disable chat:updated listener entirely to confirm it triggers React #185.
-    // Do not remove connectSocket globally; only this subscription is disabled.
+    // TEMP DIAG: disable ALL socket-related effects and calls from chat sidebar.
     return;
     if (!canQuery) return;
     if (didWireChatUpdatedRef.current) {
@@ -664,7 +656,7 @@ export function ChatSidebar() {
     console.count('[SOCKET] listener add');
     console.log('deps:', { event: 'chat:updated' });
 
-    const s = connectSocket();
+    const s = null as any;
     const onChatUpdated = (payload: unknown) => {
       const p = payload as {
         chatId?: string;
