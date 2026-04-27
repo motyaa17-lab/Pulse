@@ -366,7 +366,9 @@ export function ChatSidebar() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
-  const canQuery = hasHydrated && Boolean(accessToken) && sessionStatus === 'ok';
+  // Diagnostic safety: allow the sidebar list to load on /chats even when AuthGate is bypassed,
+  // so `sessionStatus` may stay 'idle'. Keep it token+hydration only.
+  const canQuery = hasHydrated && Boolean(accessToken);
   const t = useT();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
   const [search, setSearch] = useState('');
@@ -919,9 +921,9 @@ export function ChatSidebar() {
                               try {
                                 const chat = await getOrCreateDirectChat(u.id);
                                 void qc.invalidateQueries({ queryKey: ['chats'] });
-                                router.push(`/chats/${chat.id}`);
+                                console.log('[CHAT CLICK]', chat.id);
                               } catch {
-                                router.push('/chats');
+                                console.log('[CHAT CLICK]', 'direct-chat-create-failed');
                               }
                             }}
                           >
@@ -955,7 +957,7 @@ export function ChatSidebar() {
                             className="block w-full rounded-xl px-2 py-2 text-left transition hover:bg-white/[0.08]"
                             onClick={() => {
                               setSearchFocused(false);
-                              router.push(`/chats/${c.id}`);
+                              console.log('[CHAT CLICK]', c.id);
                             }}
                           >
                             <span className="font-medium text-white">
@@ -978,7 +980,7 @@ export function ChatSidebar() {
                             className="block w-full rounded-xl px-2 py-2 text-left transition hover:bg-white/[0.08]"
                             onClick={() => {
                               setSearchFocused(false);
-                              router.push(`/chats/${m.chatId}?highlight=${m.id}`);
+                              console.log('[CHAT CLICK]', m.chatId);
                             }}
                           >
                             <div className="text-[13px] text-white/90">
@@ -1227,7 +1229,7 @@ export function ChatSidebar() {
         onClose={() => setGroupModalOpen(false)}
         onCreated={(id) => {
           setGroupModalOpen(false);
-          router.push(`/chats/${id}`);
+          console.log('[CHAT CLICK]', id);
         }}
       />
       <CreateChannelModal
@@ -1235,7 +1237,7 @@ export function ChatSidebar() {
         onClose={() => setChannelModalOpen(false)}
         onCreated={(id) => {
           setChannelModalOpen(false);
-          router.push(`/chats/${id}`);
+          console.log('[CHAT CLICK]', id);
         }}
       />
     </aside>
