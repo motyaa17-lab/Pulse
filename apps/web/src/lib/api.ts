@@ -109,51 +109,26 @@ type ApiInit = Omit<RequestInit, 'body'> & {
 };
 
 export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T> {
-  const { skipAuth, ...rest } = init;
+  const { skipAuth, body, ...rest } = init;
+
   const headers = new Headers(rest.headers);
   if (!skipAuth) {
     const token = useAuthStore.getState().accessToken;
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    const sid = useAuthStore.getState().sessionId;
-    if (sid) headers.set('x-session-fingerprint', sid);
   }
-  let payload: BodyInit | undefined = rest.body as BodyInit | undefined;
-  if (payload !== undefined && payload !== null && !(payload instanceof FormData)) {
-    if (
-      typeof payload === 'object' &&
-      !(payload instanceof Blob) &&
-      !(payload instanceof ArrayBuffer)
-    ) {
-      payload = JSON.stringify(payload);
-    }
-    if (!headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
-    }
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
-  const origin = effectiveApiBase();
-  let res = await fetch(`${origin}${path}`, { ...rest, body: payload, headers });
-  if (res.status === 401 && !skipAuth) {
-    const next = await refreshAccess();
-    if (next) {
-      headers.set('Authorization', `Bearer ${next}`);
-      res = await fetch(`${origin}${path}`, { ...rest, body: payload, headers });
-    }
+
+  let payload: BodyInit | undefined;
+  if (body !== undefined && body !== null) {
+    payload = typeof body === 'object' && !(body instanceof FormData) ? JSON.stringify(body) : body;
   }
-  const text = await res.text();
-  let json: unknown = null;
-  if (text) {
-    try {
-      json = JSON.parse(text);
-    } catch {
-      json = { raw: text };
-    }
-  }
+
+  const origin = API_URL;
+  const res = await fetch(`${origin}${path}`, { ...rest, body: payload, headers });
   if (!res.ok) {
-    const msg =
-      typeof json === 'object' && json !== null && 'message' in json
-        ? String((json as { message: unknown }).message)
-        : res.statusText;
-    throw new ApiError(res.status, msg, json);
+    throw new Error(`HTTP ${res.status}`);
   }
-  return json as T;
+  return (await res.json()) as T;
 }

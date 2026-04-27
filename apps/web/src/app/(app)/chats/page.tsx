@@ -3,8 +3,8 @@
 import { Suspense } from 'react';
 import { ChatsOpeningFallback } from '@/components/pulse/chats-opening-fallback';
 import { useT } from '@/lib/i18n';
-import { API_URL } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { apiFetch } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 
 export default function ChatsIndexPage() {
@@ -20,16 +20,8 @@ function ChatsIndexContent() {
   const token = useAuthStore((s) => s.accessToken);
 
   const { data, isLoading, isError, error } = useQuery<unknown[]>({
-    queryKey: ['chats-raw-fetch'],
-    queryFn: async () => {
-      const res = await fetch(`${API_URL}/chats`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      return (await res.json()) as unknown[];
-    },
+    queryKey: ['chats-apiFetch'],
+    queryFn: async () => apiFetch<unknown[]>('/chats'),
     enabled: Boolean(token),
     retry: false,
     refetchOnMount: false,
