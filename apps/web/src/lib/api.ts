@@ -128,7 +128,8 @@ export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T> 
   const origin = API_URL;
   const res = await fetch(`${origin}${path}`, { ...rest, body: payload, headers });
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    // Diagnostic: keep errors simple and deterministic (no refresh/retry/redirects).
+    throw new ApiError(res.status, `HTTP ${res.status}`);
   }
   return (await res.json()) as T;
 }

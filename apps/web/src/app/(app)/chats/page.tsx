@@ -5,6 +5,7 @@ import { ChatsOpeningFallback } from '@/components/pulse/chats-opening-fallback'
 import { useT } from '@/lib/i18n';
 import { useAuthStore } from '@/stores/auth-store';
 import { apiFetch } from '@/lib/api';
+import type { ChatListItem } from '@/lib/types';
 import { useQuery } from '@tanstack/react-query';
 
 export default function ChatsIndexPage() {
@@ -19,9 +20,9 @@ function ChatsIndexContent() {
   const t = useT();
   const token = useAuthStore((s) => s.accessToken);
 
-  const { data, isLoading, isError, error } = useQuery<unknown[]>({
+  const { data, isLoading, isError, error } = useQuery<ChatListItem[]>({
     queryKey: ['chats-apiFetch'],
-    queryFn: async () => apiFetch<unknown[]>('/chats'),
+    queryFn: async () => apiFetch<ChatListItem[]>('/chats'),
     enabled: Boolean(token),
     retry: false,
     refetchOnMount: false,
@@ -30,7 +31,7 @@ function ChatsIndexContent() {
     gcTime: Number.POSITIVE_INFINITY,
   });
 
-  const count = Array.isArray(data) ? data.length : 0;
+  const rows = data ?? [];
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
@@ -42,7 +43,15 @@ function ChatsIndexContent() {
         {isError ? (
           <div>Error: {error instanceof Error ? error.message : 'Failed to load chats'}</div>
         ) : null}
-        {!isLoading && !isError ? <div>Chats count: {count}</div> : null}
+        {!isLoading && !isError ? (
+          <div className="space-y-1">
+            {rows.map((c) => (
+              <div key={c.id}>
+                {(c.title ?? c.peer?.displayName ?? c.peer?.username ?? '(no name)') + ' — ' + c.id}
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
