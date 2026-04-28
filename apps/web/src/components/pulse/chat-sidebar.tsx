@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 import { SafeAvatar } from '@/components/pulse/safe-avatar';
 import type { ChatListItem } from '@/lib/types';
 import { cn } from '@/lib/cn';
@@ -366,8 +366,6 @@ export function ChatSidebar() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
-  // Diagnostic safety: allow the sidebar list to load on /chats even when AuthGate is bypassed,
-  // so `sessionStatus` may stay 'idle'. Keep it token+hydration only.
   const canQuery = hasHydrated && Boolean(accessToken);
   const t = useT();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
@@ -393,11 +391,26 @@ export function ChatSidebar() {
   // Reserved for future interactions (e.g., measuring story strip), currently unused.
   const listScrollRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading } = useQuery<ChatListItem[]>({
-    queryKey: ['chats'],
+  const {
+    data,
+    isLoading,
+    isError: isChatsError,
+    error: chatsError,
+  } = useQuery<ChatListItem[]>({
+    queryKey: ['sidebar-chats'],
     queryFn: () => apiFetch<ChatListItem[]>('/chats'),
     enabled: canQuery,
+    retry: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
   });
+
+  const isUnauthorized =
+    isChatsError &&
+    chatsError instanceof ApiError &&
+    (chatsError.status === 401 || chatsError.status === 403);
 
   const { data: globalSearch, isFetching: globalSearchFetching } = useQuery<SearchResult>({
     queryKey: ['search', debouncedSearch],
@@ -559,7 +572,7 @@ export function ChatSidebar() {
       apiFetch<{ ok: boolean }>(`/chats/${chatId}/hide-from-list`, { method: 'POST' }),
     onSuccess: (_res: { ok: boolean }, chatId: string) => {
       qc.setQueriesData<ChatListItem[]>(
-        { queryKey: ['chats'] },
+        { queryKey: ['sidebar-chats'] },
         (old: ChatListItem[] | undefined) => (old ? old.filter((c) => c.id !== chatId) : old),
       );
       setOpenMenuId(null);
@@ -572,7 +585,7 @@ export function ChatSidebar() {
       apiFetch<{ ok: boolean }>(`/chats/${chatId}/pin`, { method: 'POST', body: { on } }),
     onSuccess: (_res: { ok: boolean }, vars: { chatId: string; on: boolean }) => {
       qc.setQueriesData<ChatListItem[]>(
-        { queryKey: ['chats'] },
+        { queryKey: ['sidebar-chats'] },
         (old: ChatListItem[] | undefined) => {
           if (!old) return old;
           const next = old.map((c) => (c.id === vars.chatId ? { ...c, isPinned: vars.on } : c));
@@ -592,7 +605,7 @@ export function ChatSidebar() {
       apiFetch<{ ok: boolean }>(`/chats/${chatId}/archive`, { method: 'POST', body: { on } }),
     onSuccess: (_res: { ok: boolean }, vars: { chatId: string; on: boolean }) => {
       qc.setQueriesData<ChatListItem[]>(
-        { queryKey: ['chats'] },
+        { queryKey: ['sidebar-chats'] },
         (old: ChatListItem[] | undefined) => {
           if (!old) return old;
           const next = old.map((c) => (c.id === vars.chatId ? { ...c, isArchived: vars.on } : c));
@@ -618,7 +631,7 @@ export function ChatSidebar() {
       }),
     onSuccess: (_res: { ok: boolean }, vars: { chatId: string; on: boolean }) => {
       qc.setQueriesData<ChatListItem[]>(
-        { queryKey: ['chats'] },
+        { queryKey: ['sidebar-chats'] },
         (old: ChatListItem[] | undefined) => {
           if (!old) return old;
           return old.map((c) => (c.id === vars.chatId ? { ...c, isMuted: vars.on } : c));
@@ -920,7 +933,7 @@ export function ChatSidebar() {
                               setSearchFocused(false);
                               try {
                                 const chat = await getOrCreateDirectChat(u.id);
-                                void qc.invalidateQueries({ queryKey: ['chats'] });
+                                void qc.invalidateQueries({ queryKey: ['sidebar-chats'] });
                                 console.log('[CHAT CLICK]', chat.id);
                               } catch {
                                 console.log('[CHAT CLICK]', 'direct-chat-create-failed');
