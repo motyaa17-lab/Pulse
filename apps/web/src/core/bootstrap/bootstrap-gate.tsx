@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCoreAuthStore } from '@/core/state/core-auth-store';
 import { CoreApiError, coreApiFetch } from '@/core/api/core-api';
 
 export function BootstrapGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isCore = pathname === '/core' || pathname.startsWith('/core/');
   const hasHydrated = useCoreAuthStore((s) => s.hasHydrated);
   const token = useCoreAuthStore((s) => s.accessToken);
@@ -101,7 +102,11 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (!token) return <>{children}</>;
+  if (!token) {
+    // Core protected area without token: always go to core login.
+    router.replace('/core/login');
+    return null;
+  }
 
   if (status === 'checking') {
     return (
