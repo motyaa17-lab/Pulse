@@ -92,8 +92,12 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If on core login route, never block the UI.
+  // If on core login/signup route, never block the UI.
   if (pathname.startsWith('/core/login') || pathname.startsWith('/core/signup')) {
+    // If already authenticated, the page should navigate away; we just avoid rendering a blocker.
+    if (token && status === 'ok') {
+      console.log('[CORE AUTH REDIRECT BLOCKED] authenticated on auth route', { pathname });
+    }
     return <>{children}</>;
   }
 
@@ -117,5 +121,8 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (status === 'ok') {
+    console.log('[CORE BOOTSTRAP OK] render children');
+  }
   return <>{children}</>;
 }

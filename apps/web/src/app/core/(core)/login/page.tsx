@@ -53,7 +53,8 @@ function LoginForm() {
         skipAuth: true,
       });
       setTokens({ accessToken: res.accessToken });
-      router.replace(next ?? '/core/chats');
+      console.log('[CORE LOGIN SUCCESS] navigating /core/chats');
+      router.replace('/core/chats');
     } catch {
       setError('root', { message: t('loginErrorCredentials') });
     }
@@ -129,7 +130,8 @@ function LoginForm() {
         {t('authSignupPrompt')}{' '}
         <Link
           className="font-medium text-white underline-offset-4 hover:underline"
-          href={next ? `/core/signup?next=${encodeURIComponent(next)}` : '/core/signup'}
+          href="/signup"
+          prefetch={false}
         >
           {t('authCreateAccount')}
         </Link>
