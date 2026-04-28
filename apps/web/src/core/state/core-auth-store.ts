@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type CoreAuthStatus = 'idle' | 'checking' | 'ok' | 'error';
+export type CoreAuthStatus = 'idle' | 'checking' | 'ok' | 'error' | 'unauthenticated';
 
 export type CoreAuthState = {
   accessToken: string | null;
@@ -42,9 +42,10 @@ export const useCoreAuthStore = create<CoreAuthState>()(
       },
       clear: () => {
         set((s) => {
-          if (s.accessToken === null && s.status === 'idle' && s.error === null) return s;
+          if (s.accessToken === null && s.status === 'unauthenticated' && s.error === null)
+            return s;
           console.log('[AUTH STORE REAL UPDATE] core clear');
-          return { ...s, accessToken: null, status: 'idle', error: null };
+          return { ...s, accessToken: null, status: 'unauthenticated', error: null };
         });
       },
     }),
