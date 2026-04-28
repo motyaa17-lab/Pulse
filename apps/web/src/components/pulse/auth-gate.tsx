@@ -1,11 +1,12 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef } from 'react';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 const checkedTokenStamps = new Set<string>();
+const clearedTokenStamps = new Set<string>();
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -18,52 +19,26 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function AuthGateInner({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
   const token = useAuthStore((s) => s.accessToken);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
-  const sessionCheckDone = useRef(false);
-  const didRedirectLoginRef = useRef(false);
+  const checkedTokensRef = useRef<Set<string>>(new Set());
 
-  const stamp = useMemo(() => {
-    return token ? token.slice(0, 16) : refreshToken ? refreshToken.slice(0, 16) : 'anon';
-  }, [token, refreshToken]);
+  const stamp = useMemo(() => (token ? token.slice(0, 16) : 'anon'), [token]);
   const sessionDoneKey = useMemo(() => `pulse:sessionChecked:${stamp}`, [stamp]);
 
-  // If auth tokens change (login/logout/switch), allow session check to run again.
-  useEffect(() => {
-    sessionCheckDone.current = false;
-    didRedirectLoginRef.current = false;
-    checkedTokenStamps.delete(stamp);
-    try {
-      if (typeof window !== 'undefined') window.sessionStorage.removeItem(sessionDoneKey);
-    } catch {
-      /* ignore */
-    }
-  }, [token, refreshToken, sessionDoneKey, stamp]);
-
+  // Fully one-shot validation: depends only on hydration + current token-stamp.
   useEffect(() => {
     if (!hasHydrated) return;
-    const publicPaths = ['/login', '/signup', '/onboarding'];
-    if (!token && !refreshToken && !publicPaths.includes(pathname)) {
-      console.log('[pulse-bootstrap] AuthGate: no token → /login', { pathname });
-      if (pathname !== '/login') router.replace('/login');
-      return;
-    }
-  }, [hasHydrated, token, refreshToken, pathname, router]);
-
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (!token && !refreshToken) return;
-    if (sessionCheckDone.current) return;
-    if (sessionStatus === 'checking' || sessionStatus === 'ok') return;
+    if (!token) return;
+    if (sessionStatus === 'ok') return;
 
     try {
       if (typeof window !== 'undefined' && window.sessionStorage.getItem(sessionDoneKey) === '1') {
         console.log('[AUTHGATE SKIP SAME TOKEN]', { stamp, reason: 'sessionStorage' });
-        sessionCheckDone.current = true;
+        checkedTokensRef.current.add(stamp);
         checkedTokenStamps.add(stamp);
         return;
       }
@@ -71,18 +46,19 @@ function AuthGateInner({ children }: { children: React.ReactNode }) {
       /* ignore */
     }
 
-    if (checkedTokenStamps.has(stamp)) {
+    if (checkedTokensRef.current.has(stamp) || checkedTokenStamps.has(stamp)) {
       console.log('[AUTHGATE SKIP SAME TOKEN]', { stamp, reason: 'moduleSet' });
-      sessionCheckDone.current = true;
+      checkedTokensRef.current.add(stamp);
       return;
     }
 
-    sessionCheckDone.current = true;
     let cancelled = false;
 
     console.log('[AUTHGATE VALIDATE]', { stamp, pathname });
-    useAuthStore.getState().setSessionStatus('checking', null);
+    checkedTokensRef.current.add(stamp);
     checkedTokenStamps.add(stamp);
+    // Idempotent due to store guards.
+    useAuthStore.getState().setSessionStatus('checking', null);
 
     void (async () => {
       let nextStatus: 'ok' | 'error' = 'error';
@@ -118,13 +94,12 @@ function AuthGateInner({ children }: { children: React.ReactNode }) {
 
         const err = e instanceof ApiError ? e : null;
         if (err && (err.status === 401 || err.status === 403)) {
-          console.warn('[pulse-bootstrap] AuthGate: session invalid → clear + /login');
+          console.warn('[pulse-bootstrap] AuthGate: session invalid → clear');
           nextStatus = 'error';
           nextError = 'Сессия истекла. Войдите снова.';
-          useAuthStore.getState().clear();
-          if (!didRedirectLoginRef.current && pathname !== '/login') {
-            didRedirectLoginRef.current = true;
-            router.replace('/login');
+          if (!clearedTokenStamps.has(stamp)) {
+            clearedTokenStamps.add(stamp);
+            useAuthStore.getState().clear();
           }
           return;
         }
@@ -139,7 +114,7 @@ function AuthGateInner({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [hasHydrated, token, refreshToken, sessionStatus, router, pathname]);
+  }, [hasHydrated, token, stamp, sessionDoneKey, sessionStatus]);
 
   // Critical: avoid mounting the full app while we are still validating session.
   // Otherwise, many screens mount and fire React Query subscriptions in parallel,

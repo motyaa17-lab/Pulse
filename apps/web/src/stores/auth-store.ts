@@ -53,11 +53,27 @@ export const useAuthStore = create<AuthState>()(
             (prevAcc?.sessionId ?? null) === nextSessionId;
           if (tokensUnchanged) return s;
 
-          console.log('[AUTH STORE SET] setTokens', {
+          console.log('[AUTH STORE REAL UPDATE] setTokens', {
             id,
             accessTokenStart: accessToken.slice(0, 12),
             accessTokenLen: accessToken.length,
           });
+
+          const nextAccounts =
+            prevAcc &&
+            prevAcc.accessToken === accessToken &&
+            prevAcc.refreshToken === refreshToken &&
+            (prevAcc.sessionId ?? null) === nextSessionId
+              ? s.accounts
+              : {
+                  ...s.accounts,
+                  [id]: {
+                    accessToken,
+                    refreshToken,
+                    sessionId: nextSessionId,
+                    updatedAt: Date.now(),
+                  },
+                };
 
           return {
             ...s,
@@ -65,15 +81,7 @@ export const useAuthStore = create<AuthState>()(
             refreshToken,
             sessionId: nextSessionId,
             activeAccountId: id,
-            accounts: {
-              ...s.accounts,
-              [id]: {
-                accessToken,
-                refreshToken,
-                sessionId: nextSessionId,
-                updatedAt: Date.now(),
-              },
-            },
+            accounts: nextAccounts,
           };
         });
         const cur = useAuthStore.getState().accessToken;
@@ -84,7 +92,7 @@ export const useAuthStore = create<AuthState>()(
           const acc = s.accounts[accountId];
           if (!acc) return s;
           if (s.activeAccountId === accountId && s.accessToken === acc.accessToken) return s;
-          console.log('[AUTH STORE SET] switchAccount', { accountId });
+          console.log('[AUTH STORE REAL UPDATE] switchAccount', { accountId });
           void syncAccessTokenCookie(acc.accessToken);
           return {
             ...s,
@@ -103,7 +111,7 @@ export const useAuthStore = create<AuthState>()(
           delete next[accountId];
           const wasActive = s.activeAccountId === accountId;
           if (!wasActive) return { ...s, accounts: next };
-          console.log('[AUTH STORE SET] removeAccount(active)', { accountId });
+          console.log('[AUTH STORE REAL UPDATE] removeAccount(active)', { accountId });
           void syncAccessTokenCookie(null);
           return {
             ...s,
@@ -121,7 +129,7 @@ export const useAuthStore = create<AuthState>()(
         const nextErr = err ?? null;
         set((s) => {
           if (s.sessionStatus === sessionStatus && s.sessionError === nextErr) return s;
-          console.log('[AUTH STORE SET] setSessionStatus', {
+          console.log('[AUTH STORE REAL UPDATE] setSessionStatus', {
             from: s.sessionStatus,
             to: sessionStatus,
             err: nextErr,
@@ -142,7 +150,7 @@ export const useAuthStore = create<AuthState>()(
           ) {
             return s;
           }
-          console.log('[AUTH STORE SET] clear');
+          console.log('[AUTH STORE REAL UPDATE] clear');
           return {
             ...s,
             accessToken: null,
