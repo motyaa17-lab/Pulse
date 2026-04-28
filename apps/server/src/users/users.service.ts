@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { ChatType, MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +16,20 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly presence: PresenceService,
   ) {}
+
+  private async withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+    const timeoutErr = new Error(`TIMEOUT:${label}`);
+    const t = new Promise<never>((_, reject) => setTimeout(() => reject(timeoutErr), ms));
+    try {
+      return await Promise.race([p, t]);
+    } catch (e) {
+      if (e instanceof Error && e.message === `TIMEOUT:${label}`) {
+        console.warn('[USERS TIMEOUT]', { label, ms });
+        throw new ServiceUnavailableException('Upstream timeout');
+      }
+      throw e;
+    }
+  }
 
   async getOrCreateSavedChat(userId: string) {
     const existing = await this.prisma.chatMember.findFirst({
@@ -34,43 +53,60 @@ export class UsersService {
   }
 
   async getById(id: string, viewerId?: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        displayName: true,
-        bio: true,
-        avatarUrl: true,
-        lastSeenAt: true,
-        shareLastSeen: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        notificationPrefs: {
-          select: {
-            soundEnabled: true,
-            desktopEnabled: true,
-            showPreview: true,
-            mentionOnlyInChannels: true,
+    const reqId = Math.random().toString(16).slice(2, 10);
+    console.log('[ME FLOW] getById start', { reqId, id, viewerId });
+    const user = await this.withTimeout(
+      this.prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          displayName: true,
+          bio: true,
+          avatarUrl: true,
+          lastSeenAt: true,
+          shareLastSeen: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+          notificationPrefs: {
+            select: {
+              soundEnabled: true,
+              desktopEnabled: true,
+              showPreview: true,
+              mentionOnlyInChannels: true,
+            },
           },
         },
-      },
-    });
+      }),
+      5000,
+      'prisma.user.findUnique(users/me)',
+    );
+    console.log('[ME FLOW] prisma done', { reqId, found: Boolean(user) });
     if (!user) throw new NotFoundException();
-    const online = await this.presence.isUserOnline(id);
+    console.log('[ME FLOW] presence start', { reqId });
+    const online = await this.withTimeout(
+      this.presence.isUserOnline(id),
+      1500,
+      'presence.isUserOnline(users/me)',
+    );
+    console.log('[ME FLOW] presence done', { reqId, online });
     if (viewerId !== id) {
       const { email: _e, shareLastSeen, role: _role, notificationPrefs: _np, ...publicUser } = user;
       const showSeen = shareLastSeen;
-      return {
+      const out = {
         ...publicUser,
         lastSeenAt: showSeen ? user.lastSeenAt : null,
         lastSeenVisible: showSeen,
         isOnline: online,
       };
+      console.log('[ME FLOW] getById return public', { reqId });
+      return out;
     }
-    return { ...user, isOnline: online };
+    const out = { ...user, isOnline: online };
+    console.log('[ME FLOW] getById return me', { reqId });
+    return out;
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {

@@ -20,8 +20,13 @@ import { PresenceService } from './presence.service';
 
         const url = config.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
         const client = new Redis(url, {
-          maxRetriesPerRequest: null,
+          // Never let HTTP requests hang forever on Redis.
+          // If Redis is down/unreachable, commands should fail fast and presence becomes a no-op.
+          maxRetriesPerRequest: 1,
           lazyConnect: true,
+          enableOfflineQueue: false,
+          connectTimeout: 2000,
+          commandTimeout: 1500,
         });
         client.on('error', () => {
           // swallow: Redis is optional in dev without Docker

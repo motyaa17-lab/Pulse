@@ -18,6 +18,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   validate(payload: JwtPayload): JwtUser {
+    console.log('[ME FLOW] jwt validate', {
+      hasSub: Boolean(payload?.sub),
+      sub: payload?.sub ?? null,
+      email: payload?.email ?? null,
+      username: payload?.username ?? null,
+    });
     if (!payload?.sub) throw new UnauthorizedException();
     return {
       sub: payload.sub,

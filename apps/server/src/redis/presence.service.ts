@@ -18,9 +18,26 @@ export class PresenceService {
     return !this.redis;
   }
 
+  private async safeRedis<T>(op: () => Promise<T>, fallback: T, label: string): Promise<T> {
+    if (this.isDisabled()) return fallback;
+    try {
+      return await op();
+    } catch (e) {
+      // Redis is optional; never block HTTP on it.
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[PRESENCE REDIS ERROR]', { label, message: msg });
+      return fallback;
+    }
+  }
+
   async setOnline(userId: string): Promise<void> {
-    if (this.isDisabled()) return;
-    await this.redis!.set(PRESENCE_KEY(userId), '1', 'EX', ONLINE_TTL_SEC);
+    await this.safeRedis(
+      async () => {
+        await this.redis!.set(PRESENCE_KEY(userId), '1', 'EX', ONLINE_TTL_SEC);
+      },
+      undefined,
+      'setOnline',
+    );
   }
 
   async refreshOnline(userId: string): Promise<void> {
@@ -28,14 +45,24 @@ export class PresenceService {
   }
 
   async setOffline(userId: string): Promise<void> {
-    if (this.isDisabled()) return;
-    await this.redis!.del(PRESENCE_KEY(userId));
+    await this.safeRedis(
+      async () => {
+        await this.redis!.del(PRESENCE_KEY(userId));
+      },
+      undefined,
+      'setOffline',
+    );
   }
 
   async isUserOnline(userId: string): Promise<boolean> {
-    if (this.isDisabled()) return false;
-    const v = await this.redis!.get(PRESENCE_KEY(userId));
-    return v === '1';
+    return await this.safeRedis(
+      async () => {
+        const v = await this.redis!.get(PRESENCE_KEY(userId));
+        return v === '1';
+      },
+      false,
+      'isUserOnline',
+    );
   }
 
   async areUsersOnline(userIds: string[]): Promise<Record<string, boolean>> {
@@ -45,15 +72,21 @@ export class PresenceService {
       for (const id of userIds) out[id] = false;
       return out;
     }
-    const pipe = this.redis!.pipeline();
-    for (const id of userIds) pipe.exists(PRESENCE_KEY(id));
-    const res = await pipe.exec();
-    const out: Record<string, boolean> = {};
-    userIds.forEach((id, i) => {
-      const row = res?.[i];
-      out[id] = Boolean(row && row[1] === 1);
-    });
-    return out;
+    return await this.safeRedis(
+      async () => {
+        const pipe = this.redis!.pipeline();
+        for (const id of userIds) pipe.exists(PRESENCE_KEY(id));
+        const res = await pipe.exec();
+        const out: Record<string, boolean> = {};
+        userIds.forEach((id, i) => {
+          const row = res?.[i];
+          out[id] = Boolean(row && row[1] === 1);
+        });
+        return out;
+      },
+      Object.fromEntries(userIds.map((id) => [id, false])),
+      'areUsersOnline',
+    );
   }
 
   async setTyping(chatId: string, userId: string, ttlSec = 6): Promise<void> {
@@ -65,8 +98,14 @@ export class PresenceService {
       // best-effort GC: drop empty maps on next clear/get
       return;
     }
-    await this.redis!.hset(TYPING_KEY(chatId), userId, String(Date.now()));
-    await this.redis!.expire(TYPING_KEY(chatId), ttlSec);
+    await this.safeRedis(
+      async () => {
+        await this.redis!.hset(TYPING_KEY(chatId), userId, String(Date.now()));
+        await this.redis!.expire(TYPING_KEY(chatId), ttlSec);
+      },
+      undefined,
+      'setTyping',
+    );
   }
 
   async clearTyping(chatId: string, userId: string): Promise<void> {
@@ -78,7 +117,13 @@ export class PresenceService {
       if (m.size === 0) this.typingMem.delete(key);
       return;
     }
-    await this.redis!.hdel(TYPING_KEY(chatId), userId);
+    await this.safeRedis(
+      async () => {
+        await this.redis!.hdel(TYPING_KEY(chatId), userId);
+      },
+      undefined,
+      'clearTyping',
+    );
   }
 
   async getTypingUserIds(chatId: string, maxAgeMs = 5000): Promise<string[]> {
@@ -93,10 +138,16 @@ export class PresenceService {
       if (m.size === 0) this.typingMem.delete(key);
       return [...m.keys()];
     }
-    const map = await this.redis!.hgetall(TYPING_KEY(chatId));
-    const now = Date.now();
-    return Object.entries(map)
-      .filter(([, ts]) => now - Number(ts) < maxAgeMs)
-      .map(([uid]) => uid);
+    return await this.safeRedis(
+      async () => {
+        const map = await this.redis!.hgetall(TYPING_KEY(chatId));
+        const now = Date.now();
+        return Object.entries(map)
+          .filter(([, ts]) => now - Number(ts) < maxAgeMs)
+          .map(([uid]) => uid);
+      },
+      [],
+      'getTypingUserIds',
+    );
   }
 }
