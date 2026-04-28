@@ -40,27 +40,51 @@ export const useAuthStore = create<AuthState>()(
       sessionError: null,
       setTokens: ({ accessToken, refreshToken, sessionId }) => {
         const id = decodeJwtSub(accessToken) ?? accessToken.slice(0, 16);
-        set((s) => ({
-          accessToken,
-          refreshToken,
-          sessionId: sessionId ?? null,
-          activeAccountId: id,
-          accounts: {
-            ...s.accounts,
-            [id]: {
-              accessToken,
-              refreshToken,
-              sessionId: sessionId ?? null,
-              updatedAt: Date.now(),
+        const nextSessionId = sessionId ?? null;
+        set((s) => {
+          const prevAcc = s.accounts[id];
+          const tokensUnchanged =
+            s.accessToken === accessToken &&
+            s.refreshToken === refreshToken &&
+            s.sessionId === nextSessionId &&
+            s.activeAccountId === id &&
+            prevAcc?.accessToken === accessToken &&
+            prevAcc?.refreshToken === refreshToken &&
+            (prevAcc?.sessionId ?? null) === nextSessionId;
+          if (tokensUnchanged) return s;
+
+          console.log('[AUTH STORE SET] setTokens', {
+            id,
+            accessTokenStart: accessToken.slice(0, 12),
+            accessTokenLen: accessToken.length,
+          });
+
+          return {
+            ...s,
+            accessToken,
+            refreshToken,
+            sessionId: nextSessionId,
+            activeAccountId: id,
+            accounts: {
+              ...s.accounts,
+              [id]: {
+                accessToken,
+                refreshToken,
+                sessionId: nextSessionId,
+                updatedAt: Date.now(),
+              },
             },
-          },
-        }));
-        void syncAccessTokenCookie(accessToken);
+          };
+        });
+        const cur = useAuthStore.getState().accessToken;
+        if (cur === accessToken) void syncAccessTokenCookie(accessToken);
       },
       switchAccount: (accountId) => {
         set((s) => {
           const acc = s.accounts[accountId];
           if (!acc) return s;
+          if (s.activeAccountId === accountId && s.accessToken === acc.accessToken) return s;
+          console.log('[AUTH STORE SET] switchAccount', { accountId });
           void syncAccessTokenCookie(acc.accessToken);
           return {
             ...s,
@@ -79,6 +103,7 @@ export const useAuthStore = create<AuthState>()(
           delete next[accountId];
           const wasActive = s.activeAccountId === accountId;
           if (!wasActive) return { ...s, accounts: next };
+          console.log('[AUTH STORE SET] removeAccount(active)', { accountId });
           void syncAccessTokenCookie(null);
           return {
             ...s,
@@ -96,6 +121,11 @@ export const useAuthStore = create<AuthState>()(
         const nextErr = err ?? null;
         set((s) => {
           if (s.sessionStatus === sessionStatus && s.sessionError === nextErr) return s;
+          console.log('[AUTH STORE SET] setSessionStatus', {
+            from: s.sessionStatus,
+            to: sessionStatus,
+            err: nextErr,
+          });
           return { ...s, sessionStatus, sessionError: nextErr };
         });
       },
@@ -112,6 +142,7 @@ export const useAuthStore = create<AuthState>()(
           ) {
             return s;
           }
+          console.log('[AUTH STORE SET] clear');
           return {
             ...s,
             accessToken: null,

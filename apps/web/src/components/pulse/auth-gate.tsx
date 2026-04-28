@@ -1,9 +1,11 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ApiError, apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+
+const checkedTokenStamps = new Set<string>();
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,38 +25,24 @@ function AuthGateInner({ children }: { children: React.ReactNode }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionCheckDone = useRef(false);
-  const sessionStampRef = useRef<string | null>(null);
   const didRedirectLoginRef = useRef(false);
 
-  const sessionDoneKey = (() => {
-    // Stable key to survive component remounts across route transitions.
-    const stamp = token ? token.slice(0, 16) : refreshToken ? refreshToken.slice(0, 16) : 'anon';
-    sessionStampRef.current = stamp;
-    return `pulse:sessionChecked:${stamp}`;
-  })();
+  const stamp = useMemo(() => {
+    return token ? token.slice(0, 16) : refreshToken ? refreshToken.slice(0, 16) : 'anon';
+  }, [token, refreshToken]);
+  const sessionDoneKey = useMemo(() => `pulse:sessionChecked:${stamp}`, [stamp]);
 
   // If auth tokens change (login/logout/switch), allow session check to run again.
   useEffect(() => {
     sessionCheckDone.current = false;
     didRedirectLoginRef.current = false;
+    checkedTokenStamps.delete(stamp);
     try {
       if (typeof window !== 'undefined') window.sessionStorage.removeItem(sessionDoneKey);
     } catch {
       /* ignore */
     }
-  }, [token, refreshToken]);
-
-  // Allow a user-driven retry: some UI can set sessionStatus back to 'idle'.
-  useEffect(() => {
-    if (sessionStatus !== 'idle') return;
-    sessionCheckDone.current = false;
-    didRedirectLoginRef.current = false;
-    try {
-      if (typeof window !== 'undefined') window.sessionStorage.removeItem(sessionDoneKey);
-    } catch {
-      /* ignore */
-    }
-  }, [sessionStatus, sessionDoneKey]);
+  }, [token, refreshToken, sessionDoneKey, stamp]);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -74,18 +62,27 @@ function AuthGateInner({ children }: { children: React.ReactNode }) {
 
     try {
       if (typeof window !== 'undefined' && window.sessionStorage.getItem(sessionDoneKey) === '1') {
+        console.log('[AUTHGATE SKIP SAME TOKEN]', { stamp, reason: 'sessionStorage' });
         sessionCheckDone.current = true;
+        checkedTokenStamps.add(stamp);
         return;
       }
     } catch {
       /* ignore */
     }
 
+    if (checkedTokenStamps.has(stamp)) {
+      console.log('[AUTHGATE SKIP SAME TOKEN]', { stamp, reason: 'moduleSet' });
+      sessionCheckDone.current = true;
+      return;
+    }
+
     sessionCheckDone.current = true;
     let cancelled = false;
 
+    console.log('[AUTHGATE VALIDATE]', { stamp, pathname });
     useAuthStore.getState().setSessionStatus('checking', null);
-    console.log('[pulse-bootstrap] AuthGate: validating session (/users/me)');
+    checkedTokenStamps.add(stamp);
 
     void (async () => {
       let nextStatus: 'ok' | 'error' = 'error';
