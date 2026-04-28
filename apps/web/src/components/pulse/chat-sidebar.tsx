@@ -369,6 +369,15 @@ export function ChatSidebar() {
   const canQuery = hasHydrated && Boolean(accessToken);
   const t = useT();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
+
+  useEffect(() => {
+    console.log('[SIDEBAR AUTH DEBUG]', {
+      hasHydrated,
+      hasToken: Boolean(accessToken),
+      tokenStart: accessToken ? accessToken.slice(0, 12) : null,
+      tokenLen: accessToken?.length ?? 0,
+    });
+  }, [hasHydrated, accessToken]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 220);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1124,6 +1133,9 @@ export function ChatSidebar() {
               />
             </button>
           )}
+          {!isLoading && isUnauthorized && (
+            <div className="px-3 py-2 text-[13px] text-white/60">Нужно войти заново</div>
+          )}
           {isLoading && (
             <div className="space-y-2 px-2">
               {[1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -1145,7 +1157,7 @@ export function ChatSidebar() {
                 onReorder={(next: ChatListItem[]) => {
                   // Optimistically reorder locally in cache.
                   qc.setQueriesData<ChatListItem[]>(
-                    { queryKey: ['chats'] },
+                    { queryKey: ['sidebar-chats'] },
                     (old: ChatListItem[] | undefined) => {
                       if (!old) return old;
                       const pinnedIds = new Set(next.map((x) => x.id));
