@@ -5,8 +5,11 @@ import { useUiStore } from '@/stores/ui-store';
 import { reconnectSocket } from '@/lib/socket';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
+import { usePathname } from 'next/navigation';
 
 export function ConnectionBanner() {
+  const pathname = usePathname();
+  if (pathname === '/core' || pathname.startsWith('/core/')) return null;
   const t = useT();
   const token = useAuthStore((s) => s.accessToken);
   const wsConnected = useUiStore((s) => s.wsConnected);

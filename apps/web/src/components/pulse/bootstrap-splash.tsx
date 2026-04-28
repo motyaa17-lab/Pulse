@@ -2,8 +2,11 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth-store';
+import { usePathname } from 'next/navigation';
 
 export function BootstrapSplash() {
+  const pathname = usePathname();
+  if (pathname === '/core' || pathname.startsWith('/core/')) return null;
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const sessionStatus = useAuthStore((s) => s.sessionStatus);
   const sessionError = useAuthStore((s) => s.sessionError);
