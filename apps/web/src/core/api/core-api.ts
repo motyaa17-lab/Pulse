@@ -19,6 +19,8 @@ function coreEffectiveApiBase(): string {
   return configured;
 }
 
+let coreApiBaseLogged = false;
+
 export class CoreApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -35,6 +37,18 @@ type CoreApiInit = Omit<RequestInit, 'body'> & {
 export async function coreApiFetch<T>(path: string, init: CoreApiInit = {}): Promise<T> {
   const { skipAuth, body, ...rest } = init;
   const headers = new Headers(rest.headers);
+
+  const base = coreEffectiveApiBase();
+  const url = `${base}${path}`;
+  if (!coreApiBaseLogged && typeof window !== 'undefined') {
+    coreApiBaseLogged = true;
+    console.log('[CORE API BASE]', {
+      configured: CORE_API_URL,
+      effective: base,
+      origin: window.location.origin,
+      protocol: window.location.protocol,
+    });
+  }
 
   if (!skipAuth) {
     const accessToken = useCoreAuthStore.getState().accessToken;
@@ -61,8 +75,40 @@ export async function coreApiFetch<T>(path: string, init: CoreApiInit = {}): Pro
   }
 
   const method = (rest.method ?? 'GET').toUpperCase();
-  console.log('[CORE API REQUEST]', { method, path });
-  const res = await fetch(`${coreEffectiveApiBase()}${path}`, { ...rest, headers, body: payload });
+  console.log('[CORE API REQUEST]', {
+    method,
+    path,
+    url,
+    hasAuthHeader: headers.has('Authorization'),
+    contentType: headers.get('Content-Type'),
+  });
+  const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  let res: Response;
+  try {
+    res = await fetch(url, { ...rest, headers, body: payload });
+  } catch (e) {
+    const elapsedMs =
+      (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt;
+    console.warn('[CORE API NETWORK ERROR]', {
+      method,
+      path,
+      url,
+      elapsedMs: Math.round(elapsedMs),
+      name: e instanceof Error ? e.name : null,
+      message: e instanceof Error ? e.message : String(e),
+    });
+    throw e;
+  }
+  const elapsedMs =
+    (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt;
+  console.log('[CORE API RESPONSE]', {
+    method,
+    path,
+    url,
+    status: res.status,
+    ok: res.ok,
+    elapsedMs: Math.round(elapsedMs),
+  });
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {
       console.log('[CORE API 401]', { path, status: res.status });

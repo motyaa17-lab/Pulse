@@ -17,7 +17,10 @@ async function bootstrap() {
 
   // Fast liveness endpoints that bypass Nest routing/guards and do not touch external deps.
   const http = app.getHttpAdapter().getInstance() as {
-    get: (path: string, handler: (req: unknown, res: { json: (body: unknown) => void }) => void) => void;
+    get: (
+      path: string,
+      handler: (req: unknown, res: { json: (body: unknown) => void }) => void,
+    ) => void;
   };
   http.get('/', (_req, res) => res.json({ ok: true, service: 'pulse-api' }));
   http.get('/health', (_req, res) => res.json({ ok: true }));
@@ -31,10 +34,21 @@ async function bootstrap() {
     }),
   );
 
-  const origin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
+  const originEnv = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
+  const allowedOrigins = originEnv
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin,
+    origin: (origin, callback) => {
+      // Allow non-browser clients (no Origin), and explicit allow-list for browsers.
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   });
 
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
