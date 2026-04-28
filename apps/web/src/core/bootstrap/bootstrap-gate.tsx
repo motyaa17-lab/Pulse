@@ -17,10 +17,18 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
   const stamp = useMemo(() => (token ? token.slice(0, 16) : 'anon'), [token]);
   const key = useMemo(() => `pulse:core:sessionChecked:${stamp}`, [stamp]);
   const ranRef = useRef(false);
+  const inFlightAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     // New token → allow a new one-shot validation.
     ranRef.current = false;
+    try {
+      inFlightAbortRef.current?.abort();
+    } catch {
+      /* ignore */
+    } finally {
+      inFlightAbortRef.current = null;
+    }
   }, [stamp]);
 
   useEffect(() => {
@@ -28,7 +36,6 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     if (!hasHydrated) return;
     if (!token) return;
     if (status === 'ok') return;
-    if (status === 'checking') return;
 
     try {
       if (typeof window !== 'undefined' && window.sessionStorage.getItem(key) === '1') {
@@ -47,17 +54,29 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     useCoreAuthStore.getState().setStatus('checking', null);
 
     let cancelled = false;
+    const controller = new AbortController();
+    inFlightAbortRef.current = controller;
     void (async () => {
       let finalStatus: 'ok' | 'error' | 'unauthenticated' = 'error';
       let finalError: string | null = null;
-      const controller = new AbortController();
+      const timeoutMs = 10_000;
+      const timeoutErr = new Error('CORE_BOOTSTRAP_TIMEOUT');
       const timeoutId = window.setTimeout(() => {
-        console.log('[CORE BOOTSTRAP TIMEOUT]', { ms: 8000 });
-        controller.abort();
-      }, 8000);
+        console.log('[CORE BOOTSTRAP TIMEOUT]', { ms: timeoutMs });
+        try {
+          controller.abort();
+        } catch {
+          /* ignore */
+        }
+      }, timeoutMs);
       try {
-        await coreApiFetch('/users/me', { signal: controller.signal });
-        if (cancelled) return;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          window.setTimeout(() => reject(timeoutErr), timeoutMs + 250);
+        });
+        await Promise.race([
+          coreApiFetch('/users/me', { signal: controller.signal }),
+          timeoutPromise,
+        ]);
         console.log('[CORE BOOTSTRAP ME OK]');
         finalStatus = 'ok';
         finalError = null;
@@ -67,27 +86,33 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
           /* ignore */
         }
       } catch (e) {
-        if (cancelled) return;
-        if (e instanceof DOMException && e.name === 'AbortError') {
+        if (e instanceof Error && e.message === 'CORE_BOOTSTRAP_TIMEOUT') {
+          finalStatus = 'error';
+          finalError = 'Таймаут проверки сессии. Проверьте соединение и попробуйте снова.';
+          console.log('[CORE BOOTSTRAP ME ERROR]', { kind: 'timeout' });
+        } else if (e instanceof DOMException && e.name === 'AbortError') {
           finalStatus = 'error';
           finalError = 'Таймаут проверки сессии. Проверьте соединение и попробуйте снова.';
           console.log('[CORE BOOTSTRAP ME ERROR]', { kind: 'abort' });
-          return;
+        } else {
+          const apiErr = e instanceof CoreApiError ? e : null;
+          if (apiErr && (apiErr.status === 401 || apiErr.status === 403)) {
+            console.log('[CORE BOOTSTRAP ME ERROR]', {
+              kind: 'unauthorized',
+              status: apiErr.status,
+            });
+            finalStatus = 'unauthenticated';
+            finalError = 'Нужно войти заново';
+            useCoreAuthStore.getState().clear();
+          } else {
+            console.log('[CORE BOOTSTRAP ME ERROR]', { kind: 'other' });
+            finalStatus = 'error';
+            finalError = 'Сервер недоступен. Обновите страницу.';
+          }
         }
-        const apiErr = e instanceof CoreApiError ? e : null;
-        if (apiErr && (apiErr.status === 401 || apiErr.status === 403)) {
-          console.log('[CORE BOOTSTRAP ME ERROR]', { kind: 'unauthorized', status: apiErr.status });
-          finalStatus = 'unauthenticated';
-          finalError = 'Нужно войти заново';
-          useCoreAuthStore.getState().clear();
-          return;
-        }
-        console.log('[CORE BOOTSTRAP ME ERROR]', { kind: 'other' });
-        finalStatus = 'error';
-        finalError = 'Сервер недоступен. Обновите страницу.';
       } finally {
         window.clearTimeout(timeoutId);
-        if (cancelled) return;
+        if (inFlightAbortRef.current === controller) inFlightAbortRef.current = null;
         useCoreAuthStore.getState().setStatus(finalStatus, finalError);
         console.log('[CORE BOOTSTRAP FINAL STATUS]', { status: finalStatus });
       }
@@ -95,8 +120,46 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      try {
+        controller.abort();
+      } catch {
+        /* ignore */
+      } finally {
+        if (inFlightAbortRef.current === controller) inFlightAbortRef.current = null;
+      }
     };
   }, [hasHydrated, isCore, key, stamp, status, token]);
+
+  // Watchdog: if something ever leaves us stuck in 'checking', force a safe final state.
+  useEffect(() => {
+    if (!isCore) return;
+    if (!hasHydrated) return;
+    if (!token) return;
+    if (status !== 'checking') return;
+
+    const watchdogMs = 15_000;
+    const id = window.setTimeout(() => {
+      if (useCoreAuthStore.getState().status !== 'checking') return;
+      console.warn('[CORE BOOTSTRAP WATCHDOG] forcing error exit', { ms: watchdogMs });
+      try {
+        inFlightAbortRef.current?.abort();
+      } catch {
+        /* ignore */
+      } finally {
+        inFlightAbortRef.current = null;
+      }
+      useCoreAuthStore
+        .getState()
+        .setStatus(
+          'error',
+          'Подключение к серверу заняло слишком много времени. Попробуйте войти заново.',
+        );
+    }, watchdogMs);
+
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [hasHydrated, isCore, status, token]);
 
   if (!isCore) return <>{children}</>;
 
