@@ -121,3 +121,20 @@ export function reconnectSocket() {
   disconnectSocket();
   return connectSocket();
 }
+
+/**
+ * Re-authenticate the live socket with the current access token (e.g. after a
+ * token refresh). No-op if no socket exists yet, so it never creates one on
+ * routes that shouldn't have a socket.
+ */
+export function refreshSocketAuth(): void {
+  if (!socket) return;
+  const token = useAuthStore.getState().accessToken;
+  try {
+    socket.auth = { token };
+    socket.disconnect();
+    if (token) socket.connect();
+  } catch {
+    /* ignore */
+  }
+}
