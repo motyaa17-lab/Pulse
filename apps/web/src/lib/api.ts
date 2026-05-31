@@ -128,12 +128,14 @@ export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T> 
 
   const buildHeaders = (token: string | null): Headers => {
     const headers = new Headers(rest.headers);
-    if (!skipAuth) {
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      const sid = useAuthStore.getState().sessionId;
-      if (sid) headers.set('x-session-fingerprint', sid);
+    if (!skipAuth && token) {
+      headers.set('Authorization', `Bearer ${token}`);
     }
-    // Let the browser set the multipart boundary for FormData uploads.
+    // NOTE: do not add custom headers (e.g. x-session-fingerprint) here. The API
+    // CORS policy only allows Content-Type + Authorization, so any extra header
+    // triggers a preflight that fails cross-origin (Vercel -> Railway) and breaks
+    // every authenticated request. Routes that need the session fingerprint must
+    // pass it explicitly via init.headers.
     if (!isFormData && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
     }
