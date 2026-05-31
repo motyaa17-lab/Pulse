@@ -114,12 +114,6 @@ export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T> 
   const headers = new Headers(rest.headers);
   if (!skipAuth) {
     const accessToken = useAuthStore.getState().accessToken;
-    console.log('[API FETCH DEBUG]', {
-      path,
-      hasAccessToken: Boolean(accessToken),
-      tokenStart: accessToken ? accessToken.slice(0, 12) : null,
-      tokenLen: accessToken?.length ?? 0,
-    });
     if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
   }
   if (!headers.has('Content-Type')) {
