@@ -855,24 +855,18 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const lastId = messages[messages.length - 1]?.id;
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread reset-select-mode');
-    console.log('deps:', { chatId });
     // Reset transient chat-local UI when switching chats.
     setSelectMode(false);
     setSelectedIds([]);
   }, [chatId]);
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread cleanup hoverLeaveTimer');
-    console.log('deps:', {});
     return () => {
       if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current);
     };
   }, []);
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread close reaction picker on scroll');
-    console.log('deps:', { open: Boolean(mobileReactionPick) });
     if (!mobileReactionPick) return;
     const el = parentRef.current;
     const close = () => setMobileReactionPick(null);
@@ -881,11 +875,6 @@ export function MessageThread({ chatId }: { chatId: string }) {
   }, [mobileReactionPick]);
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread mobileReactionPick reconcile');
-    console.log('deps:', {
-      open: Boolean(mobileReactionPick),
-      messagesLen: messages.length,
-    });
     if (!mobileReactionPick) return;
     if (!messages.some((x) => x.id === mobileReactionPick.messageId)) {
       setMobileReactionPick(null);
@@ -917,8 +906,6 @@ export function MessageThread({ chatId }: { chatId: string }) {
   };
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread selectMode auto-exit');
-    console.log('deps:', { selectMode, selectedIdsLen: selectedIds.length });
     if (!selectMode) return;
     if (selectedIds.length === 0) setSelectMode(false);
   }, [selectMode, selectedIds.length]);
@@ -936,13 +923,6 @@ export function MessageThread({ chatId }: { chatId: string }) {
   };
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread socket handlers');
-    console.log('deps:', {
-      canQuery,
-      chatId,
-      hasToken: Boolean(accessToken),
-      myId: myId ?? null,
-    });
     if (!accessToken) return;
     const s = connectSocket();
 
@@ -1068,8 +1048,6 @@ export function MessageThread({ chatId }: { chatId: string }) {
         if (!old) return old;
         return { ...old, items: old.items.filter((x) => x.id !== p.messageId) };
       });
-      console.count('[ACTION] message-thread invalidate chats/chat');
-      console.log('deps:', { chatId });
       void qc.invalidateQueries({ queryKey: ['chats'] });
       void qc.invalidateQueries({ queryKey: ['chat', chatId] });
     };
@@ -1102,8 +1080,6 @@ export function MessageThread({ chatId }: { chatId: string }) {
   const items = virtualizer.getVirtualItems();
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread highlight scroll');
-    console.log('deps:', { highlightId: highlightId ?? null, messagesLen: messages.length });
     if (!highlightId || messages.length === 0) return;
     const idx = messages.findIndex((m) => m.id === highlightId);
     if (idx < 0) return;
@@ -1115,16 +1091,12 @@ export function MessageThread({ chatId }: { chatId: string }) {
   }, [highlightId, messages.length]);
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread scroll-to-bottom on chat switch');
-    console.log('deps:', { chatId, messagesLen: messages.length });
     const el = parentRef.current;
     if (!el || messages.length === 0) return;
     el.scrollTop = el.scrollHeight;
   }, [chatId, messages.length]);
 
   useEffect(() => {
-    console.count('[EFFECT] message-thread reset composer modes');
-    console.log('deps:', { chatId });
     // Switching chats should reset transient composer modes.
     setReplyTo(null);
     setEditing(null);

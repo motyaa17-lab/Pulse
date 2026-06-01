@@ -17,27 +17,14 @@ function applyVisualPreset(preset: string) {
   }
 }
 
-function logBootstrapState(reason: string) {
-  const s = useAuthStore.getState();
-  const p = useAuthStore.persist;
-  console.warn(`[pulse-bootstrap] ${reason}`, {
-    storeHasHydrated: s.hasHydrated,
-    persistHasHydrated: p?.hasHydrated?.() ?? null,
-    hasAccessToken: Boolean(s.accessToken),
-    hasRefreshToken: Boolean(s.refreshToken),
-  });
-}
-
 export function Providers({ children }: { children: React.ReactNode }) {
   const qc = getQueryClient();
   const theme = useUiStore((s) => s.theme);
   const visualPreset = useUiStore((s) => s.visualPreset);
 
   useEffect(() => {
-    console.log('[pulse-bootstrap] Providers mount: bootstrap effect start');
     const p = useAuthStore.persist;
     if (p == null) {
-      logBootstrapState('no persist API — forcing hasHydrated');
       if (!useAuthStore.getState().hasHydrated) {
         useAuthStore.setState({ hasHydrated: true });
       }
@@ -46,26 +33,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     const finish = () => {
       if (!useAuthStore.getState().hasHydrated) {
-        console.log('[pulse-bootstrap] onFinishHydration / sync: set hasHydrated true');
         useAuthStore.setState({ hasHydrated: true });
       }
     };
 
     if (p.hasHydrated()) {
-      console.log('[pulse-bootstrap] persist already hydrated before subscribe');
       queueMicrotask(finish);
     }
 
-    const unsub = p.onFinishHydration((state) => {
-      console.log('[pulse-bootstrap] persist.onFinishHydration', {
-        hasToken: Boolean(state.accessToken),
-      });
+    const unsub = p.onFinishHydration(() => {
       queueMicrotask(finish);
     });
 
     const fallback = window.setTimeout(() => {
       if (!useAuthStore.getState().hasHydrated) {
-        logBootstrapState('FALLBACK 2500ms — forcing hasHydrated to unblock UI');
         useAuthStore.setState({ hasHydrated: true });
       }
     }, 2500);

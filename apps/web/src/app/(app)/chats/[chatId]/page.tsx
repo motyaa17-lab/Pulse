@@ -20,6 +20,11 @@ import { useT } from '@/lib/i18n';
 import { directChatPresenceSubtitle } from '@/lib/format-last-seen';
 import { useLanguageStore } from '@/stores/language-store';
 
+// Stable empty reference for zustand selectors: returning a fresh `[]` from a
+// selector each render breaks useSyncExternalStore caching and triggers an
+// infinite update loop (React #185).
+const EMPTY_TYPING_IDS: string[] = [];
+
 function typeLabel(t: (k: any) => string, type: string | undefined): string {
   switch (type) {
     case 'DIRECT':
@@ -44,7 +49,7 @@ export default function ChatPage() {
   const qc = useQueryClient();
   const detailsOpen = useUiStore((s) => s.detailsOpen);
   const setDetailsOpen = useUiStore((s) => s.setDetailsOpen);
-  const typingIds = useUiStore((s) => s.typingByChat?.[chatId] ?? []);
+  const typingIds = useUiStore((s) => s.typingByChat[chatId]) ?? EMPTY_TYPING_IDS;
   const setTyping = useUiStore((s) => s.setTypingForChat);
   const t = useT();
   const language = useLanguageStore((s) => s.language);

@@ -53,12 +53,6 @@ export const useAuthStore = create<AuthState>()(
             (prevAcc?.sessionId ?? null) === nextSessionId;
           if (tokensUnchanged) return s;
 
-          console.log('[AUTH STORE REAL UPDATE] setTokens', {
-            id,
-            accessTokenStart: accessToken.slice(0, 12),
-            accessTokenLen: accessToken.length,
-          });
-
           const nextAccounts =
             prevAcc &&
             prevAcc.accessToken === accessToken &&
@@ -92,7 +86,6 @@ export const useAuthStore = create<AuthState>()(
           const acc = s.accounts[accountId];
           if (!acc) return s;
           if (s.activeAccountId === accountId && s.accessToken === acc.accessToken) return s;
-          console.log('[AUTH STORE REAL UPDATE] switchAccount', { accountId });
           void syncAccessTokenCookie(acc.accessToken);
           return {
             ...s,
@@ -111,7 +104,6 @@ export const useAuthStore = create<AuthState>()(
           delete next[accountId];
           const wasActive = s.activeAccountId === accountId;
           if (!wasActive) return { ...s, accounts: next };
-          console.log('[AUTH STORE REAL UPDATE] removeAccount(active)', { accountId });
           void syncAccessTokenCookie(null);
           return {
             ...s,
@@ -129,11 +121,6 @@ export const useAuthStore = create<AuthState>()(
         const nextErr = err ?? null;
         set((s) => {
           if (s.sessionStatus === sessionStatus && s.sessionError === nextErr) return s;
-          console.log('[AUTH STORE REAL UPDATE] setSessionStatus', {
-            from: s.sessionStatus,
-            to: sessionStatus,
-            err: nextErr,
-          });
           return { ...s, sessionStatus, sessionError: nextErr };
         });
       },
@@ -150,7 +137,6 @@ export const useAuthStore = create<AuthState>()(
           ) {
             return s;
           }
-          console.log('[AUTH STORE REAL UPDATE] clear');
           return {
             ...s,
             accessToken: null,
@@ -173,16 +159,11 @@ export const useAuthStore = create<AuthState>()(
         accounts: state.accounts,
         activeAccountId: state.activeAccountId,
       }),
-      onRehydrateStorage: () => (_state, error) => {
-        // DEBUG: trace persist lifecycle (remove when stable)
-        console.log('[pulse-bootstrap] persist onRehydrateStorage fired', {
-          error: error instanceof Error ? error.message : (error ?? null),
-        });
+      onRehydrateStorage: () => () => {
         // Rehydration can finish synchronously inside `create()` while `useAuthStore` is still in the
         // temporal dead zone — calling useAuthStore.setState immediately throws and never sets hasHydrated.
         queueMicrotask(() => {
           if (!useAuthStore.getState().hasHydrated) {
-            console.log('[pulse-bootstrap] persist microtask: set hasHydrated true');
             useAuthStore.setState({ hasHydrated: true });
           }
           const t = useAuthStore.getState().accessToken;

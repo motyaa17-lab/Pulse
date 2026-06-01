@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth-store';
+import { refreshSocketAuth } from '@/lib/socket';
 
 const DEFAULT_API_URL =
   process.env.NODE_ENV === 'development'
@@ -93,6 +94,8 @@ async function refreshAccess(): Promise<string | null> {
       sessionId?: string;
     };
     useAuthStore.getState().setTokens(data);
+    // Re-auth the live socket so realtime recovers without a full reload.
+    refreshSocketAuth();
     return data.accessToken;
   })();
 
@@ -111,31 +114,64 @@ type ApiInit = Omit<RequestInit, 'body'> & {
 export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T> {
   const { skipAuth, body, ...rest } = init;
 
-  const headers = new Headers(rest.headers);
-  if (!skipAuth) {
-    const accessToken = useAuthStore.getState().accessToken;
-    console.log('[API FETCH DEBUG]', {
-      path,
-      hasAccessToken: Boolean(accessToken),
-      tokenStart: accessToken ? accessToken.slice(0, 12) : null,
-      tokenLen: accessToken?.length ?? 0,
-    });
-    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-  }
-  if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
+  // Serialize JSON bodies, but leave binary/multipart payloads untouched.
   let payload: BodyInit | undefined;
   if (body !== undefined && body !== null) {
-    payload = typeof body === 'object' && !(body instanceof FormData) ? JSON.stringify(body) : body;
+    const isJson =
+      typeof body === 'object' &&
+      !(body instanceof FormData) &&
+      !(body instanceof Blob) &&
+      !(body instanceof ArrayBuffer);
+    payload = isJson ? JSON.stringify(body) : (body as BodyInit);
+  }
+  const isFormData = body instanceof FormData;
+
+  const buildHeaders = (token: string | null): Headers => {
+    const headers = new Headers(rest.headers);
+    if (!skipAuth && token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    // NOTE: do not add custom headers (e.g. x-session-fingerprint) here. The API
+    // CORS policy only allows Content-Type + Authorization, so any extra header
+    // triggers a preflight that fails cross-origin (Vercel -> Railway) and breaks
+    // every authenticated request. Routes that need the session fingerprint must
+    // pass it explicitly via init.headers.
+    if (!isFormData && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+    return headers;
+  };
+
+  const base = effectiveApiBase();
+  const token = skipAuth ? null : useAuthStore.getState().accessToken;
+
+  let res = await fetch(`${base}${path}`, { ...rest, body: payload, headers: buildHeaders(token) });
+
+  // Access token likely expired — refresh once and retry before giving up.
+  if (res.status === 401 && !skipAuth) {
+    const next = await refreshAccess();
+    if (next) {
+      res = await fetch(`${base}${path}`, { ...rest, body: payload, headers: buildHeaders(next) });
+    }
   }
 
-  const origin = API_URL;
-  const res = await fetch(`${origin}${path}`, { ...rest, body: payload, headers });
-  if (!res.ok) {
-    // Diagnostic: keep errors simple and deterministic (no refresh/retry/redirects).
-    throw new ApiError(res.status, `HTTP ${res.status}`);
+  const text = await res.text();
+  let json: unknown = null;
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = { raw: text };
+    }
   }
-  return (await res.json()) as T;
+
+  if (!res.ok) {
+    const msg =
+      typeof json === 'object' && json !== null && 'message' in json
+        ? String((json as { message: unknown }).message)
+        : res.statusText || `HTTP ${res.status}`;
+    throw new ApiError(res.status, msg, json);
+  }
+
+  return json as T;
 }

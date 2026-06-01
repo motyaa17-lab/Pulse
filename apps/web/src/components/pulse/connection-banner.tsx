@@ -29,8 +29,6 @@ export function ConnectionBanner() {
         <button
           type="button"
           onClick={() => {
-            console.count('[ACTION] connection-banner reconnectSocket()');
-            console.log('deps:', { hasToken: Boolean(token), wsConnected });
             reconnectSocket();
           }}
           className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-[12px] font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25"

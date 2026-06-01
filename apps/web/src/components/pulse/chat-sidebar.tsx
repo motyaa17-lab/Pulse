@@ -16,12 +16,17 @@ import { CreateChannelModal } from '@/components/pulse/create-channel-modal';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
 import { useT, type I18nKey } from '@/lib/i18n';
 import { useLanguageStore } from '@/stores/language-store';
-// TEMP DIAG: sockets disabled on /chats (see effect below)
+import { connectSocket } from '@/lib/socket';
 import { bumpChatListPreview } from '@/lib/chat-query-helpers';
 import { decodeJwtSub } from '@/lib/jwt';
 import { useAuthStore } from '@/stores/auth-store';
 import { StoriesStrip } from '@/components/pulse/stories-strip';
 import { chatHref } from '@/lib/chat-route';
+
+// Stable empty reference for zustand selectors: returning a fresh `[]` from a
+// selector each render breaks useSyncExternalStore caching and triggers an
+// infinite update loop (React #185).
+const EMPTY_TYPING_IDS: string[] = [];
 
 function SegmentedPill({
   value,
@@ -370,14 +375,6 @@ export function ChatSidebar() {
   const t = useT();
   const locale = useLanguageStore((s) => (s.language === 'ru' ? 'ru-RU' : 'en-US'));
 
-  useEffect(() => {
-    console.log('[SIDEBAR AUTH DEBUG]', {
-      hasHydrated,
-      hasToken: Boolean(accessToken),
-      tokenStart: accessToken ? accessToken.slice(0, 12) : null,
-      tokenLen: accessToken?.length ?? 0,
-    });
-  }, [hasHydrated, accessToken]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 220);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -499,8 +496,6 @@ export function ChatSidebar() {
   }, [chipFiltered, folderId, folders?.items]);
 
   useEffect(() => {
-    // TEMP DIAG: disable focus-event listener
-    return;
     const onFocusEvt = () => {
       setSearchFocused(true);
       searchInputRef.current?.focus();
@@ -511,8 +506,6 @@ export function ChatSidebar() {
   }, []);
 
   useEffect(() => {
-    // TEMP DIAG: disable create-menu outside-click
-    return;
     if (createMenuPlacement === 'closed') return;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -524,8 +517,6 @@ export function ChatSidebar() {
   }, [createMenuPlacement]);
 
   useEffect(() => {
-    // TEMP DIAG: disable search outside-click
-    return;
     if (!searchFocused) return;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -537,8 +528,6 @@ export function ChatSidebar() {
   }, [searchFocused]);
 
   useEffect(() => {
-    // TEMP DIAG: disable search escape-key handler
-    return;
     if (!searchFocused) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -551,18 +540,12 @@ export function ChatSidebar() {
   }, [searchFocused]);
 
   useEffect(() => {
-    // TEMP DIAG: disable pending search focus logic
-    return;
     if (!pendingSidebarSearchFocus) return;
     const bare = pathname?.split('?')[0] ?? '';
     if (bare !== '/chats' && bare !== '/chats/') return;
     // Only update store if values actually change (avoids update loops).
-    console.count('[ACTION] chat-sidebar setPendingSidebarSearchFocus(false)');
-    console.log('deps:', { from: true, to: false });
     setPendingSidebarSearchFocus(false);
     if (!sidebarOpen) {
-      console.count('[ACTION] chat-sidebar setSidebarOpen(true)');
-      console.log('deps:', { from: sidebarOpen, to: true });
       setSidebarOpen(true);
     }
     requestAnimationFrame(() => {
@@ -651,8 +634,6 @@ export function ChatSidebar() {
   });
 
   useEffect(() => {
-    // TEMP DIAG: disable openMenu auto-close logic
-    return;
     if (!openMenuId) return;
     const close = () => setOpenMenuId(null);
     const t = window.setTimeout(() => window.addEventListener('click', close), 0);
@@ -663,20 +644,13 @@ export function ChatSidebar() {
   }, [openMenuId]);
 
   useEffect(() => {
-    // TEMP DIAG: disable ALL socket-related effects and calls from chat sidebar.
-    return;
     if (!canQuery) return;
     if (didWireChatUpdatedRef.current) {
-      console.count('[SOCKET] skipped existing');
-      console.log('deps:', { reason: 'listener already wired', event: 'chat:updated' });
       return;
     }
     didWireChatUpdatedRef.current = true;
 
-    console.count('[SOCKET] listener add');
-    console.log('deps:', { event: 'chat:updated' });
-
-    const s = null as any;
+    const s = connectSocket();
     const onChatUpdated = (payload: unknown) => {
       const p = payload as {
         chatId?: string;
@@ -700,21 +674,14 @@ export function ChatSidebar() {
     };
     s.on('chat:updated', onChatUpdated);
     return () => {
-      console.count('[SOCKET] listener cleanup');
-      console.log('deps:', { event: 'chat:updated' });
       s.off('chat:updated', onChatUpdated);
       didWireChatUpdatedRef.current = false;
     };
   }, [activeChatId, accessToken, canQuery, qc]);
 
   useEffect(() => {
-    // TEMP DIAG: disable the entire title/badge effect (no side effects, no logs).
-    return;
-
     // Update title only if it actually changes (avoid storms).
     if (typeof document !== 'undefined' && lastTitleRef.current !== nextTitle) {
-      console.count('[ACTION] setTitle');
-      console.log('deps:', { from: lastTitleRef.current || null, to: nextTitle });
       document.title = nextTitle;
       lastTitleRef.current = nextTitle;
     }
@@ -731,8 +698,6 @@ export function ChatSidebar() {
         lastBadgeRef.current !== nextBadge &&
         (typeof setAppBadgeFn === 'function' || typeof clearAppBadgeFn === 'function')
       ) {
-        console.count('[ACTION] setUnreadBadge');
-        console.log('deps:', { from: lastBadgeRef.current, to: nextBadge });
         lastBadgeRef.current = nextBadge;
         const p: Promise<void> | undefined =
           nextBadge > 0 ? setAppBadgeFn?.(nextBadge) : clearAppBadgeFn?.();
@@ -943,9 +908,9 @@ export function ChatSidebar() {
                               try {
                                 const chat = await getOrCreateDirectChat(u.id);
                                 void qc.invalidateQueries({ queryKey: ['sidebar-chats'] });
-                                console.log('[CHAT CLICK]', chat.id);
+                                router.push(`/chats/${chat.id}`);
                               } catch {
-                                console.log('[CHAT CLICK]', 'direct-chat-create-failed');
+                                /* ignore direct-chat creation failure */
                               }
                             }}
                           >
@@ -979,7 +944,7 @@ export function ChatSidebar() {
                             className="block w-full rounded-xl px-2 py-2 text-left transition hover:bg-white/[0.08]"
                             onClick={() => {
                               setSearchFocused(false);
-                              console.log('[CHAT CLICK]', c.id);
+                              router.push(`/chats/${c.id}`);
                             }}
                           >
                             <span className="font-medium text-white">
@@ -1002,7 +967,7 @@ export function ChatSidebar() {
                             className="block w-full rounded-xl px-2 py-2 text-left transition hover:bg-white/[0.08]"
                             onClick={() => {
                               setSearchFocused(false);
-                              console.log('[CHAT CLICK]', m.chatId);
+                              router.push(`/chats/${m.chatId}`);
                             }}
                           >
                             <div className="text-[13px] text-white/90">
@@ -1254,7 +1219,7 @@ export function ChatSidebar() {
         onClose={() => setGroupModalOpen(false)}
         onCreated={(id) => {
           setGroupModalOpen(false);
-          console.log('[CHAT CLICK]', id);
+          router.push(`/chats/${id}`);
         }}
       />
       <CreateChannelModal
@@ -1262,7 +1227,7 @@ export function ChatSidebar() {
         onClose={() => setChannelModalOpen(false)}
         onCreated={(id) => {
           setChannelModalOpen(false);
-          console.log('[CHAT CLICK]', id);
+          router.push(`/chats/${id}`);
         }}
       />
     </aside>
@@ -1304,7 +1269,7 @@ function ChatRow({
   const timeLabel = formatListTime(chat.lastMessageAt, t, locale);
   const rawAvatar = avatarSrc(chat);
   const label = chatLabel(chat, t);
-  const typingIds = useUiStore((s) => s.typingByChat?.[chat.id] ?? []);
+  const typingIds = useUiStore((s) => s.typingByChat[chat.id]) ?? EMPTY_TYPING_IDS;
   const isTyping = typingIds.length > 0;
   const hideListPreviews = useUiStore((s) => s.hideChatListPreviews);
   const preview = isTyping

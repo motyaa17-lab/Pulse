@@ -28,12 +28,6 @@ export function getSocket(): Socket | null {
   return socket;
 }
 
-function socketsDisabledOnRoute(): boolean {
-  if (typeof window === 'undefined') return false;
-  const p = window.location?.pathname ?? '';
-  return p === '/chats' || p.startsWith('/chats/');
-}
-
 function wireSocketLifecycle(s: Socket) {
   if (lifecycleWired.has(s)) {
     // Ensure store reflects current state without re-wiring handlers.
@@ -60,13 +54,6 @@ function wireSocketLifecycle(s: Socket) {
 }
 
 export function connectSocket(): Socket {
-  // TEMP ISOLATION: disable socket auto-connect on /chats routes to verify
-  // whether realtime bootstrap is the remaining source of React #185.
-  if (socketsDisabledOnRoute()) {
-    console.count('[SOCKET] disabled on /chats');
-    return (socket ?? (null as any)) as Socket;
-  }
-
   const token = useAuthStore.getState().accessToken;
   // Important: keep a single Socket instance.
   // Multiple components call connectSocket() on mount; if we recreate the socket while it's still
@@ -78,26 +65,11 @@ export function connectSocket(): Socket {
       // Avoid spamming connect() while already active/connecting.
       const active = Boolean((socket as any).active);
       if (token && !socket.connected && !active) {
-        console.count('[SOCKET] connect attempt');
-        console.log('deps:', { hasToken: true, connected: false, active });
         socket.connect();
-      } else {
-        console.count('[SOCKET] skipped existing');
-        console.log('deps:', {
-          hasToken: Boolean(token),
-          connected: Boolean(socket.connected),
-          active,
-        });
       }
     } catch {
       /* ignore */
     }
-    console.count('[SOCKET] connectSocket reuse');
-    console.log('deps:', {
-      hasToken: Boolean(token),
-      connected: Boolean(socket.connected),
-      active: Boolean((socket as any).active),
-    });
     wireSocketLifecycle(socket);
     return socket;
   }
@@ -107,8 +79,6 @@ export function connectSocket(): Socket {
     auth: { token },
     autoConnect: Boolean(token),
   });
-  console.count('[SOCKET] connectSocket create');
-  console.log('deps:', { hasToken: Boolean(token), autoConnect: Boolean(token) });
   wireSocketLifecycle(socket);
   if (presenceTimer) {
     clearInterval(presenceTimer);
@@ -126,8 +96,6 @@ export function connectSocket(): Socket {
 }
 
 export function disconnectSocket() {
-  console.count('[SOCKET] disconnectSocket');
-  console.log('deps:', { hadSocket: Boolean(socket), connected: Boolean(socket?.connected) });
   try {
     useUiStore.getState().setWsConnected(null);
   } catch {
@@ -150,8 +118,23 @@ export function disconnectSocket() {
 }
 
 export function reconnectSocket() {
-  console.count('[SOCKET] reconnectSocket');
-  console.log('deps:', {});
   disconnectSocket();
   return connectSocket();
+}
+
+/**
+ * Re-authenticate the live socket with the current access token (e.g. after a
+ * token refresh). No-op if no socket exists yet, so it never creates one on
+ * routes that shouldn't have a socket.
+ */
+export function refreshSocketAuth(): void {
+  if (!socket) return;
+  const token = useAuthStore.getState().accessToken;
+  try {
+    socket.auth = { token };
+    socket.disconnect();
+    if (token) socket.connect();
+  } catch {
+    /* ignore */
+  }
 }
